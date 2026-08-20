@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+  <title>UNION ONE 진행판</title>
+  <rect width="120" height="120" fill="#16130F"/>
+  <rect x="26" y="66" width="14" height="28" rx="7" fill="#FFFFFF"/>
+  <rect x="53" y="44" width="14" height="50" rx="7" fill="#FFFFFF"/>
+  <rect x="80" y="56" width="14" height="38" rx="7" fill="#FFFFFF"/>
+  <circle cx="60" cy="28" r="7" fill="#D22B2B"/>
+</svg>
