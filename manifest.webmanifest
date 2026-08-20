@@ -1,7 +1,7 @@
 {
-  "name": "UNION ONE 진행판",
-  "short_name": "진행판",
-  "description": "UNION ONE 사내 업무공유 - 진행판, 업무일지, 전자결재",
+  "name": "UNION ONE WORK BOARD",
+  "short_name": "WORK BOARD",
+  "description": "UNION ONE WORK BOARD - 진행판, 업무일지, 전자결재",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
