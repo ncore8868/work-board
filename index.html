@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<title>UNION ONE 진행판</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#16130F">
+<meta name="color-scheme" content="dark light">
+
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="icon" href="./favicon.ico" sizes="any">
+<link rel="icon" type="image/png" href="./icon-192.png">
+<link rel="apple-touch-icon" href="./apple-touch-icon.png">
+
+<!-- 아이폰 홈 화면 실행용 -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="진행판">
+<meta name="mobile-web-app-capable" content="yes">
+
+<style>
+  html,body{margin:0;padding:0;height:100%;background:#16130F;overflow:hidden}
+  #app{position:fixed;inset:0;width:100%;height:100%;border:0;display:block;background:#16130F}
+
+  #splash{position:fixed;inset:0;z-index:10;background:#16130F;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;
+    font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Malgun Gothic",sans-serif;
+    transition:opacity .35s ease}
+  #splash.gone{opacity:0;pointer-events:none}
+  #splash svg{width:88px;height:88px}
+  #splash .t{color:#F2F2F4;font-size:14px;letter-spacing:.02em}
+  #splash .s{color:#8A8A94;font-size:12px}
+  #splash .bar{width:132px;height:3px;border-radius:2px;background:#2B2B31;overflow:hidden}
+  #splash .bar i{display:block;width:40%;height:100%;background:#D22B2B;border-radius:2px;
+    animation:slide 1.1s ease-in-out infinite}
+  @keyframes slide{0%{transform:translateX(-110%)}100%{transform:translateX(340%)}}
+  #splash button{margin-top:6px;border:1px solid #454550;background:transparent;color:#B6B6BE;
+    padding:9px 16px;border-radius:8px;font-size:12.5px;cursor:pointer;font-family:inherit}
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <svg viewBox="0 0 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <rect width="120" height="120" rx="26" fill="#1D1D22"/>
+    <rect x="26" y="66" width="14" height="28" rx="7" fill="#FFFFFF"/>
+    <rect x="53" y="44" width="14" height="50" rx="7" fill="#FFFFFF"/>
+    <rect x="80" y="56" width="14" height="38" rx="7" fill="#FFFFFF"/>
+    <circle cx="60" cy="28" r="7" fill="#D22B2B"/>
+  </svg>
+  <div class="t">UNION ONE 진행판</div>
+  <div class="bar"><i></i></div>
+  <div class="s" id="msg">불러오는 중입니다</div>
+  <button id="retry" style="display:none" onclick="location.reload()">다시 시도</button>
+</div>
+
+<iframe id="app" title="UNION ONE 진행판" allow="clipboard-write; camera; geolocation"></iframe>
+
+<script>
+/* ------------------------------------------------------------------
+ *  앱 주소 — 앱스스크립트를 새로 배포해서 주소가 바뀌면 이 줄만 고치세요
+ * ---------------------------------------------------------------- */
+var APP_URL = 'https://script.google.com/macros/s/AKfycbxcTm_Y7WEcBdG0166KHmSwDNlyD7HnA1QPSwO0GDH29w3_a0DJlKiptnVPUuam7_M/exec';
+
+/* 기기 식별값
+   앱이 아니라 이 런처가 들고 있습니다.
+   브라우저가 iframe 안의 저장소를 막아도 로그인이 유지되는 이유입니다. */
+var KEY = 'unionone_device_v1';
+var token = '';
+try {
+  token = localStorage.getItem(KEY) || '';
+  if (!token) {
+    token = 'T' + Date.now() + Math.random().toString(36).substr(2, 8);
+    localStorage.setItem(KEY, token);
+  }
+} catch (e) {
+  token = 'T' + Date.now() + Math.random().toString(36).substr(2, 8);
+}
+
+var frame = document.getElementById('app');
+var splash = document.getElementById('splash');
+var msg = document.getElementById('msg');
+var retry = document.getElementById('retry');
+
+frame.src = APP_URL + '?dt=' + encodeURIComponent(token);
+
+var done = false;
+function hideSplash() {
+  if (done) return;
+  done = true;
+  splash.classList.add('gone');
+  setTimeout(function () { splash.style.display = 'none'; }, 400);
+}
+
+frame.addEventListener('load', function () {
+  // 앱 화면이 그려질 시간을 조금 준 뒤 가림막을 걷는다
+  setTimeout(hideSplash, 900);
+});
+
+// 너무 오래 걸리면 안내 문구를 바꾼다
+setTimeout(function () { if (!done) msg.textContent = '서버 응답을 기다리는 중입니다'; }, 6000);
+setTimeout(function () {
+  if (!done) {
+    msg.textContent = '연결이 지연되고 있습니다. 통신 상태를 확인해주세요.';
+    retry.style.display = 'block';
+  }
+}, 15000);
+
+// 서비스워커 등록 (홈 화면 설치에 필요)
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function () {
+    navigator.serviceWorker.register('./sw.js').catch(function () {});
+  });
+}
+
+// 아이폰에서 화면이 튀는 것 방지
+document.addEventListener('touchmove', function (e) {
+  if (e.target === document.body) e.preventDefault();
+}, { passive: false });
+</script>
+</body>
+</html>
