@@ -2,7 +2,7 @@
    앱 화면은 항상 서버에서 새로 받아야 하므로 캐시하지 않는다.
    여기서는 런처 껍데기와 아이콘만 캐시한다. */
 
-const CACHE = 'unionone-launcher-v1';
+const CACHE = 'unionone-launcher-v2';
 const SHELL = [
   './',
   './index.html',

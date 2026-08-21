@@ -93,8 +93,12 @@ function hideSplash() {
 }
 
 frame.addEventListener('load', function () {
-  // 앱 화면이 그려질 시간을 조금 준 뒤 가림막을 걷는다
-  setTimeout(hideSplash, 900);
+  // 앱이 '다 그렸다'고 알려주면 바로 걷는다. 신호가 없으면 1.2초 뒤 자동으로.
+  setTimeout(hideSplash, 1200);
+});
+
+window.addEventListener('message', function (e) {
+  if (e && e.data && e.data.ncore === 'ready') hideSplash();
 });
 
 // 너무 오래 걸리면 안내 문구를 바꾼다
