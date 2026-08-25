@@ -3,54 +3,114 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <title>UNION ONE</title>
+
   <meta name="theme-color" content="#111217">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="UNION ONE">
   <meta name="format-detection" content="telephone=no">
-  <title>UNION ONE</title>
+
   <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./favicon.ico">
+  <link rel="icon" type="image/png" sizes="192x192" href="./icon-192.png">
+  <link rel="icon" type="image/png" sizes="512x512" href="./icon-512.png">
+  <link rel="apple-touch-icon" href="./apple-touch-icon.png">
+
   <style>
-    :root{--bg:#0f1014;--panel:#18191f;--line:#2a2c35;--text:#f4f5f7;--muted:#9297a3;--accent:#ff5d67}
-    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-    html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Noto Sans KR","Segoe UI",sans-serif}
-    body{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:calc(24px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom))}
-    .wrap{width:min(100%,420px);text-align:center}
-    .brand{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:12px;font-size:28px;font-weight:900;letter-spacing:-1px}
-    .brand-dot{width:12px;height:12px;border-radius:3px;background:var(--accent);box-shadow:0 0 22px rgba(255,93,103,.35)}
-    .sub{margin:0;color:var(--muted);font-size:14px;line-height:1.6}
-    .card{margin-top:26px;padding:20px;border:1px solid var(--line);border-radius:20px;background:var(--panel);text-align:left}
-    .card strong{display:block;margin-bottom:12px;font-size:15px}
-    .step{display:flex;gap:10px;margin:10px 0;color:#d9dce3;font-size:14px;line-height:1.5}
-    .num{flex:none;width:23px;height:23px;display:grid;place-items:center;border-radius:50%;background:var(--accent);color:#fff;font-size:12px;font-weight:900}
-    .open-btn{width:100%;min-height:52px;margin-top:18px;border:0;border-radius:15px;background:#fff;color:#111217;font-size:15px;font-weight:900;cursor:pointer}
-    .launching{display:none;margin-top:28px;color:var(--muted);font-size:14px}
-    .spinner{width:32px;height:32px;margin:0 auto 13px;border:4px solid #343641;border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite}
-    .note{margin-top:16px;color:#747985;font-size:11px;line-height:1.5}
-    @keyframes spin{to{transform:rotate(360deg)}}
+    :root {
+      --bg:#0f1014;
+      --panel:#18191f;
+      --line:#2a2c35;
+      --text:#f4f5f7;
+      --muted:#9297a3;
+      --accent:#ff5d67;
+    }
+    * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+    html,body {
+      margin:0; min-height:100%; background:var(--bg); color:var(--text);
+      font-family:-apple-system,BlinkMacSystemFont,"Noto Sans KR","Segoe UI",sans-serif;
+    }
+    body {
+      min-height:100vh; display:flex; align-items:center; justify-content:center;
+      padding:calc(24px + env(safe-area-inset-top)) 20px calc(24px + env(safe-area-inset-bottom));
+    }
+    .wrap { width:min(100%,420px); text-align:center; }
+    .app-icon {
+      width:112px; height:112px; border-radius:24px; object-fit:cover;
+      box-shadow:0 18px 48px rgba(0,0,0,.42); margin-bottom:18px;
+    }
+    .brand {
+      display:flex; align-items:center; justify-content:center; gap:9px;
+      font-size:28px; font-weight:900; letter-spacing:-1px;
+    }
+    .dot { width:11px; height:11px; border-radius:3px; background:var(--accent); }
+    .sub { margin:10px 0 0; color:var(--muted); font-size:14px; line-height:1.6; }
+    .card {
+      margin-top:26px; padding:20px; border:1px solid var(--line);
+      border-radius:20px; background:var(--panel); text-align:left;
+    }
+    .card strong { display:block; margin-bottom:12px; font-size:15px; }
+    .step { display:flex; gap:10px; margin:10px 0; color:#d9dce3; font-size:14px; line-height:1.5; }
+    .num {
+      flex:none; width:23px; height:23px; display:grid; place-items:center;
+      border-radius:50%; background:var(--accent); color:#fff; font-size:12px; font-weight:900;
+    }
+    .open-btn {
+      width:100%; min-height:52px; margin-top:18px; border:0; border-radius:15px;
+      background:#fff; color:#111217; font-size:15px; font-weight:900; cursor:pointer;
+    }
+    .launching { display:none; margin-top:28px; color:var(--muted); font-size:14px; }
+    .spinner {
+      width:32px; height:32px; margin:0 auto 13px; border:4px solid #343641;
+      border-top-color:#fff; border-radius:50%; animation:spin .8s linear infinite;
+    }
+    .note { margin-top:16px; color:#747985; font-size:11px; line-height:1.5; }
+    @keyframes spin { to { transform:rotate(360deg); } }
   </style>
 </head>
+
 <body>
   <main class="wrap">
-    <div class="brand"><span class="brand-dot"></span><span>UNION ONE</span></div>
+    <img class="app-icon" src="./icon-192.png" alt="UNION ONE 아이콘">
+
+    <div class="brand">
+      <span class="dot"></span>
+      <span>UNION ONE</span>
+    </div>
+
     <p class="sub">업무 플랫폼을 실행합니다.</p>
+
     <section id="installPanel" class="card">
       <strong>실행 방법</strong>
-      <div class="step"><span class="num">1</span><span>홈 화면에 설치된 UNION ONE 아이콘으로 실행해 주세요.</span></div>
-      <div class="step"><span class="num">2</span><span>처음 연결되는 기기는 한 번만 로그인하면 이후 자동 연결됩니다.</span></div>
+      <div class="step"><span class="num">1</span><span>홈 화면의 UNION ONE 아이콘으로 실행해 주세요.</span></div>
+      <div class="step"><span class="num">2</span><span>브라우저에서 확인할 때는 아래 버튼을 눌러 실행할 수 있습니다.</span></div>
       <button id="openButton" class="open-btn" type="button">업무 플랫폼 열기</button>
     </section>
+
     <section id="launchingPanel" class="launching">
       <div class="spinner"></div>
       UNION ONE 업무 플랫폼을 여는 중입니다.
     </section>
+
     <p class="note">업무 데이터는 회사 Google Sheets와 연동됩니다.</p>
   </main>
 
   <script>
-    const WORKBOARD_APP_URL = "https://script.google.com/macros/s/AKfycbxHirretvYo0aE-R8P5bwuORhtn-R2gL8pK0pNLXMSxQDpOS9lBn_YPGV2sqpfgov8g/exec";
+    /*
+     * WORK-BOARD / UNION ONE 전용
+     * 새 Google Apps Script 웹앱
+     */
+    const WORKBOARD_APP_URL =
+      "https://script.google.com/macros/s/AKfycbxHirretvYo0aE-R8P5bwuORhtn-R2gL8pK0pNLXMSxQDpOS9lBn_YPGV2sqpfgov8g/exec";
+
+    /*
+     * 기기 식별값은 서버의 doGet(e)가 ?dt= 로 받습니다.
+     * 키 이름은 이후 변경하지 않습니다.
+     */
     const DEVICE_TOKEN_KEY = "unionone_workboard_launcher_device_v1";
-    const LEGACY_DEVICE_TOKEN_KEYS = [
+
+    const LEGACY_KEYS = [
       "ncore_workboard_launcher_device_v1",
       "ncore_workboard_device_v1",
       "unionone_workboard_device_v1"
@@ -61,10 +121,10 @@
     }
 
     function getOrCreateDeviceToken() {
-      const current = localStorage.getItem(DEVICE_TOKEN_KEY);
-      if (validToken(current)) return current;
+      let token = localStorage.getItem(DEVICE_TOKEN_KEY);
+      if (validToken(token)) return token;
 
-      for (const key of LEGACY_DEVICE_TOKEN_KEYS) {
+      for (const key of LEGACY_KEYS) {
         const old = localStorage.getItem(key);
         if (validToken(old)) {
           localStorage.setItem(DEVICE_TOKEN_KEY, old);
@@ -72,17 +132,16 @@
         }
       }
 
-      const query = new URLSearchParams(window.location.search || "");
-      const supplied = query.get("dt");
+      const q = new URLSearchParams(location.search);
+      const supplied = q.get("dt");
       if (validToken(supplied)) {
         localStorage.setItem(DEVICE_TOKEN_KEY, supplied);
         return supplied;
       }
 
-      const token =
-        window.crypto && crypto.randomUUID
-          ? crypto.randomUUID().replace(/-/g, "")
-          : "device_" + Date.now() + "_" + Math.random().toString(36).slice(2);
+      token = (window.crypto && crypto.randomUUID)
+        ? crypto.randomUUID().replace(/-/g, "")
+        : "device_" + Date.now() + "_" + Math.random().toString(36).slice(2);
 
       localStorage.setItem(DEVICE_TOKEN_KEY, token);
       return token;
@@ -101,21 +160,25 @@
     function openWorkboard() {
       document.getElementById("installPanel").style.display = "none";
       document.getElementById("launchingPanel").style.display = "block";
-      const deviceToken = getOrCreateDeviceToken();
-      const separator = WORKBOARD_APP_URL.includes("?") ? "&" : "?";
-      window.location.replace(
-        WORKBOARD_APP_URL + separator + "dt=" + encodeURIComponent(deviceToken)
+
+      const dt = getOrCreateDeviceToken();
+      const sep = WORKBOARD_APP_URL.includes("?") ? "&" : "?";
+
+      location.replace(
+        WORKBOARD_APP_URL + sep + "dt=" + encodeURIComponent(dt)
       );
     }
 
     document.getElementById("openButton").addEventListener("click", openWorkboard);
 
     if ("serviceWorker" in navigator) {
-      window.addEventListener("load", async () => {
+      addEventListener("load", async () => {
         try {
           await navigator.serviceWorker.register("./service-worker.js");
         } catch (e) {
-          try { await navigator.serviceWorker.register("./sw.js"); } catch (_) {}
+          try {
+            await navigator.serviceWorker.register("./sw.js");
+          } catch (_) {}
         }
       });
     }
