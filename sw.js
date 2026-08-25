@@ -1,96 +1,48 @@
-/*
- * WORK-BOARD / UNION ONE 전용 서비스워커
- * 계정 이전 캐시 갱신본
- */
-const CACHE_NAME = "unionone-work-board-v3";
+/* UNION ONE 진행판 - 런처 서비스워커
+   앱 화면은 항상 서버에서 새로 받아야 하므로 캐시하지 않는다.
+   여기서는 런처 껍데기와 아이콘만 캐시한다. */
 
-const CORE_ASSETS = [
-  "./",
-  "./index.html",
-  "./manifest.webmanifest",
-  "./favicon.ico",
-  "./apple-touch-icon.png",
-  "./icon-192.png",
-  "./icon-512.png",
-  "./icon-maskable-192.png",
-  "./icon-maskable-512.png"
+const CACHE = 'unionone-launcher-v3';
+const SHELL = [
+  './',
+  './index.html',
+  './manifest.webmanifest',
+  './icon-192.png',
+  './icon-512.png',
+  './icon-maskable-192.png',
+  './icon-maskable-512.png',
+  './apple-touch-icon.png'
 ];
 
-self.addEventListener("install", (event) => {
-  event.waitUntil(
-    caches.open(CACHE_NAME)
-      .then((cache) =>
-        Promise.all(
-          CORE_ASSETS.map((url) => cache.add(url).catch(() => null))
-        )
-      )
-      .then(() => self.skipWaiting())
+self.addEventListener('install', (e) => {
+  e.waitUntil(
+    caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())
   );
 });
 
-self.addEventListener("activate", (event) => {
-  event.waitUntil(
+self.addEventListener('activate', (e) => {
+  e.waitUntil(
     caches.keys()
-      .then((keys) =>
-        Promise.all(
-          keys
-            .filter((key) => key !== CACHE_NAME)
-            .map((key) => caches.delete(key))
-        )
-      )
+      .then((keys) => Promise.all(keys.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
       .then(() => self.clients.claim())
   );
 });
 
-self.addEventListener("fetch", (event) => {
-  const request = event.request;
-  if (request.method !== "GET") return;
+self.addEventListener('fetch', (e) => {
+  const url = new URL(e.request.url);
 
-  const url = new URL(request.url);
-
-  // Apps Script 등 외부 주소는 서비스워커가 건드리지 않는다.
+  // 구글 앱스스크립트 요청은 절대 가로채지 않는다
+  if (url.hostname.indexOf('google') >= 0) return;
+  if (e.request.method !== 'GET') return;
   if (url.origin !== self.location.origin) return;
 
-  // 런처 HTML은 항상 최신 네트워크 우선.
-  if (request.mode === "navigate" || url.pathname.endsWith("/index.html")) {
-    event.respondWith(
-      fetch(request, { cache: "no-store" })
-        .then((response) => {
-          if (response && response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        })
-        .catch(async () =>
-          (await caches.match(request, { ignoreSearch: true })) ||
-          (await caches.match("./index.html")) ||
-          new Response(
-            "오프라인 상태입니다.\n인터넷 연결 후 다시 시도해 주세요.",
-            {
-              status: 503,
-              headers: { "Content-Type": "text/plain; charset=utf-8" }
-            }
-          )
-        )
-    );
-    return;
-  }
-
-  // 아이콘/manifest 등 정적 파일은 캐시 우선 + 백그라운드 갱신.
-  event.respondWith(
-    caches.match(request).then((cached) => {
-      const network = fetch(request)
-        .then((response) => {
-          if (response && response.ok) {
-            const clone = response.clone();
-            caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          }
-          return response;
-        })
-        .catch(() => cached);
-
-      return cached || network;
-    })
+  e.respondWith(
+    fetch(e.request)
+      .then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE).then((c) => c.put(e.request, copy)).catch(() => {});
+        return res;
+      })
+      .catch(() => caches.match(e.request).then((r) => r || caches.match('./index.html')))
   );
 });
