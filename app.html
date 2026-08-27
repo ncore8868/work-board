@@ -1249,10 +1249,21 @@ function showLogin(){
    '<div class="veil"><div class="sheet">'+
    '<h3 class="tt">UNION ONE WORK BOARD</h3>'+
    '<div class="field"><label class="fl req">휴대폰 번호</label>'+
-   '<input type="tel" id="lgPhone" inputmode="numeric"></div>'+
+   '<input type="tel" id="lgPhone" inputmode="numeric" onkeydown="enterGo(event, stepPhone)"></div>'+
    '<div class="actions"><button class="btn pri" id="lgNextBtn" onclick="stepPhone()">다음</button></div>'+
-   '<p class="muted" id="lgMsg" style="margin-top:10px"></p></div></div>';
+   '<p class="muted" id="lgMsg" style="margin-top:10px"></p>'+
+   '<div id="lgSignup"></div></div></div>';
   setTimeout(function(){ var e=$('lgPhone'); if(e) e.focus(); }, 200);
+}
+
+/* 엔터를 누르면 다음 단계로 넘어간다.
+   한글 입력 중(조합 중)에 눌린 엔터는 무시한다. */
+function enterGo(ev, fn){
+  if(!ev) return;
+  if(ev.key !== 'Enter' && ev.keyCode !== 13) return;
+  if(ev.isComposing || ev.keyCode === 229) return;
+  ev.preventDefault();
+  try { fn(); } catch(e){}
 }
 
 function stepPhone(){
@@ -1261,7 +1272,17 @@ function stepPhone(){
   $('lgNextBtn').disabled=true; $('lgMsg').textContent='확인 중입니다...';
   call('api_checkPhone', v).then(function(r){
     $('lgNextBtn').disabled=false;
-    if(!r.ok){ $('lgMsg').textContent=r.msg; return; }
+    if(!r.ok){
+      $('lgMsg').textContent=r.msg;
+      var box=$('lgSignup');
+      if(box){
+        box.innerHTML = (r.code==='NOT_FOUND')
+          ? '<div class="actions" style="margin-top:6px">'+
+            '<button class="btn" onclick="showSignup(\''+v+'\')">처음이신가요? 사용 신청</button></div>'
+          : '';
+      }
+      return;
+    }
     showPinStep(v, r.name, r.hasPin);
   });
 }
@@ -1273,9 +1294,11 @@ function showPinStep(phone, name, hasPin){
    '<h3 class="tt">'+esc(name)+'님</h3>'+
    '<div class="field"><label class="fl req">'+(first?'새 PIN 4자리':'PIN')+'</label>'+
    '<input type="password" id="lgPin" maxlength="4" inputmode="numeric" '+
+     'onkeydown="enterGo(event, function(){ doLogin(\''+phone+'\','+(first?'true':'false')+'); })" '+
      'style="font-size:var(--fs-pin);letter-spacing:10px;text-align:center;padding:12px"></div>'+
    (first? '<div class="field"><label class="fl req">PIN 다시 입력</label>'+
      '<input type="password" id="lgPin2" maxlength="4" inputmode="numeric" '+
+     'onkeydown="enterGo(event, function(){ doLogin(\''+phone+'\',true); })" '+
      'style="font-size:var(--fs-pin);letter-spacing:10px;text-align:center;padding:12px"></div>' : '')+
    '<div class="actions"><button class="btn" onclick="showLogin()">뒤로</button>'+
    '<button class="btn pri" id="lgGo" onclick="doLogin(\''+phone+'\','+(first?'true':'false')+')">'+
@@ -1306,6 +1329,63 @@ function doLogin(phone, first){
       if(!b.ok) return;
       S.anim=true; applyBoard(b); saveSnap(); startPolling();
     });
+  });
+}
+
+/* ---- 사용 신청 (로그인 전) ----
+   신청으로 만들어지는 계정은 언제나 등급 1 이고 승인 전에는 로그인되지 않는다. */
+function showSignup(phone){
+  $('modal').innerHTML =
+   '<div class="veil"><div class="sheet">'+
+   '<div class="sheethead"><h3 class="tt">사용 신청</h3>'+
+   '<button class="btn sm" onclick="showLogin()">뒤로</button></div>'+
+   '<div class="field"><label class="fl req">휴대폰 번호</label>'+
+   '<input type="tel" id="suPhone" inputmode="numeric" value="'+esc(phone||'')+'"></div>'+
+   '<div class="field"><label class="fl req">이름</label>'+
+   '<input type="text" id="suName" onkeydown="enterGo(event, doSignup)"></div>'+
+   '<div class="field"><label class="fl req">쓰실 PIN 4자리</label>'+
+   '<input type="password" id="suPin" maxlength="4" inputmode="numeric" '+
+     'style="font-size:var(--fs-pin);letter-spacing:10px;text-align:center;padding:12px" '+
+     'onkeydown="enterGo(event, doSignup)"></div>'+
+   '<div class="field"><label class="fl req">PIN 다시 입력</label>'+
+   '<input type="password" id="suPin2" maxlength="4" inputmode="numeric" '+
+     'style="font-size:var(--fs-pin);letter-spacing:10px;text-align:center;padding:12px" '+
+     'onkeydown="enterGo(event, doSignup)"></div>'+
+   '<div class="actions"><button class="btn" onclick="showLogin()">취소</button>'+
+   '<button class="btn pri" id="suGo" onclick="doSignup()">신청하기</button></div>'+
+   '<p class="muted" id="suMsg" style="margin-top:10px">'+
+     '신청 후 관리자가 승인해야 이용할 수 있습니다.</p></div></div>';
+  setTimeout(function(){ var e=$('suName'); if(e) e.focus(); }, 200);
+}
+
+function doSignup(){
+  var phone=$('suPhone').value.replace(/[^0-9]/g,'');
+  var name=$('suName').value.trim();
+  var pin=$('suPin').value.replace(/[^0-9]/g,'');
+  var pin2=$('suPin2').value.replace(/[^0-9]/g,'');
+  var msg=$('suMsg'), btn=$('suGo');
+
+  if(phone.length<10){ msg.textContent='번호를 정확히 입력해주세요.'; return; }
+  if(name.length<2){ msg.textContent='이름을 입력해주세요.'; return; }
+  if(pin.length!==4){ msg.textContent='PIN 4자리를 입력해주세요.'; return; }
+  if(pin!==pin2){ msg.textContent='두 번 입력한 PIN이 다릅니다.'; return; }
+  if(/^(\d)\1{3}$/.test(pin) || pin==='1234' || pin==='0000'){
+    msg.textContent='너무 쉬운 번호입니다. 다른 번호로 정해주세요.'; return;
+  }
+
+  if(btn.disabled) return;
+  btn.disabled=true; msg.textContent='신청 중입니다...';
+  call('api_signup', phone, name, pin).then(function(r){
+    btn.disabled=false;
+    if(!r.ok){ msg.textContent=r.msg; return; }
+    $('modal').innerHTML =
+      '<div class="veil"><div class="sheet">'+
+      '<h3 class="tt">신청이 접수되었습니다</h3>'+
+      '<p class="muted" style="margin:10px 0 0;line-height:1.6">'+
+        '관리자가 승인하면 바로 이용하실 수 있습니다.<br>'+
+        '승인 후 이 번호와 방금 정한 PIN으로 로그인해주세요.</p>'+
+      '<div class="actions" style="margin-top:14px">'+
+      '<button class="btn pri" onclick="showLogin()">확인</button></div></div></div>';
   });
 }
 
@@ -4160,15 +4240,37 @@ function paintAdmin(r){
         '<button class="btn" onclick="refreshMeta()">기준정보 새로고침</button>'+
       '</div>'+
       '<p class="muted" id="syncMsg" style="font-size:var(--fs-sm);margin:0 0 8px"></p>'+
-      '<h4 class="sech">직원 '+r.staff.length+'명</h4>';
+      '';
     S.staffCache=r.staff;
-    r.staff.forEach(function(s){
+
+    /* 승인 대기 — 있을 때만 맨 위에 보인다 */
+    var 대기 = r.staff.filter(function(s){ return s.state==='승인대기'; });
+    if(대기.length){
+      h+='<h4 class="sech">승인 대기 '+대기.length+'명</h4>';
+      대기.forEach(function(s){
+        h+='<div class="lrow plain">'+
+           '<div class="m"><p class="t">'+esc(s.name)+
+           ' <span class="tag wn">대기</span></p>'+
+           '<p class="b">'+esc(s.phone)+'</p></div>'+
+           '<div class="r">'+
+           '<button class="btn sm pri" onclick="approveStaff(\''+s.phone+'\',\''+esc(s.name)+'\')">승인</button> '+
+           '<button class="btn sm" onclick="rejectStaff(\''+s.phone+'\',\''+esc(s.name)+'\')">거절</button>'+
+           '</div></div>';
+      });
+    }
+
+    var 정직원 = r.staff.filter(function(s){ return s.state!=='승인대기'; });
+    h+='<h4 class="sech">직원 '+정직원.length+'명</h4>';
+    정직원.forEach(function(s){
+      var 퇴사 = (s.state==='퇴사');
       h+='<div class="lrow plain">'+
          '<div class="m"><p class="t">'+esc(s.name)+' '+esc(s.rank)+
+         (퇴사? ' <span class="tag">퇴사</span>':'')+
          (s.deputyName? ' <span class="tag wn">대리 '+esc(s.deputyName)+'</span>':'')+'</p>'+
          '<p class="b">'+esc(s.phone)+' · 등급 '+s.grade+
          ' · PIN '+(s.hasPin?'설정됨':'미설정')+'</p></div>'+
          '<div class="r">'+
+         '<button class="btn sm" onclick="openGrade(\''+s.phone+'\')">등급</button> '+
          '<button class="btn sm" onclick="openDeputy(\''+s.phone+'\')">대리인</button> '+
          (s.hasPin?'<button class="btn sm" onclick="resetPin(\''+s.phone+'\',\''+esc(s.name)+'\')">초기화</button>':'')+
          '</div></div>';
@@ -4176,6 +4278,78 @@ function paintAdmin(r){
     
     $('adminBox').innerHTML=h;
 }
+/* ---- 사용 신청 승인 (관리자만) ---- */
+function approveStaff(phone, name){
+  if(!confirm(name+'님을 승인할까요?\n승인하면 바로 이용할 수 있습니다.')) return;
+  call('api_approve', S.token, phone).then(function(r){
+    if(!r.ok){ toast(r.msg); return; }
+    toast(r.msg);
+    S.setCache=null; renderSettings();
+  });
+}
+
+function rejectStaff(phone, name){
+  if(!confirm(name+'님의 신청을 거절할까요?\n명단에서 지워집니다.')) return;
+  call('api_reject', S.token, phone).then(function(r){
+    if(!r.ok){ toast(r.msg); return; }
+    toast(r.msg);
+    S.setCache=null; renderSettings();
+  });
+}
+
+/* ---- 등급 변경 · 퇴사 처리 (관리자만) ---- */
+function openGrade(phone){
+  var list=S.staffCache||[];
+  var t=null; list.forEach(function(s){ if(s.phone===phone) t=s; });
+  if(!t) return;
+
+  var 등급표 = [
+    [1,'1  일반'],
+    [5,'5  중간관리'],
+    [9,'9  관리자']
+  ];
+
+  $('modal').innerHTML='<div class="veil"><div class="sheet">'+
+    '<div class="sheethead"><h3 class="tt">'+esc(t.name)+'</h3>'+
+    '<button class="btn sm" onclick="closeModal()">닫기</button></div>'+
+    '<div class="field"><label class="fl">권한 등급</label><select id="grSel">'+
+      등급표.map(function(g){
+        return '<option value="'+g[0]+'"'+(Number(t.grade)===g[0]?' selected':'')+'>'+g[1]+'</option>';
+      }).join('')+
+    '</select></div>'+
+    '<p class="muted" style="margin:0 0 12px;font-size:var(--fs-sm);line-height:1.6">'+
+      '등급 9 는 설정 화면과 직원 관리를 볼 수 있습니다.<br>'+
+      '관리자가 한 명도 남지 않는 변경은 막혀 있습니다.</p>'+
+    '<div class="actions">'+
+      '<button class="btn" onclick="toggleLeft(\''+phone+'\',\''+esc(t.name)+'\','+(t.state==='퇴사'?'false':'true')+')">'+
+        (t.state==='퇴사'?'복직 처리':'퇴사 처리')+'</button>'+
+      '<button class="btn pri" id="grSave" onclick="saveGrade(\''+phone+'\')">저장</button></div>'+
+    '<p class="muted" id="grMsg" style="margin-top:8px"></p></div></div>';
+}
+
+function saveGrade(phone){
+  var btn=$('grSave'), msg=$('grMsg');
+  if(btn.disabled) return;
+  btn.disabled=true; msg.textContent='저장 중입니다...';
+  call('api_setGrade', S.token, phone, $('grSel').value).then(function(r){
+    btn.disabled=false;
+    if(!r.ok){ msg.textContent=r.msg; return; }
+    closeOk(); toast(r.msg);
+    S.setCache=null; renderSettings();
+  });
+}
+
+function toggleLeft(phone, name, leave){
+  var 말 = leave ? '퇴사 처리할까요?\n로그인이 막히고 기기 등록이 지워집니다.'
+                 : '복직 처리할까요?';
+  if(!confirm(name+'님을 '+말)) return;
+  call('api_setLeft', S.token, phone, leave).then(function(r){
+    if(!r.ok){ toast(r.msg); return; }
+    closeOk(); toast(r.msg);
+    S.setCache=null; renderSettings();
+  });
+}
+
 /* ---- 대리인 지정 (관리자만) ---- */
 function openDeputy(phone){
   var list=S.staffCache||[];
