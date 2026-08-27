@@ -3,7 +3,6 @@
 <head>
 <base target="_top">
 <meta charset="utf-8">
-<!-- UNION ONE WORK BOARD — 앱 화면 (깃허브에서 띄웁니다) -->
 <title>UNION ONE WORK BOARD</title>
 <style>
 /* ===================== 색·글꼴 토큰 ===================== */
@@ -994,8 +993,6 @@ function call(fn){
     var tt = (r && r.t) ? r.t : (r && r.board && r.board.t ? r.board.t : null);
     if(tt){ S.lastT=tt; S.lastTFn=fn; printT(fn, tt, ms); }
 
-    /* 서버가 거절한 경우도 그대로 돌려준다.
-       화면 쪽에서 ok 를 보고 판단한다. 여기서 자동 재시도는 하지 않는다. */
     return r;
   })
   .catch(function(e){
@@ -1353,8 +1350,9 @@ function showSignup(phone){
      'onkeydown="enterGo(event, doSignup)"></div>'+
    '<div class="actions"><button class="btn" onclick="showLogin()">취소</button>'+
    '<button class="btn pri" id="suGo" onclick="doSignup()">신청하기</button></div>'+
-   '<p class="muted" id="suMsg" style="margin-top:10px">'+
-     '신청 후 관리자가 승인해야 이용할 수 있습니다.</p></div></div>';
+   '<p class="muted" id="suMsg" style="margin-top:10px;line-height:1.6">'+
+     '신청 후 관리자가 승인해야 이용할 수 있습니다.<br>'+
+     '여기서 정한 PIN으로 현장견적 앱도 함께 쓰실 수 있습니다.</p></div></div>';
   setTimeout(function(){ var e=$('suName'); if(e) e.focus(); }, 200);
 }
 
@@ -4249,8 +4247,7 @@ function paintAdmin(r){
       h+='<h4 class="sech">승인 대기 '+대기.length+'명</h4>';
       대기.forEach(function(s){
         h+='<div class="lrow plain">'+
-           '<div class="m"><p class="t">'+esc(s.name)+
-           ' <span class="tag wn">대기</span></p>'+
+           '<div class="m"><p class="t">'+esc(s.name)+' <span class="tag wn">대기</span></p>'+
            '<p class="b">'+esc(s.phone)+'</p></div>'+
            '<div class="r">'+
            '<button class="btn sm pri" onclick="approveStaff(\''+s.phone+'\',\''+esc(s.name)+'\')">승인</button> '+
@@ -4267,7 +4264,7 @@ function paintAdmin(r){
          '<div class="m"><p class="t">'+esc(s.name)+' '+esc(s.rank)+
          (퇴사? ' <span class="tag">퇴사</span>':'')+
          (s.deputyName? ' <span class="tag wn">대리 '+esc(s.deputyName)+'</span>':'')+'</p>'+
-         '<p class="b">'+esc(s.phone)+' · 등급 '+s.grade+
+         '<p class="b">'+esc(s.phone)+' · '+gradeName(s.grade)+
          ' · PIN '+(s.hasPin?'설정됨':'미설정')+'</p></div>'+
          '<div class="r">'+
          '<button class="btn sm" onclick="openGrade(\''+s.phone+'\')">등급</button> '+
@@ -4278,9 +4275,20 @@ function paintAdmin(r){
     
     $('adminBox').innerHTML=h;
 }
+/* ---- 권한 등급 ----
+   현장견적 앱도 이 등급을 그대로 씁니다.
+   1 현장 · 2 사무실 · 3 임원 · 9 관리자 */
+var GRADES = [[1,'현장'],[2,'사무실'],[3,'임원'],[9,'관리자']];
+
+function gradeName(g){
+  var n = Number(g||1), out = '등급 '+n;
+  GRADES.forEach(function(x){ if(x[0]===n) out = n+' '+x[1]; });
+  return out;
+}
+
 /* ---- 사용 신청 승인 (관리자만) ---- */
 function approveStaff(phone, name){
-  if(!confirm(name+'님을 승인할까요?\n승인하면 바로 이용할 수 있습니다.')) return;
+  if(!confirm(name+'님을 승인할까요?\n승인하면 워크보드와 현장견적을 바로 쓸 수 있습니다.')) return;
   call('api_approve', S.token, phone).then(function(r){
     if(!r.ok){ toast(r.msg); return; }
     toast(r.msg);
@@ -4303,22 +4311,19 @@ function openGrade(phone){
   var t=null; list.forEach(function(s){ if(s.phone===phone) t=s; });
   if(!t) return;
 
-  var 등급표 = [
-    [1,'1  일반'],
-    [5,'5  중간관리'],
-    [9,'9  관리자']
-  ];
-
   $('modal').innerHTML='<div class="veil"><div class="sheet">'+
     '<div class="sheethead"><h3 class="tt">'+esc(t.name)+'</h3>'+
     '<button class="btn sm" onclick="closeModal()">닫기</button></div>'+
     '<div class="field"><label class="fl">권한 등급</label><select id="grSel">'+
-      등급표.map(function(g){
-        return '<option value="'+g[0]+'"'+(Number(t.grade)===g[0]?' selected':'')+'>'+g[1]+'</option>';
+      GRADES.map(function(g){
+        return '<option value="'+g[0]+'"'+(Number(t.grade)===g[0]?' selected':'')+'>'+
+               g[0]+'  '+g[1]+'</option>';
       }).join('')+
     '</select></div>'+
     '<p class="muted" style="margin:0 0 12px;font-size:var(--fs-sm);line-height:1.6">'+
-      '등급 9 는 설정 화면과 직원 관리를 볼 수 있습니다.<br>'+
+      '현장견적 앱도 이 등급을 그대로 씁니다.<br>'+
+      '1 현장은 현장반장 화면, 2·3은 사무실 화면입니다.<br>'+
+      '9 관리자만 설정과 직원 관리를 볼 수 있습니다.<br>'+
       '관리자가 한 명도 남지 않는 변경은 막혀 있습니다.</p>'+
     '<div class="actions">'+
       '<button class="btn" onclick="toggleLeft(\''+phone+'\',\''+esc(t.name)+'\','+(t.state==='퇴사'?'false':'true')+')">'+
