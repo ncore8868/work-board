@@ -1,11 +1,18 @@
-/* UNION ONE 진행판 - 런처 서비스워커
-   앱 화면은 항상 서버에서 새로 받아야 하므로 캐시하지 않는다.
-   여기서는 런처 껍데기와 아이콘만 캐시한다. */
+/* UNION ONE WORK BOARD - 런처 서비스워커
+ *
+ * 2026-08 부터 앱 화면(app.html)도 이 저장소에 있습니다.
+ * 앱 화면은 항상 서버에서 먼저 받아보고, 실패했을 때만 캐시를 씁니다.
+ * 그래야 새로 올린 화면이 바로 반영됩니다.
+ *
+ * ★ 화면을 고쳐서 올릴 때마다 아래 CACHE 뒤의 숫자를 하나 올리세요.
+ *   올리지 않으면 직원들 폰에 옛 화면이 계속 남습니다.
+ */
+const CACHE = 'unionone-launcher-v4';
 
-const CACHE = 'unionone-launcher-v3';
 const SHELL = [
   './',
   './index.html',
+  './app.html',
   './manifest.webmanifest',
   './icon-192.png',
   './icon-512.png',
@@ -16,7 +23,10 @@ const SHELL = [
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
-    caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting())
+    caches.open(CACHE)
+      // 아이콘 하나가 없어도 설치가 통째로 실패하지 않게 한다
+      .then((c) => Promise.all(SHELL.map((u) => c.add(u).catch(() => {}))))
+      .then(() => self.skipWaiting())
   );
 });
 

@@ -58,9 +58,15 @@
 
 <script>
 /* ------------------------------------------------------------------
- *  앱 주소 — 앱스스크립트를 새로 배포해서 주소가 바뀌면 이 줄만 고치세요
+ *  앱 화면 주소
+ *
+ *  2026-08 부터 앱 화면은 구글이 아니라 이 저장소가 띄웁니다.
+ *  구글 도메인에서 로그인 화면을 띄우지 않는 것이 목적입니다.
+ *
+ *  앱스스크립트 주소는 여기가 아니라 app.html 안의 API_URL 에 있습니다.
+ *  새로 배포해서 주소가 바뀌면 app.html 을 고치세요.
  * ---------------------------------------------------------------- */
-var APP_URL = 'https://script.google.com/macros/s/AKfycbxcTm_Y7WEcBdG0166KHmSwDNlyD7HnA1QPSwO0GDH29w3_a0DJlKiptnVPUuam7_M/exec';
+var APP_URL = './app.html';
 
 /* 기기 식별값
    앱이 아니라 이 런처가 들고 있습니다.
@@ -84,7 +90,7 @@ var retry = document.getElementById('retry');
 
 /* 주소 끝에 매번 다른 숫자를 붙인다.
    이게 없으면 브라우저가 예전에 받아둔 앱 화면을 계속 꺼내 써서,
-   새로 배포해도 옛 화면이 뜬다. (2026-08 실제로 겪음) */
+   새로 올려도 옛 화면이 뜬다. (2026-08 실제로 겪음) */
 frame.src = APP_URL + '?dt=' + encodeURIComponent(token) + '&v=' + Date.now();
 
 var done = false;
