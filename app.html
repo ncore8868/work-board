@@ -9,7 +9,6 @@
 /* 층: 바탕(--bg) < 카드(--card) 는 밝게 뜨고, 입력칸(--field) 은 카드보다 파인다.
    글자: 값(--t1) > 본문(--t2) > 라벨(--t3). 라벨이 값보다 튀면 안 된다. */
 :root{
-  color-scheme:light;
   --bg:#EDEBE7; --card:#FFFFFF; --field:#F4F2EE;
   --panel:#E5E2DD; --panel2:#D8D3CD;
   --line:#DFDAD3; --line2:#C4BCB4;
@@ -36,7 +35,6 @@
   --r:var(--r-md); --r2:var(--r-lg);   /* 옛 이름 (쓰던 곳이 많아 남겨둔다) */
 }
 html[data-theme="dark"]{
-  color-scheme:dark;
   --bg:#0D0D10; --card:#1B1B21; --field:#131317;
   --panel:#212128; --panel2:#2C2C34;
   --line:#2C2C34; --line2:#3D3D47;
@@ -56,6 +54,42 @@ body{
 h1,h2,h3,.tt,.num{font-family:"A2Z","A2Z Fallback",inherit; font-weight:700; letter-spacing:-0.01em}
 button,input,select,textarea{font-family:inherit;font-size:var(--fs-body);color:var(--t1)}
 a{color:inherit}
+
+/* ===================== 휴가 달력 ===================== */
+.cal{width:100%}
+.calhd{display:flex;align-items:center;justify-content:center;gap:var(--sp-4);
+  margin:0 0 var(--sp-3)}
+.calhd .m{font-size:var(--fs-h2);font-weight:700;min-width:104px;text-align:center;
+  font-variant-numeric:tabular-nums}
+.calhd button{min-width:34px}
+
+.calgrid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px}
+.calgrid .dow{text-align:center;font-size:var(--fs-sm);color:var(--t3);
+  padding:var(--sp-1) 0 var(--sp-2)}
+.calgrid .dow.sun{color:var(--dg)}
+.calgrid .dow.sat{color:var(--t2)}
+
+.calcell{min-height:62px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:var(--card);padding:3px 4px;cursor:pointer;overflow:hidden}
+.calcell.off{background:var(--bg);border-color:transparent;cursor:default}
+.calcell.today{border-color:var(--accent)}
+.calcell.pick{background:var(--panel);border-color:var(--line2)}
+.calcell .d{font-size:var(--fs-sm);color:var(--t2);font-variant-numeric:tabular-nums}
+.calcell.sun .d{color:var(--dg)}
+.calcell .chip{display:block;font-size:var(--fs-xs);line-height:1.5;
+  border-radius:3px;padding:0 3px;margin-top:2px;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  background:var(--wn-bg);color:var(--wn);border:1px solid var(--wn-line)}
+.calcell .chip.half{background:var(--panel);color:var(--t2);border-color:var(--line2)}
+.calcell .more{font-size:var(--fs-xs);color:var(--t3);margin-top:1px}
+
+.calday{margin-top:var(--sp-4);border-top:1px solid var(--line);padding-top:var(--sp-3)}
+.calday h4{margin:0 0 var(--sp-2);font-size:var(--fs-h2)}
+.calday .lrow{padding:var(--sp-2) 0}
+
+@media (max-width:640px){
+  .calcell{min-height:50px}
+}
 
 /* ===================== 공통 부품 ===================== */
 .btn{border:1px solid var(--line2);background:var(--field);border-radius:var(--r);
@@ -537,13 +571,6 @@ html[data-theme="light"] .slrow .tagk.pay{background:#E7F6EE;color:#127A4B}
 .none{margin:0;padding:var(--sp-2) var(--sp-1);font-size:var(--fs-sm);color:var(--t3)}
 .none.big{padding:var(--sp-6) var(--sp-1);text-align:center}
 
-@media (max-width:719px){
-  .top{padding-top:calc(9px + env(safe-area-inset-top));}
-  .navtabs button,.icobtn,.count button{min-height:44px;}
-  .count button{width:44px;height:44px;}
-  .card,.sumbox,.sheet,.prog,.settle{border-radius:var(--r2);}
-}
-
 /* 의미를 가진 색은 둘뿐 — 빨강(지금 손댈 것) · 노랑(곧 문제) */
 .dgv{color:var(--dg)}
 .wnv{color:var(--wn)}
@@ -559,7 +586,7 @@ html[data-theme="light"] .slrow .tagk.pay{background:#E7F6EE;color:#127A4B}
 <!-- ================= 상단바 ================= -->
 <div class="top"><div class="topin">
   <button class="brand" onclick="go('board')" title="워크보드로">
-    <span class="dot"></span><b class="tt" id="brandName">UNION-ONE</b></button>
+    <span class="dot"></span><b class="tt" id="brandName">UNION ONE</b></button>
 
   <nav class="navtabs deskmenu" aria-label="화면 이동">
     <button data-view="board" onclick="go('board')">워크보드</button>
@@ -570,6 +597,7 @@ html[data-theme="light"] .slrow .tagk.pay{background:#E7F6EE;color:#127A4B}
   <div class="spacer"></div>
   <span class="clock" id="atTime"></span>
   <button class="icobtn" id="refBtn" onclick="refresh(true)" title="새로고침">⟳</button>
+  <button class="icobtn" onclick="openLeave()" title="휴가 달력">📅</button>
   <button class="icobtn" onclick="openNoti()" title="알림">🔔<span class="badge hide" id="notiBadge">0</span></button>
   <button class="icobtn" onclick="go('settings')" title="설정">⚙</button>
 </div></div>
@@ -635,17 +663,15 @@ html[data-theme="light"] .slrow .tagk.pay{background:#E7F6EE;color:#127A4B}
       <button class="btn" onclick="openPinChange()">PIN 변경</button>
       <button class="btn" onclick="logout()">이 기기에서 로그아웃</button>
     </div>
-    <div id="developerInfo" class="hide">
-      <div class="field" style="margin-top:20px">
-        <label class="fl">속도</label>
-        <div class="sumbox" id="perfBox"></div>
-        <div class="actions" style="margin-top:8px">
-          <button class="btn sm" onclick="paintPerf()">다시 재기</button>
-          <button class="btn sm" onclick="PERF=[];paintPerf()">지우기</button>
-        </div>
+    <div class="field" style="margin-top:20px">
+      <label class="fl">속도</label>
+      <div class="sumbox" id="perfBox"></div>
+      <div class="actions" style="margin-top:8px">
+        <button class="btn sm" onclick="paintPerf()">다시 재기</button>
+        <button class="btn sm" onclick="PERF=[];paintPerf()">지우기</button>
       </div>
-      <p class="muted" style="margin-top:18px;font-size:var(--fs-sm)" id="verText"></p>
     </div>
+    <p class="muted" style="margin-top:18px;font-size:var(--fs-sm)" id="verText"></p>
   </div>
 </div>
 
@@ -1220,7 +1246,7 @@ function boot(){
   if(snap){
     S.meta=snap.meta; S.me=snap.me; S.corp=snap.corp||'ALL'; S.data=snap.data;
     takeDocPack(S.data);          // 지난번에 받아둔 문서 상세도 되살린다
-    $('brandName').textContent='UNION-ONE';
+    $('brandName').textContent=(S.meta.company||'UNION ONE').replace('(주)','').trim()||'UNION ONE';
     loadFont(S.meta.fontTitle, S.meta.fontNum);
     renderFilters();
     S.anim=true;
@@ -1238,7 +1264,7 @@ function boot(){
   call('api_start', S.token, S.corp).then(function(r){
     if(r.meta){
       S.meta=r.meta;
-      $('brandName').textContent='UNION-ONE';
+      $('brandName').textContent=(r.meta.company||'UNION ONE').replace('(주)','').trim()||'UNION ONE';
       loadFont(r.meta.fontTitle, r.meta.fontNum);
     }
     hideBooting();
@@ -1337,64 +1363,6 @@ function doLogin(phone, first){
       if(!b.ok) return;
       S.anim=true; applyBoard(b); saveSnap(); startPolling();
     });
-  });
-}
-
-/* ---- 사용 신청 (로그인 전) ----
-   신청으로 만들어지는 계정은 언제나 등급 1 이고 승인 전에는 로그인되지 않는다. */
-function showSignup(phone){
-  $('modal').innerHTML =
-   '<div class="veil"><div class="sheet">'+
-   '<div class="sheethead"><h3 class="tt">사용 신청</h3>'+
-   '<button class="btn sm" onclick="showLogin()">뒤로</button></div>'+
-   '<div class="field"><label class="fl req">휴대폰 번호</label>'+
-   '<input type="tel" id="suPhone" inputmode="numeric" value="'+esc(phone||'')+'"></div>'+
-   '<div class="field"><label class="fl req">이름</label>'+
-   '<input type="text" id="suName" onkeydown="enterGo(event, doSignup)"></div>'+
-   '<div class="field"><label class="fl req">쓰실 PIN 4자리</label>'+
-   '<input type="password" id="suPin" maxlength="4" inputmode="numeric" '+
-     'style="font-size:var(--fs-pin);letter-spacing:10px;text-align:center;padding:12px" '+
-     'onkeydown="enterGo(event, doSignup)"></div>'+
-   '<div class="field"><label class="fl req">PIN 다시 입력</label>'+
-   '<input type="password" id="suPin2" maxlength="4" inputmode="numeric" '+
-     'style="font-size:var(--fs-pin);letter-spacing:10px;text-align:center;padding:12px" '+
-     'onkeydown="enterGo(event, doSignup)"></div>'+
-   '<div class="actions"><button class="btn" onclick="showLogin()">취소</button>'+
-   '<button class="btn pri" id="suGo" onclick="doSignup()">신청하기</button></div>'+
-   '<p class="muted" id="suMsg" style="margin-top:10px;line-height:1.6">'+
-     '신청 후 관리자가 승인해야 이용할 수 있습니다.<br>'+
-     '여기서 정한 PIN으로 현장견적 앱도 함께 쓰실 수 있습니다.</p></div></div>';
-  setTimeout(function(){ var e=$('suName'); if(e) e.focus(); }, 200);
-}
-
-function doSignup(){
-  var phone=$('suPhone').value.replace(/[^0-9]/g,'');
-  var name=$('suName').value.trim();
-  var pin=$('suPin').value.replace(/[^0-9]/g,'');
-  var pin2=$('suPin2').value.replace(/[^0-9]/g,'');
-  var msg=$('suMsg'), btn=$('suGo');
-
-  if(phone.length<10){ msg.textContent='번호를 정확히 입력해주세요.'; return; }
-  if(name.length<2){ msg.textContent='이름을 입력해주세요.'; return; }
-  if(pin.length!==4){ msg.textContent='PIN 4자리를 입력해주세요.'; return; }
-  if(pin!==pin2){ msg.textContent='두 번 입력한 PIN이 다릅니다.'; return; }
-  if(/^(\d)\1{3}$/.test(pin) || pin==='1234' || pin==='0000'){
-    msg.textContent='너무 쉬운 번호입니다. 다른 번호로 정해주세요.'; return;
-  }
-
-  if(btn.disabled) return;
-  btn.disabled=true; msg.textContent='신청 중입니다...';
-  call('api_signup', phone, name, pin).then(function(r){
-    btn.disabled=false;
-    if(!r.ok){ msg.textContent=r.msg; return; }
-    $('modal').innerHTML =
-      '<div class="veil"><div class="sheet">'+
-      '<h3 class="tt">신청이 접수되었습니다</h3>'+
-      '<p class="muted" style="margin:10px 0 0;line-height:1.6">'+
-        '관리자가 승인하면 바로 이용하실 수 있습니다.<br>'+
-        '승인 후 이 번호와 방금 정한 PIN으로 로그인해주세요.</p>'+
-      '<div class="actions" style="margin-top:14px">'+
-      '<button class="btn pri" onclick="showLogin()">확인</button></div></div></div>';
   });
 }
 
@@ -3012,6 +2980,121 @@ function shrinkReceipt(file){
   });
 }
 
+/* ===================== 휴가 달력 (탭이 아니라 모달) =====================
+   자료는 board 가 이미 실어 보냈다 (S.data.leaves). 열 때 서버에 가지 않는다.
+   휴가 신청서가 최종 승인되면 서버가 '휴가' 시트에 한 줄 남긴다 — 여기서 입력하지 않는다.
+========================================================================= */
+
+var CAL = { ym:'', pick:'' };
+
+function openLeave(){
+  var t = todayStr();
+  CAL.ym = t.substring(0,7);
+  CAL.pick = '';
+  drawLeave();
+}
+
+function calMove(n){
+  var y = Number(CAL.ym.substring(0,4));
+  var m = Number(CAL.ym.substring(5,7)) + n;
+  while(m < 1){ m += 12; y -= 1; }
+  while(m > 12){ m -= 12; y += 1; }
+  CAL.ym = y + '-' + p2(m);
+  CAL.pick = '';
+  drawLeave();
+}
+
+function calPick(d){
+  CAL.pick = (CAL.pick === d) ? '' : d;
+  drawLeave();
+}
+
+/** 그 날짜에 쉬는 사람들 */
+function leavesOn(dateStr){
+  return ((S.data && S.data.leaves) || []).filter(function(v){
+    return v.from <= dateStr && dateStr <= v.to;
+  });
+}
+
+function drawLeave(){
+  var y = Number(CAL.ym.substring(0,4));
+  var m = Number(CAL.ym.substring(5,7));
+  var td = todayStr();
+
+  var first = new Date(y, m-1, 1);
+  var startDow = first.getDay();                 // 0 일요일
+  var lastDate = new Date(y, m, 0).getDate();
+
+  var dows = ['일','월','화','수','목','금','토'];
+  var cells = dows.map(function(d,i){
+    var c = (i===0?' sun':(i===6?' sat':''));
+    return '<div class="dow'+c+'">'+d+'</div>';
+  });
+
+  var i;
+  for(i=0; i<startDow; i++) cells.push('<div class="calcell off"></div>');
+
+  var monthCount = 0;
+  for(i=1; i<=lastDate; i++){
+    var ds = y + '-' + p2(m) + '-' + p2(i);
+    var list = leavesOn(ds);
+    monthCount += list.length;
+
+    var cls = 'calcell';
+    if(((startDow + i - 1) % 7) === 0) cls += ' sun';
+    if(ds === td) cls += ' today';
+    if(ds === CAL.pick) cls += ' pick';
+
+    var chips = list.slice(0,2).map(function(v){
+      var half = (Number(v.days) < 1);
+      return '<span class="chip'+(half?' half':'')+'">'+esc(v.name)+
+             (half?' 반차':'')+'</span>';
+    }).join('');
+    if(list.length > 2) chips += '<span class="more">+'+(list.length-2)+'</span>';
+
+    cells.push('<div class="'+cls+'" onclick="calPick(\''+ds+'\')">'+
+      '<span class="d">'+i+'</span>'+chips+'</div>');
+  }
+
+  var dayBox = '';
+  if(CAL.pick){
+    var picked = leavesOn(CAL.pick);
+    dayBox = '<div class="calday"><h4>'+esc(dateLabelK(CAL.pick))+'</h4>' +
+      (picked.length
+        ? picked.map(function(v){
+            return '<div class="lrow plain"><div class="m">'+
+              '<p class="t">'+esc(v.name)+' <span class="tag wn">'+esc(v.kind||'휴가')+'</span></p>'+
+              '<p class="b">'+esc(v.from)+(v.to!==v.from?(' ~ '+esc(v.to)):'')+
+              ' · '+esc(String(v.days))+'일</p></div></div>';
+          }).join('')
+        : '<p class="muted">쉬는 사람이 없습니다.</p>') +
+      '</div>';
+  }
+
+  $('modal').innerHTML='<div class="veil"><div class="sheet">'+
+    '<div class="sheethead"><h3 class="tt">휴가</h3>'+
+    '<button class="btn sm" onclick="closeModal()">닫기</button></div>'+
+    '<div class="cal">'+
+      '<div class="calhd">'+
+        '<button class="btn sm" onclick="calMove(-1)">◀</button>'+
+        '<span class="m">'+y+'년 '+m+'월</span>'+
+        '<button class="btn sm" onclick="calMove(1)">▶</button>'+
+      '</div>'+
+      '<div class="calgrid">'+cells.join('')+'</div>'+
+      '<p class="muted" style="margin:var(--sp-3) 0 0;font-size:var(--fs-sm)">'+
+        (monthCount ? ('이 달 휴가 '+monthCount+'건 · 날짜를 누르면 자세히 보입니다')
+                    : '이 달에 등록된 휴가가 없습니다') + '</p>'+
+      dayBox+
+    '</div></div></div>';
+}
+
+/** 2026-08-28 → 8월 28일 (금) */
+function dateLabelK(ds){
+  var y=Number(ds.substring(0,4)), m=Number(ds.substring(5,7)), d=Number(ds.substring(8,10));
+  var w=['일','월','화','수','목','금','토'][new Date(y,m-1,d).getDay()];
+  return m+'월 '+d+'일 ('+w+')';
+}
+
 /* ===================== 게시판 (탭이 아니라 모달) ===================== */
 
 function nowHM(){ var d=new Date(); return p2(d.getHours())+':'+p2(d.getMinutes()); }
@@ -4118,7 +4201,9 @@ function renderMe(){
   var h='<div class="sumbox" style="margin-bottom:14px">'+
     '<p><b>'+esc(S.me.name)+'</b> '+esc(S.me.rank)+(S.me.dept?' · '+esc(S.me.dept):'')+'</p>'+
     '<p class="sub">오늘 '+(att&&att.state==='출근'? ('출근 '+att.time) : '출근 기록 없음')+'</p>'+
-    '<p class="sub">진행중 '+run.length+'건 · 대기 '+wait.length+'건</p></div>'+
+    '<p class="sub">진행중 '+run.length+'건 · 대기 '+wait.length+'건</p>'+
+    '<p class="muted" style="font-size:var(--fs-sm);margin:4px 0 0">서버 코드 '+
+      ((S.meta && S.meta.code) ? esc(S.meta.code) : '(옛 버전 — 배포 안 됨)')+'</p></div>'+
     '<div class="actions" style="margin-bottom:16px">'+
       '<button class="btn" onclick="openLogForm()">기록 남기기</button>'+
       '<button class="btn pri" onclick="openTaskForm()">＋ 새 업무</button></div>';
@@ -4175,8 +4260,6 @@ function paintSettings(r){
     if(r.me) S.me=r.me;
 
     var me=S.me||{};
-  var isAdmin=Number(me.grade)===9;
-  $('developerInfo').classList.toggle('hide', !isAdmin);
     $('meInfo').innerHTML='<p><b>'+esc(me.name||'(이름 없음)')+'</b> '+esc(me.rank||'')+
       (me.dept?' · '+esc(me.dept):'')+'</p>'+
       '<p class="sub">'+esc(me.phone||'')+'</p>'+
@@ -4249,36 +4332,15 @@ function paintAdmin(r){
         '<button class="btn" onclick="refreshMeta()">기준정보 새로고침</button>'+
       '</div>'+
       '<p class="muted" id="syncMsg" style="font-size:var(--fs-sm);margin:0 0 8px"></p>'+
-      '';
+      '<h4 class="sech">직원 '+r.staff.length+'명</h4>';
     S.staffCache=r.staff;
-
-    /* 승인 대기 — 있을 때만 맨 위에 보인다 */
-    var 대기 = r.staff.filter(function(s){ return s.state==='승인대기'; });
-    if(대기.length){
-      h+='<h4 class="sech">승인 대기 '+대기.length+'명</h4>';
-      대기.forEach(function(s){
-        h+='<div class="lrow plain">'+
-           '<div class="m"><p class="t">'+esc(s.name)+' <span class="tag wn">대기</span></p>'+
-           '<p class="b">'+esc(s.phone)+'</p></div>'+
-           '<div class="r">'+
-           '<button class="btn sm pri" onclick="approveStaff(\''+s.phone+'\',\''+esc(s.name)+'\')">승인</button> '+
-           '<button class="btn sm" onclick="rejectStaff(\''+s.phone+'\',\''+esc(s.name)+'\')">거절</button>'+
-           '</div></div>';
-      });
-    }
-
-    var 정직원 = r.staff.filter(function(s){ return s.state!=='승인대기'; });
-    h+='<h4 class="sech">직원 '+정직원.length+'명</h4>';
-    정직원.forEach(function(s){
-      var 퇴사 = (s.state==='퇴사');
+    r.staff.forEach(function(s){
       h+='<div class="lrow plain">'+
          '<div class="m"><p class="t">'+esc(s.name)+' '+esc(s.rank)+
-         (퇴사? ' <span class="tag">퇴사</span>':'')+
          (s.deputyName? ' <span class="tag wn">대리 '+esc(s.deputyName)+'</span>':'')+'</p>'+
-         '<p class="b">'+esc(s.phone)+' · '+gradeName(s.grade)+
+         '<p class="b">'+esc(s.phone)+' · 등급 '+s.grade+
          ' · PIN '+(s.hasPin?'설정됨':'미설정')+'</p></div>'+
          '<div class="r">'+
-         '<button class="btn sm" onclick="openGrade(\''+s.phone+'\')">등급</button> '+
          '<button class="btn sm" onclick="openDeputy(\''+s.phone+'\')">대리인</button> '+
          (s.hasPin?'<button class="btn sm" onclick="resetPin(\''+s.phone+'\',\''+esc(s.name)+'\')">초기화</button>':'')+
          '</div></div>';
@@ -4286,86 +4348,6 @@ function paintAdmin(r){
     
     $('adminBox').innerHTML=h;
 }
-/* ---- 권한 등급 ----
-   현장견적 앱도 이 등급을 그대로 씁니다.
-   1 현장 · 2 사무실 · 3 임원 · 9 관리자 */
-var GRADES = [[1,'현장'],[2,'사무실'],[3,'임원'],[9,'관리자']];
-
-function gradeName(g){
-  var n = Number(g||1), out = '등급 '+n;
-  GRADES.forEach(function(x){ if(x[0]===n) out = n+' '+x[1]; });
-  return out;
-}
-
-/* ---- 사용 신청 승인 (관리자만) ---- */
-function approveStaff(phone, name){
-  if(!confirm(name+'님을 승인할까요?\n승인하면 워크보드와 현장견적을 바로 쓸 수 있습니다.')) return;
-  call('api_approve', S.token, phone).then(function(r){
-    if(!r.ok){ toast(r.msg); return; }
-    toast(r.msg);
-    S.setCache=null; renderSettings();
-  });
-}
-
-function rejectStaff(phone, name){
-  if(!confirm(name+'님의 신청을 거절할까요?\n명단에서 지워집니다.')) return;
-  call('api_reject', S.token, phone).then(function(r){
-    if(!r.ok){ toast(r.msg); return; }
-    toast(r.msg);
-    S.setCache=null; renderSettings();
-  });
-}
-
-/* ---- 등급 변경 · 퇴사 처리 (관리자만) ---- */
-function openGrade(phone){
-  var list=S.staffCache||[];
-  var t=null; list.forEach(function(s){ if(s.phone===phone) t=s; });
-  if(!t) return;
-
-  $('modal').innerHTML='<div class="veil"><div class="sheet">'+
-    '<div class="sheethead"><h3 class="tt">'+esc(t.name)+'</h3>'+
-    '<button class="btn sm" onclick="closeModal()">닫기</button></div>'+
-    '<div class="field"><label class="fl">권한 등급</label><select id="grSel">'+
-      GRADES.map(function(g){
-        return '<option value="'+g[0]+'"'+(Number(t.grade)===g[0]?' selected':'')+'>'+
-               g[0]+'  '+g[1]+'</option>';
-      }).join('')+
-    '</select></div>'+
-    '<p class="muted" style="margin:0 0 12px;font-size:var(--fs-sm);line-height:1.6">'+
-      '현장견적 앱도 이 등급을 그대로 씁니다.<br>'+
-      '1 현장은 현장반장 화면, 2·3은 사무실 화면입니다.<br>'+
-      '9 관리자만 설정과 직원 관리를 볼 수 있습니다.<br>'+
-      '관리자가 한 명도 남지 않는 변경은 막혀 있습니다.</p>'+
-    '<div class="actions">'+
-      '<button class="btn" onclick="toggleLeft(\''+phone+'\',\''+esc(t.name)+'\','+(t.state==='퇴사'?'false':'true')+')">'+
-        (t.state==='퇴사'?'복직 처리':'퇴사 처리')+'</button>'+
-      '<button class="btn pri" id="grSave" onclick="saveGrade(\''+phone+'\')">저장</button></div>'+
-    '<p class="muted" id="grMsg" style="margin-top:8px"></p></div></div>';
-}
-
-function saveGrade(phone){
-  var btn=$('grSave'), msg=$('grMsg');
-  if(btn.disabled) return;
-  btn.disabled=true; msg.textContent='저장 중입니다...';
-  call('api_setGrade', S.token, phone, $('grSel').value).then(function(r){
-    btn.disabled=false;
-    if(!r.ok){ msg.textContent=r.msg; return; }
-    closeOk(); toast(r.msg);
-    S.setCache=null; renderSettings();
-  });
-}
-
-function toggleLeft(phone, name, leave){
-  var 말 = leave ? '퇴사 처리할까요?\n로그인이 막히고 기기 등록이 지워집니다.'
-                 : '복직 처리할까요?';
-  if(!confirm(name+'님을 '+말)) return;
-  call('api_setLeft', S.token, phone, leave).then(function(r){
-    if(!r.ok){ toast(r.msg); return; }
-    closeOk(); toast(r.msg);
-    S.setCache=null; renderSettings();
-  });
-}
-
 /* ---- 대리인 지정 (관리자만) ---- */
 function openDeputy(phone){
   var list=S.staffCache||[];

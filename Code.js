@@ -1,10 +1,7 @@
 /**
  * =============================================================
- *  UNION ONE WORK BOARD - 서버 코드
- *  파일명: Code.js
- * -------------------------------------------------------------
- *  화면(HTML)은 이 파일이 띄우지 않습니다. 깃허브가 띄웁니다.
- *  들어오는 통로는 연결.gs 의 doPost 하나뿐입니다.
+ *  N-CORE(주) 업무공유 앱 - 서버 코드
+ *  파일명: 코드.gs
  * =============================================================
  *  이 파일은 통째로 덮어쓰기만 하면 됩니다. 고칠 곳 없습니다.
  * =============================================================
@@ -33,6 +30,41 @@ var DEFAULT_SETTINGS = [
 //  진입점
 // =============================================================
 
+function doGet(e) {
+  // 시트 점검은 앱을 열 때마다 할 필요가 없다. 하루 1번이면 충분.
+  var _t = new Date().getTime();
+  try {
+    var props = PropertiesService.getScriptProperties();
+    var mark = props.getProperty('SETUP_DAY');
+    var today = today_() + '|' + SETUP_VER;
+    if (mark !== today) {
+      // 점검이 실제로 끝났을 때만 '오늘 했음' 표시를 남긴다.
+      // 잠금을 못 잡아 건너뛴 경우까지 표시하면 그날은 다시 시도하지 않는다.
+      if (점검_지금하기() === '점검 완료') props.setProperty('SETUP_DAY', today);
+    }
+  } catch (e) {}
+  add_('단계:점검', _t);
+
+  _t = new Date().getTime();
+  var t = HtmlService.createTemplateFromFile('화면');
+
+  // 런처(GitHub Pages)가 넘겨준 기기 식별값을 화면에 심어준다
+  var dt = '';
+  try {
+    if (e && e.parameter && e.parameter.dt) {
+      dt = String(e.parameter.dt).replace(/[^A-Za-z0-9_\-]/g, '').substring(0, 64);
+    }
+  } catch (err) { dt = ''; }
+  t.launchToken = dt;
+
+  var out = t.evaluate()
+    .setTitle('UNION ONE WORK BOARD')
+    .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover')
+    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+  add_('단계:화면그리기', _t);
+  logTiming_('doGet');
+  return out;
+}
 
 /**
  * 시트 구조 점검 (하루 1번 자동 실행 / 편집기에서 직접 실행 가능)
@@ -524,6 +556,10 @@ function ensureFormSheets_() {
   if (newForms.length) appendObjects_('문서양식', newForms);
 }
 
+function include_(name) {
+  return HtmlService.createHtmlOutputFromFile(name).getContent();
+}
+
 // =============================================================
 //  공통 유틸
 // =============================================================
@@ -656,7 +692,7 @@ var _TOUCHED = false;              // 이번 요청에서 이미 시각을 찍�
 var _LASTUP = '';                  // 이번 요청에서 찍은 바뀜시각 (다시 물어보지 않으려고)
 var _META = null;                  // 기준정보 캐시 (요청 안에서 재사용)
 var _START = new Date().getTime(); // 이 요청이 시작된 시각 (응답에 처리시간 표시용)
-var SETUP_VER = 'v45';             // 시트 구조가 바뀌면 이 값을 올린다. 점검이 한 번 다시 돈다
+var SETUP_VER = 'v46';             // 시트 구조가 바뀌면 이 값을 올린다. 점검이 한 번 다시 돈다
 
 /* -------------------------------------------------------------
  *  속도 재기 (v37m)
@@ -720,7 +756,7 @@ var CACHE_SEC = 21600;             // 6시간 (구글 최대)
 var CACHE_MAX_BYTES = 95000;       // 한 칸 100KB 한도. 실제 바이트로 재서 여유를 다 쓴다 (v43)
 var CACHE_SHEETS = ['직원', '업무', '업무일지', '결재문서', '결재선', '결재내역', '문서상세',
                     '정산내역', '댓글', '첨부', '게시글', '알림', '연동캐시', '설정', '서명',
-                    '읽음'];   // ★ 읽음 추가 (v43) — 업무를 열 때마다 통째로 읽고 있었다
+                    '읽음', '휴가'];   // ★ 휴가 추가 (v46) — 달력이 board 와 같은 한 번에 실려 온다
 
 /* 여기 적힌 시트에 쓰는 것은 '바뀜 시각'(LAST_UPDATE)을 건드리지 않는다 (v43).
    ★ 업무 상세를 **열기만** 해도 읽음 기록이 쌓이는데, 그때마다 바뀜 시각이 올라가면
@@ -937,9 +973,6 @@ function warmCache_() {
   missing.forEach(function (n) {
     try { values_(n); } catch (e) {}
   });
-  if (!got['@meta']) {
-    try { meta_(); } catch (e) {}
-  }
   return missing;
 }
 
@@ -1648,19 +1681,7 @@ function api_checkPhone(phone) {
   ensureColumn_('직원', 'PIN해시');
   ensureSyncSheet_();
   var u = findUserByPhone_(phone);
-
-  /* 없는 번호면 화면에서 사용 신청 버튼을 띄운다 (code 로 구분) */
-  if (!u) return { ok: false, code: 'NOT_FOUND', msg: '등록되지 않은 번호입니다.' };
-
-  var state = String(u['재직상태'] || '재직');
-  if (state === '승인대기') {
-    return { ok: false, code: 'PENDING',
-             msg: '승인 대기 중입니다. 관리자가 승인하면 이용할 수 있습니다.' };
-  }
-  if (state === '퇴사') {
-    return { ok: false, code: 'LEFT', msg: '사용할 수 없는 번호입니다.' };
-  }
-
+  if (!u) return { ok: false, msg: '등록되지 않은 번호입니다. 전략기획실에 문의해주세요.' };
   return { ok: true, name: u['이름'], hasPin: !!String(u['PIN해시'] || '').trim() };
 }
 
@@ -1670,14 +1691,6 @@ function api_login(phone, pin, token) {
   ensureSyncSheet_();
   var u = findUserByPhone_(phone);
   if (!u) return { ok: false, msg: '등록되지 않은 번호입니다.' };
-
-  /* 승인 전이거나 그만둔 사람은 PIN 이 맞아도 들어올 수 없다 */
-  var st = String(u['재직상태'] || '재직');
-  if (st === '승인대기') {
-    return { ok: false, code: 'PENDING',
-             msg: '승인 대기 중입니다. 관리자가 승인하면 이용할 수 있습니다.' };
-  }
-  if (st === '퇴사') return { ok: false, msg: '사용할 수 없는 번호입니다.' };
 
   var p = String(pin || '').replace(/[^0-9]/g, '');
   if (p.length !== 4) return { ok: false, msg: 'PIN 4자리를 입력해주세요.' };
@@ -2060,10 +2073,7 @@ function syncEstimateJob() {
   // 견적 목록이 실제로 바뀌었을 때만 기준정보 캐시를 버린다 (v38)
   try {
     var r = syncEstimates_();
-    if (r && r.changed) {
-      bumpMeta_();
-      warmCache_();
-    }
+    if (r && r.changed) bumpMeta_();
   } catch (e) {}
   logTiming_('syncEstimateJob');
 }
@@ -2099,7 +2109,6 @@ function 자동동기화_설치() {
   var a = syncAttendance_();
   var b = syncEstimates_();
   bumpMeta_();
-  try { warmCache_(); } catch (e) {}
 
   var 지금 = ScriptApp.getProjectTriggers().map(function (t) {
     return '· ' + t.getHandlerFunction();
@@ -3005,6 +3014,10 @@ function board_(me, corp) {
   add_('단계:출퇴근', _t);
 
   _t = new Date().getTime();
+  var leaves = leavesFor_(nameOf);
+  add_('단계:휴가', _t);
+
+  _t = new Date().getTime();
   var recent = recentLogs_(logs, nameOf, tasks);
   var stat = monthStat_(tasks);
   var statByCorp = monthStatByCorp_(tasks);
@@ -3037,6 +3050,7 @@ function board_(me, corp) {
     docs: docs,
     approvals: approvals,
     attendance: attendance,
+    leaves: leaves,             // 휴가 달력 (v46) — 달력을 열 때 서버에 다시 묻지 않는다
     recent: recent,
     stat: stat,
     statByCorp: statByCorp,
@@ -3048,6 +3062,59 @@ function board_(me, corp) {
   };
   res.t = timing_();
   return res;
+}
+
+/**
+ * 휴가 달력 재료 (v46).
+ *
+ * '휴가' 시트는 휴가 신청서가 최종 승인될 때 addLeave_ 가 한 줄씩 쌓는다.
+ * 사람이 따로 입력하는 곳이 없다.
+ *
+ * ★ 시트를 새로 열지 않는다. '휴가' 는 CACHE_SHEETS 에 들어 있어
+ *   board_ 가 이미 한 번에 가져온 것 안에 들어 있다 (구글 왕복 0회).
+ * ★ 최근 6개월 + 앞으로 6개월만 보낸다. 응답이 해마다 커지지 않게.
+ */
+function leavesFor_(nameOf) {
+  var td = today_();
+  var from = shiftMonth_(td, -6);
+  var to = shiftMonth_(td, 6);
+
+  var out = [];
+  readObjects_('휴가').forEach(function (r) {
+    var s1 = fmtD_(r['시작일']);
+    if (!s1) return;
+    var s2 = fmtD_(r['종료일']) || s1;
+    if (s2 < s1) s2 = s1;
+
+    /* 기간이 창 밖으로 완전히 벗어난 것만 뺀다 (걸쳐 있으면 넣는다) */
+    if (s2 < from || s1 > to) return;
+
+    var ph = normPhone_(r['전화번호']);
+    out.push({
+      id: r['휴가ID'],
+      name: String(r['이름'] || nameOf[ph] || ''),
+      phone: ph,
+      kind: String(r['휴가종류'] || ''),
+      from: s1, to: s2,
+      days: Number(r['일수'] || 0),
+      docNo: String(r['문서번호'] || '')
+    });
+  });
+
+  out.sort(function (a, b) {
+    if (a.from !== b.from) return a.from < b.from ? -1 : 1;
+    return a.name < b.name ? -1 : 1;
+  });
+  return out;
+}
+
+/** 'yyyy-MM-dd' 에서 달만 옮긴다 (Date 객체를 만들지 않는다) */
+function shiftMonth_(dateStr, n) {
+  var y = Number(String(dateStr).substring(0, 4));
+  var m = Number(String(dateStr).substring(5, 7)) + n;
+  while (m < 1) { m += 12; y -= 1; }
+  while (m > 12) { m -= 12; y += 1; }
+  return z4_(y) + '-' + z2_(m) + '-01';
 }
 
 /** 댓글 한 줄을 화면이 쓰는 모양으로 */
