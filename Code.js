@@ -738,7 +738,7 @@ var _TOUCHED = false;              // 이번 요청에서 이미 시각을 찍�
 var _LASTUP = '';                  // 이번 요청에서 찍은 바뀜시각 (다시 물어보지 않으려고)
 var _META = null;                  // 기준정보 캐시 (요청 안에서 재사용)
 var _START = new Date().getTime(); // 이 요청이 시작된 시각 (응답에 처리시간 표시용)
-var SETUP_VER = 'v46b';             // 시트 구조가 바뀌면 이 값을 올린다. 점검이 한 번 다시 돈다
+var SETUP_VER = 'v46c';             // 시트 구조가 바뀌면 이 값을 올린다. 점검이 한 번 다시 돈다
 
 /* -------------------------------------------------------------
  *  속도 재기 (v37m)
@@ -1610,6 +1610,7 @@ function findUserByToken_(token) {
   var rows = readObjects_('직원');
   for (var i = 0; i < rows.length; i++) {
     if (rows[i]['재직상태'] === '퇴사') continue;
+    if (rows[i]['재직상태'] === '승인대기') continue;   // 승인 전에는 기기를 기억해도 못 들어온다
     var list = String(rows[i]['기기토큰'] || '').split(',');
     for (var j = 0; j < list.length; j++) {
       if (list[j].trim() && list[j].trim() === token) return rows[i];
@@ -1727,7 +1728,25 @@ function api_checkPhone(phone) {
   ensureColumn_('직원', 'PIN해시');
   ensureSyncSheet_();
   var u = findUserByPhone_(phone);
-  if (!u) return { ok: false, msg: '등록되지 않은 번호입니다. 전략기획실에 문의해주세요.' };
+
+  /* ★ 왜 안 되는지 code 로 구분해서 보냅니다.
+     화면은 이 code 를 보고 '사용 신청' 버튼을 띄웁니다.
+     예전에는 code 를 보내지 않아 버튼이 한 번도 뜨지 못했고,
+     처음 쓰는 사람은 '문의해주세요' 에서 길이 끊겼습니다 (2026-08-28). */
+  if (!u) {
+    return { ok: false, code: 'NOT_FOUND',
+             msg: '등록되지 않은 번호입니다. 아래에서 사용 신청을 해주세요.' };
+  }
+
+  var st = String(u['재직상태'] || '재직');
+  if (st === '승인대기') {
+    return { ok: false, code: 'PENDING',
+             msg: '신청이 접수되어 있습니다. 관리자 승인 후 이용하실 수 있습니다.' };
+  }
+  if (st === '퇴사') {
+    return { ok: false, code: 'LEFT',
+             msg: '사용할 수 없는 계정입니다. 전략기획실에 문의해주세요.' };
+  }
   return { ok: true, name: u['이름'], hasPin: !!String(u['PIN해시'] || '').trim() };
 }
 
@@ -1737,6 +1756,15 @@ function api_login(phone, pin, token) {
   ensureSyncSheet_();
   var u = findUserByPhone_(phone);
   if (!u) return { ok: false, msg: '등록되지 않은 번호입니다.' };
+
+  /* ★ 승인 전에는 PIN 이 맞아도 들여보내지 않습니다.
+     신청할 때 PIN 을 이미 만들어 두기 때문에 여기서 막지 않으면
+     승인을 기다리지 않고 그대로 들어옵니다. */
+  var state = String(u['재직상태'] || '재직');
+  if (state === '승인대기') {
+    return { ok: false, msg: '아직 승인 전입니다. 관리자 승인 후 이용하실 수 있습니다.' };
+  }
+  if (state === '퇴사') return { ok: false, msg: '사용할 수 없는 계정입니다.' };
 
   var p = String(pin || '').replace(/[^0-9]/g, '');
   if (p.length !== 4) return { ok: false, msg: 'PIN 4자리를 입력해주세요.' };
@@ -5291,21 +5319,51 @@ function api_saveStaff(token, p) {
   var me = userInfo_(u);
   if (me.grade < 9) return { ok: false, msg: '관리자만 변경할 수 있습니다.' };
 
-  var rows = readObjects_('직원');
   var phone = normPhone_(p.phone);
+  var grade = Number(p.grade || 1);
+  var state = String(p.state || '재직');
+  if (!(grade >= 1 && grade <= 9)) return { ok: false, msg: '등급은 1에서 9 사이여야 합니다.' };
+  if (['재직', '퇴사', '승인대기'].indexOf(state) < 0) state = '재직';
+
+  var rows = readObjects_('직원');
   for (var i = 0; i < rows.length; i++) {
     if (normPhone_(rows[i]['전화번호']) === phone) {
+
+      /* ★ 관리자가 한 명도 남지 않는 변경은 거부한다.
+         실수로 본인 등급을 내리거나 퇴사 처리하면 아무도 되돌릴 수 없다.
+         api_setGrade·api_setLeft 에는 있던 검사가 여기에는 없어서
+         이 길로는 그대로 통과했다. */
+      var was = Number(rows[i]['권한등급'] || 1);
+      var wasState = String(rows[i]['재직상태'] || '재직');
+      if (was >= 9 && wasState === '재직' && (grade < 9 || state !== '재직')) {
+        var left = 0;
+        rows.forEach(function (r) {
+          if (normPhone_(r['전화번호']) === phone) return;
+          if (String(r['재직상태'] || '재직') !== '재직') return;
+          if (Number(r['권한등급'] || 1) >= 9) left += 1;
+        });
+        if (left < 1) {
+          return { ok: false, msg: '관리자가 한 명도 남지 않게 됩니다. 다른 사람을 먼저 관리자로 올려주세요.' };
+        }
+      }
+
       updateObject_('직원', rows[i]._row, {
         '이름': p.name, '부서': p.dept || '', '직급': p.rank || '',
-        '권한등급': Number(p.grade || 1), '재직상태': p.state || '재직'
+        '권한등급': grade, '재직상태': state
       });
+      var res = { ok: true, ms: took_() };
       bumpMeta_();
-      return { ok: true };
+      log_(me.phone, '직원수정', phone, token, p.name + ' 등급' + grade + ' ' + state);
+      return res;
     }
   }
+
   appendObject_('직원', {
     '전화번호': phone, '이름': p.name, '부서': p.dept || '', '직급': p.rank || '',
-    '권한등급': Number(p.grade || 1), '재직상태': '재직'
+    '권한등급': grade, '재직상태': '재직'
   });
-  return { ok: true };
+  var res2 = { ok: true, ms: took_() };
+  bumpMeta_();                       // 새 직원이 담당자 드롭다운에 바로 뜨게
+  log_(me.phone, '직원추가', phone, token, p.name);
+  return res2;
 }

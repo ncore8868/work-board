@@ -1321,6 +1321,57 @@ function stepPhone(){
   });
 }
 
+/* ---- 사용 신청 (v46b) ----
+   처음 쓰는 사람이 번호를 넣으면 '등록되지 않은 번호' 에서 길이 끊겨 있었다.
+   서버(가입승인.js api_signup)는 진작 되어 있었는데 이 화면이 없었다.
+
+   ★ 여기서 만들어지는 계정은 언제나 등급 1 · 재직상태 '승인대기' 다.
+     관리자가 설정 화면에서 승인해야 비로소 쓸 수 있다. */
+function showSignup(phone){
+  var pinStyle='font-size:var(--fs-pin);letter-spacing:10px;text-align:center;padding:12px';
+  $('modal').innerHTML=
+   '<div class="veil"><div class="sheet">'+
+   '<h3 class="tt">사용 신청</h3>'+
+   '<div class="field"><label class="fl req">휴대폰 번호</label>'+
+   '<input type="tel" id="suPhone" inputmode="numeric" value="'+esc(phone||'')+'"></div>'+
+   '<div class="field"><label class="fl req">이름</label>'+
+   '<input type="text" id="suName"></div>'+
+   '<div class="field"><label class="fl req">PIN 4자리</label>'+
+   '<input type="password" id="suPin" maxlength="4" inputmode="numeric" style="'+pinStyle+'"></div>'+
+   '<div class="field"><label class="fl req">PIN 다시 입력</label>'+
+   '<input type="password" id="suPin2" maxlength="4" inputmode="numeric" '+
+     'onkeydown="enterGo(event, doSignup)" style="'+pinStyle+'"></div>'+
+   '<div class="actions"><button class="btn" onclick="showLogin()">뒤로</button>'+
+   '<button class="btn pri" id="suGo" onclick="doSignup()">신청</button></div>'+
+   '<p class="muted" id="suMsg" style="margin-top:10px"></p></div></div>';
+  setTimeout(function(){ var e=$('suName'); if(e) e.focus(); }, 200);
+}
+
+function doSignup(){
+  var btn=$('suGo'), msg=$('suMsg');
+  if(!btn || btn.disabled) return;
+  var phone=$('suPhone').value.replace(/[^0-9]/g,'');
+  var name=$('suName').value.trim();
+  var pin=$('suPin').value.replace(/[^0-9]/g,'');
+  var pin2=$('suPin2').value.replace(/[^0-9]/g,'');
+  if(phone.length<10){ msg.textContent='번호를 정확히 입력해주세요.'; return; }
+  if(name.length<2){ msg.textContent='이름을 정확히 입력해주세요.'; return; }
+  if(pin.length!==4){ msg.textContent='PIN 4자리를 입력해주세요.'; return; }
+  if(pin!==pin2){ msg.textContent='PIN이 서로 다릅니다.'; return; }
+
+  btn.disabled=true; msg.textContent='신청하는 중입니다...';
+  call('api_signup', phone, name, pin).then(function(r){
+    btn.disabled=false;
+    if(!r.ok){ msg.textContent=r.msg; return; }
+    $('modal').innerHTML=
+     '<div class="veil"><div class="sheet">'+
+     '<h3 class="tt">신청이 접수되었습니다</h3>'+
+     '<p class="none">관리자 승인 후 이용하실 수 있습니다.</p>'+
+     '<div class="actions"><button class="btn pri" onclick="showLogin()">확인</button></div>'+
+     '</div></div>';
+  }, function(){ btn.disabled=false; msg.textContent='신청하지 못했습니다. 잠시 후 다시 시도해주세요.'; });
+}
+
 function showPinStep(phone, name, hasPin){
   var first = !hasPin;
   $('modal').innerHTML =
@@ -4331,23 +4382,119 @@ function paintAdmin(r){
         '<button class="btn" id="syncBtn" onclick="syncNow()">지금 연동 동기화</button>'+
         '<button class="btn" onclick="refreshMeta()">기준정보 새로고침</button>'+
       '</div>'+
-      '<p class="muted" id="syncMsg" style="font-size:var(--fs-sm);margin:0 0 8px"></p>'+
-      '<h4 class="sech">직원 '+r.staff.length+'명</h4>';
+      '<p class="muted" id="syncMsg" style="font-size:var(--fs-sm);margin:0 0 8px"></p>';
     S.staffCache=r.staff;
-    r.staff.forEach(function(s){
+
+    /* 승인 대기 — 지금 손대야 할 것이라 직원 목록보다 위에 둔다.
+       0명이면 구역 자체를 그리지 않는다. */
+    var wait=r.staff.filter(function(s){ return s.state==='승인대기'; });
+    if(wait.length){
+      h+='<h4 class="sech hot">승인 대기 '+wait.length+'명</h4>';
+      wait.forEach(function(s){
+        h+='<div class="lrow plain">'+
+           '<div class="m"><p class="t">'+esc(s.name)+'</p>'+
+           '<p class="b">'+esc(s.phone)+'</p></div>'+
+           '<div class="r" style="display:flex;gap:var(--sp-2)">'+
+           '<button class="btn dg sm" onclick="rejectStaff(\''+s.phone+'\',\''+esc(s.name)+'\')">거절</button>'+
+           '<button class="btn pri sm" onclick="approveStaff(\''+s.phone+'\',\''+esc(s.name)+'\')">승인</button>'+
+           '</div></div>';
+      });
+    }
+
+    var members=r.staff.filter(function(s){ return s.state!=='승인대기'; });
+    h+='<h4 class="sech">직원 '+members.length+'명</h4>';
+    members.forEach(function(s){
       h+='<div class="lrow plain">'+
          '<div class="m"><p class="t">'+esc(s.name)+' '+esc(s.rank)+
+         (s.state==='퇴사'? ' <span class="tag gy">퇴사</span>':'')+
          (s.deputyName? ' <span class="tag wn">대리 '+esc(s.deputyName)+'</span>':'')+'</p>'+
          '<p class="b">'+esc(s.phone)+' · 등급 '+s.grade+
          ' · PIN '+(s.hasPin?'설정됨':'미설정')+'</p></div>'+
-         '<div class="r">'+
-         '<button class="btn sm" onclick="openDeputy(\''+s.phone+'\')">대리인</button> '+
+         '<div class="r" style="display:flex;gap:var(--sp-2)">'+
+         '<button class="btn sm" onclick="openStaff(\''+s.phone+'\')">권한</button>'+
+         '<button class="btn sm" onclick="openDeputy(\''+s.phone+'\')">대리인</button>'+
          (s.hasPin?'<button class="btn sm" onclick="resetPin(\''+s.phone+'\',\''+esc(s.name)+'\')">초기화</button>':'')+
          '</div></div>';
     });
     
     $('adminBox').innerHTML=h;
 }
+/* ---- 사용 신청 승인 · 거절 (관리자만, v46b) ----
+   판정은 서버가 다시 합니다 (가입승인.js 관리자확인_).
+   화면에서 버튼을 숨기는 것으로 막지 않습니다. */
+function approveStaff(phone, name){
+  call('api_approve', S.token, phone).then(function(r){
+    toast(r.ok? (name+'님을 승인했습니다') : r.msg);
+    if(!r.ok) return;
+    S.setCache=null;            // 낡은 목록으로 한 번 그렸다가 바뀌는 깜빡임을 없앤다
+    renderSettings();
+  });
+}
+
+function rejectStaff(phone, name){
+  if(!confirm(name+'님의 신청을 거절할까요?\n명부에서 지워지고 되돌릴 수 없습니다.')) return;
+  call('api_reject', S.token, phone).then(function(r){
+    toast(r.ok? (name+'님의 신청을 거절했습니다') : r.msg);
+    if(!r.ok) return;
+    S.setCache=null;
+    renderSettings();
+  });
+}
+
+/* ---- 직원 권한 (관리자만, v46b) ----
+   부서·직급·등급·재직상태를 한 번에 저장합니다 (왕복 1회).
+   ★ 직급에 '대표' 를 넣으면 결재 기본승인자로 잡힙니다. */
+function openStaff(phone){
+  var list=S.staffCache||[];
+  var t=null; list.forEach(function(s){ if(s.phone===phone) t=s; });
+  if(!t) return;
+
+  var grades=[[1,'현장'],[2,'사무실'],[3,'임원'],[9,'관리자']];
+  $('modal').innerHTML='<div class="veil"><div class="sheet">'+
+    '<div class="sheethead"><h3 class="tt">'+esc(t.name)+'</h3>'+
+    '<button class="btn sm" onclick="closeModal()">닫기</button></div>'+
+    byline([t.phone])+
+    '<div class="field"><label class="fl">부서</label>'+
+    '<input type="text" id="stDept" value="'+esc(t.dept||'')+'"></div>'+
+    '<div class="field"><label class="fl">직급</label>'+
+    '<input type="text" id="stRank" value="'+esc(t.rank||'')+'"></div>'+
+    '<div class="field"><label class="fl">권한등급</label><select id="stGrade">'+
+      grades.map(function(g){
+        return '<option value="'+g[0]+'"'+(Number(t.grade)===g[0]?' selected':'')+'>'+
+               g[0]+' · '+g[1]+'</option>';
+      }).join('')+
+    '</select></div>'+
+    '<div class="field"><label class="fl">재직상태</label><select id="stState">'+
+      ['재직','퇴사'].map(function(v){
+        return '<option value="'+v+'"'+(t.state===v?' selected':'')+'>'+v+'</option>';
+      }).join('')+
+    '</select></div>'+
+    '<div class="actions"><button class="btn" onclick="closeModal()">취소</button>'+
+    '<button class="btn pri" id="stSave" onclick="saveStaff(\''+phone+'\')">저장</button></div>'+
+    '<p class="muted" id="stMsg" style="margin-top:8px"></p></div></div>';
+}
+
+function saveStaff(phone){
+  var btn=$('stSave'), msg=$('stMsg');
+  if(!btn || btn.disabled) return;
+  var list=S.staffCache||[];
+  var t=null; list.forEach(function(s){ if(s.phone===phone) t=s; });
+  if(!t) return;
+
+  btn.disabled=true; msg.textContent='저장 중입니다...';
+  call('api_saveStaff', S.token, {
+    phone: phone, name: t.name,
+    dept: $('stDept').value.trim(), rank: $('stRank').value.trim(),
+    grade: Number($('stGrade').value), state: $('stState').value
+  }).then(function(r){
+    btn.disabled=false;
+    if(!r.ok){ msg.textContent=r.msg; return; }
+    closeOk(); toast('저장되었습니다');
+    S.setCache=null;
+    renderSettings();
+  });
+}
+
 /* ---- 대리인 지정 (관리자만) ---- */
 function openDeputy(phone){
   var list=S.staffCache||[];
