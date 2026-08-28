@@ -12,7 +12,7 @@
   --bg:#EDEBE7; --card:#FFFFFF; --field:#F4F2EE;
   --panel:#E5E2DD; --panel2:#D8D3CD;
   --line:#DFDAD3; --line2:#C4BCB4;
-  --t1:#14110D; --t2:#544D46; --t3:#8D867E;
+  --t1:#14110D; --t2:#544D46; --t3:#6B655E;   /* t3 4.83:1 (전에는 3.02:1) */
   --dg-bg:#FDECEC; --dg-line:#E9A3A3; --dg:#A32020;
   --wn-bg:#FDF4E0; --wn-line:#E0B65C; --wn:#8A5A05;
   --ok:#127A4B; --accent:#D22B2B;
@@ -38,7 +38,7 @@ html[data-theme="dark"]{
   --bg:#0D0D10; --card:#1B1B21; --field:#131317;
   --panel:#212128; --panel2:#2C2C34;
   --line:#2C2C34; --line2:#3D3D47;
-  --t1:#F4F4F7; --t2:#A6A6B0; --t3:#6B6B76;
+  --t1:#F4F4F7; --t2:#A6A6B0; --t3:#85858F;   /* t3 4.69:1 (전에는 3.26:1) */
   --dg-bg:#331A1C; --dg-line:#8A2A2E; --dg:#FFB3B3;
   --wn-bg:#312414; --wn-line:#8A6614; --wn:#FFD98A;
   --ok:#54D68C; --accent:#F05252;
@@ -91,6 +91,78 @@ a{color:inherit}
   .calcell{min-height:50px}
 }
 
+/* ===================== 브라우저가 그리는 것들 (v46f) =====================
+   달력·시계·파일 고르기·select 목록·체크박스·스크롤바는 우리 CSS 가 닿지 않는
+   브라우저 기본 요소입니다. 어느 테마인지 알려주지 않으면 브라우저가 제멋대로 그립니다.
+
+   실제로 어두운 테마에서 날짜 칸의 달력 아이콘이 배경과 거의 같은 어두운 회색으로 나와
+   눈을 가늘게 떠야 보였습니다. 아래 두 줄이 그 원인을 없앱니다.
+
+   ★ applyTheme() 이 언제나 data-theme 을 light/dark 로 정해 붙이므로
+     (자동이면 시각을 보고 정합니다) 두 갈래만 있으면 됩니다.        */
+:root{ color-scheme: light }
+html[data-theme="dark"]{ color-scheme: dark }
+
+/* 달력 아이콘 — 보이기만 해서는 부족하고 어디를 눌러야 할지 알아야 합니다.
+   오른쪽 끝에 붙어 있던 작은 아이콘을 키우고 눌리는 범위를 넓힙니다. */
+input[type=date],input[type=time],input[type=month]{
+  padding-right:6px;                       /* 아이콘 자리를 만든다 */
+}
+input[type=date]::-webkit-calendar-picker-indicator,
+input[type=time]::-webkit-calendar-picker-indicator,
+input[type=month]::-webkit-calendar-picker-indicator{
+  width:22px;height:22px;padding:8px;margin:0;
+  border-radius:var(--r-sm);
+  cursor:pointer;
+  opacity:.75;                             /* 기본은 흐릿한 아이콘을 또렷하게 */
+}
+input[type=date]::-webkit-calendar-picker-indicator:hover,
+input[type=time]::-webkit-calendar-picker-indicator:hover,
+input[type=month]::-webkit-calendar-picker-indicator:hover{
+  opacity:1; background:var(--panel2);
+}
+input[type=date]:focus::-webkit-calendar-picker-indicator{ opacity:1 }
+
+/* 파일 고르기 버튼도 칸 안에서 튀지 않게 */
+input[type=file]{padding:8px 10px;cursor:pointer}
+input[type=file]::-webkit-file-upload-button,
+input[type=file]::file-selector-button{
+  margin-right:10px;padding:6px 12px;min-height:32px;
+  border:1px solid var(--line2);border-radius:var(--r-sm);
+  background:var(--panel);color:var(--t1);font:inherit;cursor:pointer}
+input[type=file]::-webkit-file-upload-button:hover,
+input[type=file]::file-selector-button:hover{background:var(--panel2)}
+
+/* 체크박스·라디오 — 기본색 그대로 두면 테마와 따로 논다 */
+input[type=checkbox],input[type=radio]{
+  width:18px;height:18px;accent-color:var(--t1);cursor:pointer;vertical-align:-3px}
+
+/* select 화살표 자리 — 글자가 화살표 밑으로 들어가지 않게 */
+select{padding-right:30px}
+
+/* 스크롤바 — color-scheme 이 색을 맞춰주고, 두께만 다듬는다 */
+*{scrollbar-width:thin}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:var(--line2);border-radius:99px;
+  border:2px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:var(--t3);background-clip:content-box}
+::-webkit-scrollbar-track{background:transparent}
+
+/* 숫자가 바뀔 때 자리가 흔들리지 않게 (금액·진행률·건수) */
+.num,.stats .num,.v,.cnt,input[type=number]{font-variant-numeric:tabular-nums}
+
+/* 삭제는 되돌릴 수 없습니다. 옆 버튼과 조금 더 떼어놓습니다.
+   순서와 위치는 그대로입니다 — 사이 간격만 8px → 20px 로 넓힙니다. */
+.actions .btn.dg{margin-inline:6px}
+
+/* 폰에서는 누르는 곳을 조금 키운다 (PC 밀도는 그대로 둔다) */
+@media (max-width:640px){
+  .btn{min-height:38px;display:inline-flex;align-items:center;justify-content:center}
+  .btn.sm{min-height:34px}
+  .actions .btn{min-height:42px}
+  .navtabs button{min-height:38px}
+}
+
 /* ===================== 공통 부품 ===================== */
 .btn{border:1px solid var(--line2);background:var(--field);border-radius:var(--r);
   padding:9px 15px;cursor:pointer;font-size:var(--fs-body);white-space:nowrap;color:var(--t1)}
@@ -98,7 +170,9 @@ a{color:inherit}
 .btn.pri{background:var(--t1);color:var(--bg);border-color:var(--t1)}
 .btn.pri:hover{opacity:.88}
 .btn.dg{background:var(--dg-bg);color:var(--dg);border-color:var(--dg-line)}
-.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn:disabled{opacity:1;cursor:not-allowed;
+  background:var(--panel);border-color:var(--line);color:var(--t3);box-shadow:none}
+.btn.pri:disabled{background:var(--panel2);border-color:var(--line2);color:var(--t3)}
 .btn.sm{padding:5px 10px;font-size:var(--fs-sm)}
 .chip{border:1px solid var(--line2);background:transparent;border-radius:99px;
   padding:4px 11px;cursor:pointer;font-size:var(--fs-sm);color:var(--t2)}
