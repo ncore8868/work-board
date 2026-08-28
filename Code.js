@@ -937,6 +937,9 @@ function warmCache_() {
   missing.forEach(function (n) {
     try { values_(n); } catch (e) {}
   });
+  if (!got['@meta']) {
+    try { meta_(); } catch (e) {}
+  }
   return missing;
 }
 
@@ -2057,7 +2060,10 @@ function syncEstimateJob() {
   // 견적 목록이 실제로 바뀌었을 때만 기준정보 캐시를 버린다 (v38)
   try {
     var r = syncEstimates_();
-    if (r && r.changed) bumpMeta_();
+    if (r && r.changed) {
+      bumpMeta_();
+      warmCache_();
+    }
   } catch (e) {}
   logTiming_('syncEstimateJob');
 }
@@ -2093,6 +2099,7 @@ function 자동동기화_설치() {
   var a = syncAttendance_();
   var b = syncEstimates_();
   bumpMeta_();
+  try { warmCache_(); } catch (e) {}
 
   var 지금 = ScriptApp.getProjectTriggers().map(function (t) {
     return '· ' + t.getHandlerFunction();

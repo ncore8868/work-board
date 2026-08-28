@@ -9,6 +9,7 @@
 /* 층: 바탕(--bg) < 카드(--card) 는 밝게 뜨고, 입력칸(--field) 은 카드보다 파인다.
    글자: 값(--t1) > 본문(--t2) > 라벨(--t3). 라벨이 값보다 튀면 안 된다. */
 :root{
+  color-scheme:light;
   --bg:#EDEBE7; --card:#FFFFFF; --field:#F4F2EE;
   --panel:#E5E2DD; --panel2:#D8D3CD;
   --line:#DFDAD3; --line2:#C4BCB4;
@@ -35,6 +36,7 @@
   --r:var(--r-md); --r2:var(--r-lg);   /* 옛 이름 (쓰던 곳이 많아 남겨둔다) */
 }
 html[data-theme="dark"]{
+  color-scheme:dark;
   --bg:#0D0D10; --card:#1B1B21; --field:#131317;
   --panel:#212128; --panel2:#2C2C34;
   --line:#2C2C34; --line2:#3D3D47;
@@ -535,6 +537,13 @@ html[data-theme="light"] .slrow .tagk.pay{background:#E7F6EE;color:#127A4B}
 .none{margin:0;padding:var(--sp-2) var(--sp-1);font-size:var(--fs-sm);color:var(--t3)}
 .none.big{padding:var(--sp-6) var(--sp-1);text-align:center}
 
+@media (max-width:719px){
+  .top{padding-top:calc(9px + env(safe-area-inset-top));}
+  .navtabs button,.icobtn,.count button{min-height:44px;}
+  .count button{width:44px;height:44px;}
+  .card,.sumbox,.sheet,.prog,.settle{border-radius:var(--r2);}
+}
+
 /* 의미를 가진 색은 둘뿐 — 빨강(지금 손댈 것) · 노랑(곧 문제) */
 .dgv{color:var(--dg)}
 .wnv{color:var(--wn)}
@@ -550,7 +559,7 @@ html[data-theme="light"] .slrow .tagk.pay{background:#E7F6EE;color:#127A4B}
 <!-- ================= 상단바 ================= -->
 <div class="top"><div class="topin">
   <button class="brand" onclick="go('board')" title="워크보드로">
-    <span class="dot"></span><b class="tt" id="brandName">UNION ONE</b></button>
+    <span class="dot"></span><b class="tt" id="brandName">UNION-ONE</b></button>
 
   <nav class="navtabs deskmenu" aria-label="화면 이동">
     <button data-view="board" onclick="go('board')">워크보드</button>
@@ -1211,7 +1220,7 @@ function boot(){
   if(snap){
     S.meta=snap.meta; S.me=snap.me; S.corp=snap.corp||'ALL'; S.data=snap.data;
     takeDocPack(S.data);          // 지난번에 받아둔 문서 상세도 되살린다
-    $('brandName').textContent=(S.meta.company||'UNION ONE').replace('(주)','').trim()||'UNION ONE';
+    $('brandName').textContent='UNION-ONE';
     loadFont(S.meta.fontTitle, S.meta.fontNum);
     renderFilters();
     S.anim=true;
@@ -1229,7 +1238,7 @@ function boot(){
   call('api_start', S.token, S.corp).then(function(r){
     if(r.meta){
       S.meta=r.meta;
-      $('brandName').textContent=(r.meta.company||'UNION ONE').replace('(주)','').trim()||'UNION ONE';
+      $('brandName').textContent='UNION-ONE';
       loadFont(r.meta.fontTitle, r.meta.fontNum);
     }
     hideBooting();
