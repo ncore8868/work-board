@@ -3125,6 +3125,7 @@ function board_(me, corp) {
     approvals: approvals,
     attendance: attendance,
     leaves: leaves,             // 휴가 달력 (v46) — 달력을 열 때 서버에 다시 묻지 않는다
+    staff: staffList_(),        // 담당자 드롭다운 (v46c) — 업무가 없어도 목록에 뜨게
     recent: recent,
     stat: stat,
     statByCorp: statByCorp,
@@ -3282,6 +3283,34 @@ function nameMap_() {
   var o = {};
   readObjects_('직원').forEach(function (r) { o[normPhone_(r['전화번호'])] = r['이름']; });
   return o;
+}
+
+/**
+ * 담당자로 고를 수 있는 사람 (v46c).
+ *
+ * 예전에는 화면이 '이미 업무를 맡고 있는 사람 + 나' 만 모아 드롭다운을 만들었습니다.
+ * 그래서 명부에 갓 올라온 사람은 업무를 하나 맡기 전까지 고를 수가 없었습니다.
+ *
+ * ★ board_ 에서만 부릅니다. 로그인한 사람에게만 나갑니다.
+ *   기준정보(meta)에는 절대 넣지 마세요 — meta 는 로그인 전에도 나가는 값입니다.
+ *   (2026-08-27 계정 사고의 원인이 인증 없이 명부를 내주는 통로였습니다)
+ * ★ 이름·전화번호·부서·직급만 보냅니다. PIN·기기토큰·대리인은 담지 않습니다.
+ * ★ 시트를 새로 열지 않습니다. board_ 가 이미 '직원' 을 읽었습니다 (구글 왕복 0회).
+ */
+function staffList_() {
+  return readObjects_('직원')
+    .filter(function (r) {
+      var st = String(r['재직상태'] || '재직');
+      return normPhone_(r['전화번호']) && st !== '퇴사' && st !== '승인대기';
+    })
+    .map(function (r) {
+      return {
+        phone: normPhone_(r['전화번호']),
+        name: String(r['이름'] || ''),
+        dept: String(r['부서'] || ''),
+        rank: String(r['직급'] || '')
+      };
+    });
 }
 
 /**

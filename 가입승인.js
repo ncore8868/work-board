@@ -32,8 +32,10 @@ function api_signup(phone, name, pin) {
   if (번호.replace(/[^0-9]/g, '').length < 10) {
     return { ok: false, msg: '번호를 정확히 입력해주세요.' };
   }
-  if (이름.length < 2 || 이름.length > 20) {
-    return { ok: false, msg: '이름을 정확히 입력해주세요.' };
+  /* 한 글자 이름도 받습니다 (명부에 'K' · 'J' 처럼 쓰는 줄이 있습니다).
+     비어 있는 것만 막습니다. */
+  if (이름.length < 1 || 이름.length > 20) {
+    return { ok: false, msg: '이름을 입력해주세요.' };
   }
   if (핀.length !== 4) {
     return { ok: false, msg: 'PIN 4자리를 입력해주세요.' };

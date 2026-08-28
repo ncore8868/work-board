@@ -1187,7 +1187,7 @@ var LAUNCH_TOKEN = (function () {
 
 /* 마지막으로 본 화면을 이 기기에 저장해둔다.
    다음에 열 때 서버를 기다리지 않고 바로 그려서 체감 대기를 없앤다. */
-var SNAP='ncore_snap_v6';
+var SNAP='ncore_snap_v7';
 
 function saveSnap(){
   try{
@@ -1199,6 +1199,7 @@ function saveSnap(){
     localStorage.setItem(SNAP, JSON.stringify({
       t:Date.now(), me:S.me, meta:S.meta, corp:S.corp,
       data:{ ok:true, me:d.me, tasks:d.tasks, approvals:d.approvals,
+             staff:d.staff,       // 담당자 드롭다운 재료 (v46c)
              attendance:d.attendance, recent:d.recent, stat:d.stat,
              statByCorp:d.statByCorp, noti:d.noti, at:d.at,
              // 업무 상세·결재 탭·공지·댓글을 왕복 없이 열기 위한 재료도 같이 저장한다
@@ -1355,7 +1356,7 @@ function doSignup(){
   var pin=$('suPin').value.replace(/[^0-9]/g,'');
   var pin2=$('suPin2').value.replace(/[^0-9]/g,'');
   if(phone.length<10){ msg.textContent='번호를 정확히 입력해주세요.'; return; }
-  if(name.length<2){ msg.textContent='이름을 정확히 입력해주세요.'; return; }
+  if(!name){ msg.textContent='이름을 입력해주세요.'; return; }
   if(pin.length!==4){ msg.textContent='PIN 4자리를 입력해주세요.'; return; }
   if(pin!==pin2){ msg.textContent='PIN이 서로 다릅니다.'; return; }
 
@@ -2696,15 +2697,34 @@ function drawTaskForm(id, t){
   $('modal').innerHTML=h;
   syncDemo();
 }
+/**
+ * 담당자 드롭다운 (v46c에서 다시 짬).
+ *
+ * 예전에는 '이미 업무를 맡고 있는 사람 + 나' 만 모았다.
+ * 그래서 명부에 갓 올라온 사람(대표님·전무님)은 업무를 하나 맡기 전까지
+ * 담당자로 고를 수가 없었다. 이제는 board 가 실어 보낸 명부(staff)로 만든다.
+ */
 function staffOptions(sel){
-  var list=(S.data&&S.data.attendance&&S.data.attendance.rows)||[];
-  var opts='';
-  (S.staffCache||[]).forEach(function(){});
-  // 담당자 목록은 진행판 데이터에서 이름만 뽑되, 없으면 본인만
-  var seen={};
-  (S.data? S.data.tasks:[]).forEach(function(t){ if(t.owner&&!seen[t.owner]){ seen[t.owner]=t.ownerName; } });
-  seen[S.me.phone]=S.me.name;
-  for(var p in seen) opts+='<option value="'+p+'"'+(p===sel?' selected':'')+'>'+esc(seen[p])+'</option>';
+  var list=(S.data && S.data.staff) || [];
+  var opts='', seen={};
+  list.forEach(function(s){
+    if(!s.phone || seen[s.phone]) return;
+    seen[s.phone]=1;
+    var label=(s.name||s.phone)+(s.rank? ' '+s.rank : '');
+    opts+='<option value="'+esc(s.phone)+'"'+(s.phone===sel?' selected':'')+'>'+esc(label)+'</option>';
+  });
+
+  /* 지금 담당자가 목록에 없을 때 — 퇴사한 사람이 담당으로 남아 있는 업무를
+     수정하는 경우다. 그 사람을 지우지 않도록 맨 위에 살려둔다. */
+  if(sel && !seen[sel]){
+    var nm='';
+    (S.data? S.data.tasks:[]).forEach(function(t){ if(t.owner===sel && t.ownerName) nm=t.ownerName; });
+    if(!nm && S.me && S.me.phone===sel) nm=S.me.name;
+    opts='<option value="'+esc(sel)+'" selected>'+esc(nm||sel)+'</option>'+opts;
+  }
+
+  // 옛 스냅샷으로 그리는 중이라 명부가 아직 안 왔을 때
+  if(!opts && S.me) opts='<option value="'+esc(S.me.phone)+'" selected>'+esc(S.me.name)+'</option>';
   return opts;
 }
 /** 현장 드롭다운. 예전 데이터의 현장코드가 목록에 없으면 그것도 살려둔다 */
