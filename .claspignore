@@ -1,0 +1,12 @@
+# 앱스스크립트로 올리지 않을 것 — 화면 파일과 잡동사니
+index.html
+app.html
+sw.js
+manifest.webmanifest
+*.png
+*.ico
+*.md
+*.bat
+*.txt
+.git/**
+node_modules/**
