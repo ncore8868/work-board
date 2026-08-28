@@ -3997,7 +3997,7 @@ function pendingDocs_(me, docs, lines, nameOf, proxy) {
     if (String(l['상태'] || '대기') !== '대기') return;
     var tp = normPhone_(l['대상전화']);
     var mine = (tp === me.phone);
-    if (!mine && !proxy[tp]) return;               // 내 몫이거나 내가 대리인 것만
+    if (!mine && !proxy[tp] && me.grade < 9) return; // 내 몫·대리 또는 관리자
     var d = docMap[l['문서번호']];
     if (!d || d['상태'] !== '진행중') return;
     if (seen[d['문서번호']]) return;
@@ -4007,7 +4007,7 @@ function pendingDocs_(me, docs, lines, nameOf, proxy) {
       amount: Number(d['총금액'] || 0),
       who: nameOf[normPhone_(d['기안자전화'])] || '',
       at: fmtDT_(d['기안일시']).substring(5),
-      proxy: !mine
+      proxy: !mine && me.grade < 9
     });
   });
   return out;
@@ -4042,6 +4042,12 @@ function docList_(me, docs, lines, nameOf, proxy) {
     var actLines = my.filter(function (x) {
       return x.l['역할'] === '승인' && String(x.l['상태'] || '대기') === '대기';
     });
+    if (me.grade >= 9 && !actLines.length) {
+      actLines = lines.filter(function (l) {
+        return l['문서번호'] === d['문서번호'] && l['역할'] === '승인' &&
+          String(l['상태'] || '대기') === '대기';
+      }).map(function (l) { return { l: l, proxy: false }; });
+    }
     var fmx = formOf[d['양식코드']];
     var item = {
       no: d['문서번호'], title: d['제목'], corp: d['법인코드'],
@@ -4133,7 +4139,7 @@ function docDetailFrom_(doc, lines, items, files, detRows, me, nameOf, rankOf, p
     canAct: doc['상태'] === '진행중' && lines.some(function (l) {
       if (l['역할'] !== '승인' || String(l['상태'] || '대기') !== '대기') return false;
       var tp = normPhone_(l['대상전화']);
-      return tp === me.phone || !!proxy[tp];
+      return tp === me.phone || !!proxy[tp] || me.grade >= 9;
     }),
     proxy: doc['상태'] === '진행중' && lines.some(function (l) {
       if (l['역할'] !== '승인' || String(l['상태'] || '대기') !== '대기') return false;
@@ -4575,6 +4581,7 @@ function api_actDoc(token, no, action, comment, corp) {
     if (String(l['상태'] || '대기') !== '대기') return;
     var tp = normPhone_(l['대상전화']);
     if (tp === me.phone) { target = l; byProxy = false; }
+    else if (!target && me.grade >= 9) { target = l; byProxy = false; }
     else if (!target && proxy[tp]) { target = l; byProxy = true; }
   });
   if (!target) return { ok: false, msg: '결재 권한이 없거나 이미 처리된 문서입니다.' };
