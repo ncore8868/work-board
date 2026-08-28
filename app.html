@@ -3626,7 +3626,7 @@ function docSheetHtml(d, r){
   if(d.status) head.push({ t:d.status, hot:(d.status==='반려') });
   if(d.formName) head.push(d.formName);
   if(d.corp) head.push(d.corp);
-  if(d.no) head.push(d.no);
+  // 문서번호(EXP-260826-001)는 제목 아래에 쓰지 않는다 — 사람이 읽을 것이 아니다
 
   return '<div class="veil"><div class="sheet">'+
     '<div class="sheethead"><h3 class="tt">'+esc(d.title)+'</h3>'+

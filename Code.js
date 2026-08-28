@@ -331,7 +331,16 @@ function ensurePostSheets_(deep) {
 function ensureDefaultLine_() {
   var props;
   try { props = PropertiesService.getScriptProperties(); } catch (e) { return; }
-  if (props.getProperty('FORM_LINE_V28')) return;
+  /* 한 번 채우고 나면 다시 건드리지 않습니다.
+     다만 '기본승인자' 가 빈 양식이 남아 있으면 다시 시도합니다.
+     나중에 더한 양식(인감·휴가)이 빈 채로 만들어져,
+     결재선이 하나도 없는 문서가 생긴 적이 있습니다 (2026-08-28). */
+  if (props.getProperty('FORM_LINE_V28')) {
+    var hole = readObjects_('문서양식').some(function (f) {
+      return String(f['양식코드'] || '').trim() && !String(f['기본승인자'] || '').trim();
+    });
+    if (!hole) return;
+  }
 
   var ceo = [], vice = [];
   readObjects_('직원').forEach(function (r) {
@@ -356,6 +365,28 @@ function ensureDefaultLine_() {
     updateObject_('문서양식', f._row, upd);
   });
   props.setProperty('FORM_LINE_V28', fmtDT_(now_()));
+}
+
+/**
+ * 양식에 '기본승인자' 가 적혀 있지 않을 때 대신 쓸 승인자.
+ *   ① 직급에 '대표' 가 든 재직자
+ *   ② 없으면 권한등급 9 (관리자)
+ *
+ * 승인자가 한 명도 없으면 결재선이 빈 문서가 만들어지고,
+ * 그런 문서는 관리자라도 누를 줄이 없어 영영 '진행중' 으로 남습니다.
+ * 시트를 새로 읽지 않습니다 ('직원' 은 로그인 확인 때 이미 읽었습니다).
+ */
+function fallbackApprovers_() {
+  var ceo = [], adm = [];
+  readObjects_('직원').forEach(function (r) {
+    if (String(r['재직상태'] || '') === '퇴사') return;
+    if (String(r['재직상태'] || '') === '승인대기') return;
+    var ph = normPhone_(r['전화번호']);
+    if (!ph) return;
+    if (String(r['직급'] || '').indexOf('대표') >= 0 && ceo.indexOf(ph) < 0) ceo.push(ph);
+    if (Number(r['권한등급'] || 1) >= 9 && adm.indexOf(ph) < 0) adm.push(ph);
+  });
+  return ceo.length ? ceo : adm;
 }
 
 /**
@@ -670,6 +701,21 @@ function stamp_() {
   return z2_(p.y % 100) + z2_(p.mo) + z2_(p.d);
 }
 
+/**
+ * 시트 칸 하나를 화면에 내보낼 글자로 바꾼다.
+ *
+ * '2026-08-28' 이라고 넣어도 시트가 날짜로 알아서 바꿔 담습니다.
+ * 그것을 String() 으로 꺼내면 'Fri Aug 28 2026 00:00:00 GMT+0900 (한국 표준시)'
+ * 가 되어 화면에 그대로 나옵니다 (2026-08-28 휴가 신청서에서 실제로 나왔습니다).
+ * 자정이면 날짜만, 시각이 붙어 있으면 날짜와 시각으로 돌립니다.
+ */
+function cellText_(v) {
+  if (v === null || v === undefined) return '';
+  if (!(v instanceof Date)) return String(v);
+  var p = kst_(v);
+  return (p.h === 0 && p.mi === 0) ? fmtD_(v) : fmtDT_(v);
+}
+
 function digits_(v) { return String(v == null ? '' : v).replace(/[^0-9]/g, ''); }
 function normPhone_(v) {
   var d = digits_(v);
@@ -692,7 +738,7 @@ var _TOUCHED = false;              // 이번 요청에서 이미 시각을 찍�
 var _LASTUP = '';                  // 이번 요청에서 찍은 바뀜시각 (다시 물어보지 않으려고)
 var _META = null;                  // 기준정보 캐시 (요청 안에서 재사용)
 var _START = new Date().getTime(); // 이 요청이 시작된 시각 (응답에 처리시간 표시용)
-var SETUP_VER = 'v46';             // 시트 구조가 바뀌면 이 값을 올린다. 점검이 한 번 다시 돈다
+var SETUP_VER = 'v46b';             // 시트 구조가 바뀌면 이 값을 올린다. 점검이 한 번 다시 돈다
 
 /* -------------------------------------------------------------
  *  속도 재기 (v37m)
@@ -4119,7 +4165,7 @@ function docDetail_(no, me, nameOf, rankOf, proxy) {
 function docDetailFrom_(doc, lines, items, files, detRows, me, nameOf, rankOf, proxy) {
   var det = detRows.slice()
     .sort(function (a, b) { return Number(a['순번'] || 0) - Number(b['순번'] || 0); })
-    .map(function (d) { return { name: d['항목명'], value: String(d['값'] || '') }; });
+    .map(function (d) { return { name: d['항목명'], value: cellText_(d['값']) }; });
   var fm = meta_().forms[doc['양식코드']];
 
   return {
@@ -4231,6 +4277,27 @@ function api_saveDoc(token, p, corp) {
   title = title.substring(0, 120);
   if (!title) return { ok: false, msg: '제목을 입력해주세요.' };
 
+  /* ★ 결재선을 문서보다 먼저 정합니다.
+     승인자가 한 명도 없으면 결재선이 빈 문서가 되고, 그런 문서는
+     관리자라도 누를 줄이 없어 영영 '진행중' 으로 남습니다.
+     양식의 '기본승인자' 가 비어 있으면 여기서 대표 → 관리자 순으로 찾아 채우고,
+     그래도 못 찾으면 문서를 아예 만들지 않습니다.
+     (문서를 만든 뒤에 막으면 주인 없는 줄이 시트에 남습니다) */
+  var approvers = [], viewers = [];
+  String(form.approvers || '').split(',').forEach(function (ph) {
+    ph = normPhone_(ph); if (!ph) return;
+    if (approvers.indexOf(ph) < 0) approvers.push(ph);
+  });
+  if (!approvers.length) approvers = fallbackApprovers_();
+  if (!approvers.length) {
+    return { ok: false, msg: '결재선을 정할 수 없습니다. 설정에서 대표 직급이나 관리자를 먼저 지정해주세요.' };
+  }
+  String(form.viewers || '').split(',').forEach(function (ph) {
+    ph = normPhone_(ph); if (!ph) return;
+    if (approvers.indexOf(ph) >= 0) return;       // 승인자와 겹치면 열람은 넣지 않는다
+    if (viewers.indexOf(ph) < 0) viewers.push(ph);
+  });
+
   var no = nextId_('결재문서', '문서번호', code);
   var nowS = fmtDT_(now_());
 
@@ -4257,7 +4324,6 @@ function api_saveDoc(token, p, corp) {
   appendObjects_('결재문서', docRows);
 
   var lines = [];
-  var approvers = [], viewers = [];
   function addLines_(docNo) {
     var seq = 1;
     approvers.forEach(function (ph) {
@@ -4267,15 +4333,6 @@ function api_saveDoc(token, p, corp) {
       lines.push({ '문서번호': docNo, '순번': seq++, '역할': '열람', '대상전화': ph, '상태': '대기' });
     });
   }
-  String(form.approvers || '').split(',').forEach(function (ph) {
-    ph = normPhone_(ph); if (!ph) return;
-    if (approvers.indexOf(ph) < 0) approvers.push(ph);
-  });
-  String(form.viewers || '').split(',').forEach(function (ph) {
-    ph = normPhone_(ph); if (!ph) return;
-    if (approvers.indexOf(ph) >= 0) return;       // 승인자와 겹치면 열람은 넣지 않는다
-    if (viewers.indexOf(ph) < 0) viewers.push(ph);
-  });
   addLines_(no);
   if (needSeal) addLines_(sealNo);                // 같은 결재선을 그대로 쓴다
   appendObjects_('결재선', lines);
@@ -4419,7 +4476,7 @@ function docPdfHtml_(doc, corpName, fm, det, items, lines, nameOf, rankOf, compa
 
   var rows = '';
   det.forEach(function (d) {
-    rows += '<tr><th>' + e_(d['항목명']) + '</th><td>' + e_(d['값']) + '</td></tr>';
+    rows += '<tr><th>' + e_(d['항목명']) + '</th><td>' + e_(cellText_(d['값'])) + '</td></tr>';
   });
 
   var itemHtml = '';
@@ -4694,7 +4751,7 @@ function addLeave_(docRow, no) {
 
     var det = {};
     readObjects_('문서상세').forEach(function (d) {
-      if (d['문서번호'] === no) det[String(d['항목명'])] = String(d['값'] == null ? '' : d['값']);
+      if (d['문서번호'] === no) det[String(d['항목명'])] = cellText_(d['값']);
     });
 
     var kind = det['휴가종류'] || '';
