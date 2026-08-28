@@ -626,15 +626,17 @@ html[data-theme="light"] .slrow .tagk.pay{background:#E7F6EE;color:#127A4B}
       <button class="btn" onclick="openPinChange()">PIN 변경</button>
       <button class="btn" onclick="logout()">이 기기에서 로그아웃</button>
     </div>
-    <div class="field" style="margin-top:20px">
-      <label class="fl">속도</label>
-      <div class="sumbox" id="perfBox"></div>
-      <div class="actions" style="margin-top:8px">
-        <button class="btn sm" onclick="paintPerf()">다시 재기</button>
-        <button class="btn sm" onclick="PERF=[];paintPerf()">지우기</button>
+    <div id="developerInfo" class="hide">
+      <div class="field" style="margin-top:20px">
+        <label class="fl">속도</label>
+        <div class="sumbox" id="perfBox"></div>
+        <div class="actions" style="margin-top:8px">
+          <button class="btn sm" onclick="paintPerf()">다시 재기</button>
+          <button class="btn sm" onclick="PERF=[];paintPerf()">지우기</button>
+        </div>
       </div>
+      <p class="muted" style="margin-top:18px;font-size:var(--fs-sm)" id="verText"></p>
     </div>
-    <p class="muted" style="margin-top:18px;font-size:var(--fs-sm)" id="verText"></p>
   </div>
 </div>
 
@@ -4107,9 +4109,7 @@ function renderMe(){
   var h='<div class="sumbox" style="margin-bottom:14px">'+
     '<p><b>'+esc(S.me.name)+'</b> '+esc(S.me.rank)+(S.me.dept?' · '+esc(S.me.dept):'')+'</p>'+
     '<p class="sub">오늘 '+(att&&att.state==='출근'? ('출근 '+att.time) : '출근 기록 없음')+'</p>'+
-    '<p class="sub">진행중 '+run.length+'건 · 대기 '+wait.length+'건</p>'+
-    '<p class="muted" style="font-size:var(--fs-sm);margin:4px 0 0">서버 코드 '+
-      ((S.meta && S.meta.code) ? esc(S.meta.code) : '(옛 버전 — 배포 안 됨)')+'</p></div>'+
+    '<p class="sub">진행중 '+run.length+'건 · 대기 '+wait.length+'건</p></div>'+
     '<div class="actions" style="margin-bottom:16px">'+
       '<button class="btn" onclick="openLogForm()">기록 남기기</button>'+
       '<button class="btn pri" onclick="openTaskForm()">＋ 새 업무</button></div>';
@@ -4166,6 +4166,8 @@ function paintSettings(r){
     if(r.me) S.me=r.me;
 
     var me=S.me||{};
+  var isAdmin=Number(me.grade)===9;
+  $('developerInfo').classList.toggle('hide', !isAdmin);
     $('meInfo').innerHTML='<p><b>'+esc(me.name||'(이름 없음)')+'</b> '+esc(me.rank||'')+
       (me.dept?' · '+esc(me.dept):'')+'</p>'+
       '<p class="sub">'+esc(me.phone||'')+'</p>'+
