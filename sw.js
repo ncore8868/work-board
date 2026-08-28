@@ -6,7 +6,7 @@
  * ★ 화면을 고쳐서 올릴 때마다 아래 CACHE 뒤의 숫자를 하나 올리세요.
  *   올리지 않으면 직원들 폰에 옛 화면이 계속 남습니다.
  */
-const CACHE = 'unionone-launcher-v10';
+const CACHE = 'unionone-launcher-v12';
 
 const SHELL = [
   './',

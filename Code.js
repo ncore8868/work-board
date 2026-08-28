@@ -1,6 +1,6 @@
 /**
  * =============================================================
- *  N-CORE(주) 업무공유 앱 - 서버 코드
+ *  UNION ONE 워크보드 - 서버 코드
  *  파일명: 코드.gs
  * =============================================================
  *  이 파일은 통째로 덮어쓰기만 하면 됩니다. 고칠 곳 없습니다.
@@ -14,7 +14,7 @@ var SALT = 'ncore-workboard-2026';  // PIN 암호화용 (변경하면 기존 PIN
 /** 설정 시트에 없으면 자동으로 만들어 두는 항목 */
 var DEFAULT_SETTINGS = [
   ['LAST_UPDATE', '', '데이터가 마지막으로 바뀐 시각 (앱이 자동 기록)'],
-  ['회사명', 'N-CORE(주)', '화면 상단 표시'],
+  ['회사명', 'UNION-ONE', '화면 상단 표시'],
   ['타임존', 'Asia/Seoul', '변경 금지'],
   ['게스트유효일수', 30, '게스트 링크 유효 일수'],
   ['앱버전', 'v1.0', '배포 버전'],
@@ -324,23 +324,20 @@ function ensurePostSheets_(deep) {
 }
 
 /**
- * 기본 결재선을 딱 한 번만 채운다.
- *   승인 = 직급이 '대표이사' 인 사람 / 열람 = 직급이 '전무' 인 사람
+ * 기본 결재선을 '직원' 시트의 직급에 맞춰 둔다 (하루 1회 점검).
+ *   승인 = 직급에 '대표' 가 든 사람 / 열람 = 직급에 '전무' 가 든 사람
  * 전화번호는 코드에 적지 않고 '직원' 시트에서 그때그때 찾는다.
+ *
+ * ★ 예전에는 스크립트 속성(FORM_LINE_V28)으로 **딱 한 번만** 돌았다.
+ *   그래서 나중에 직급을 채우면 반영되지 않았다 —
+ *   대표 직급을 먼저 넣고 전무 직급을 나중에 넣었더니 승인자만 들어가고
+ *   **열람자가 영영 비어 있었다** (2026-08-28, 휴가 신청서 두 건 연속).
+ *   지금은 점검 때마다 견주어 보고 **다른 것만** 고쳐 쓴다.
+ *   같으면 시트에 아무것도 쓰지 않으므로 비용이 없다.
  */
 function ensureDefaultLine_() {
   var props;
-  try { props = PropertiesService.getScriptProperties(); } catch (e) { return; }
-  /* 한 번 채우고 나면 다시 건드리지 않습니다.
-     다만 '기본승인자' 가 빈 양식이 남아 있으면 다시 시도합니다.
-     나중에 더한 양식(인감·휴가)이 빈 채로 만들어져,
-     결재선이 하나도 없는 문서가 생긴 적이 있습니다 (2026-08-28). */
-  if (props.getProperty('FORM_LINE_V28')) {
-    var hole = readObjects_('문서양식').some(function (f) {
-      return String(f['양식코드'] || '').trim() && !String(f['기본승인자'] || '').trim();
-    });
-    if (!hole) return;
-  }
+  try { props = PropertiesService.getScriptProperties(); } catch (e) { props = null; }
 
   var ceo = [], vice = [];
   readObjects_('직원').forEach(function (r) {
@@ -351,10 +348,11 @@ function ensureDefaultLine_() {
     if (rank.indexOf('대표') >= 0) ceo.push(ph);        // 대표이사 / 대표 둘 다
     else if (rank.indexOf('전무') >= 0) vice.push(ph);
   });
-  // 직급이 아직 안 채워져 있으면 표시를 남기지 않는다 (다음 점검 때 다시 시도)
+  // 직급이 아직 안 채워져 있으면 아무것도 하지 않는다 (다음 점검 때 다시 본다)
   if (!ceo.length && !vice.length) return;
 
   var approvers = ceo.join(','), viewers = vice.join(',');
+  var changed = 0;
   readObjects_('문서양식').forEach(function (f) {
     if (!String(f['양식코드'] || '').trim()) return;
     var upd = {};
@@ -363,8 +361,13 @@ function ensureDefaultLine_() {
     if (vice.length && String(f['기본열람자'] || '') !== viewers) upd['기본열람자'] = viewers;
     if (upd['기본승인자'] === undefined && upd['기본열람자'] === undefined) return;
     updateObject_('문서양식', f._row, upd);
+    changed += 1;
   });
-  props.setProperty('FORM_LINE_V28', fmtDT_(now_()));
+
+  // 언제 마지막으로 맞췄는지만 남긴다 (판단에 쓰지 않는다)
+  if (props && changed) {
+    try { props.setProperty('FORM_LINE_V28', fmtDT_(now_())); } catch (e) {}
+  }
 }
 
 /**
@@ -738,7 +741,7 @@ var _TOUCHED = false;              // 이번 요청에서 이미 시각을 찍�
 var _LASTUP = '';                  // 이번 요청에서 찍은 바뀜시각 (다시 물어보지 않으려고)
 var _META = null;                  // 기준정보 캐시 (요청 안에서 재사용)
 var _START = new Date().getTime(); // 이 요청이 시작된 시각 (응답에 처리시간 표시용)
-var SETUP_VER = 'v46c';             // 시트 구조가 바뀌면 이 값을 올린다. 점검이 한 번 다시 돈다
+var SETUP_VER = 'v46e';             // 시트 구조가 바뀌면 이 값을 올린다. 점검이 한 번 다시 돈다
 
 /* -------------------------------------------------------------
  *  속도 재기 (v37m)
@@ -1705,7 +1708,7 @@ function api_boot(token) {
   var m = meta_();
   var st = m.settings;
   var base = {
-    company: st['회사명'] || 'N-CORE(주)',
+    company: st['회사명'] || 'UNION ONE',
     version: st['앱버전'] || 'v1.0',
     fontTitle: st['폰트URL_제목'] || '',
     fontNum: st['폰트URL_숫자'] || '',
@@ -2198,7 +2201,7 @@ function 자동동기화_설치() {
     '· 출퇴근: ' + (a.ok ? a.count + '명' : a.msg) + '\n' +
     '· 견적: ' + (b.ok ? b.count + '건' : b.msg);
   Logger.log(msg);
-  try { SpreadsheetApp.getUi().alert('N-CORE 업무공유', msg, SpreadsheetApp.getUi().ButtonSet.OK); } catch (e) {}
+  try { SpreadsheetApp.getUi().alert('UNION ONE 워크보드', msg, SpreadsheetApp.getUi().ButtonSet.OK); } catch (e) {}
   return msg;
 }
 
@@ -4065,7 +4068,7 @@ function attachFolder_() {
       return fo;
     } catch (e) {}
   }
-  var f = DriveApp.createFolder('N-CORE 업무공유 첨부');
+  var f = DriveApp.createFolder('UNION ONE 워크보드 첨부');
   shareFolderOnce_(f, f.getId());
   setSetting_('첨부폴더ID', f.getId());
   return f;
@@ -5321,7 +5324,13 @@ function onSheetChange(e) {
     var last = Number(lastUpdate_() || 0);
     if (last && (new Date().getTime() - last) < 20000) return;   // 앱이 방금 쓴 것
     bumpAllSheets_();
-    console.log('[캐시] 시트를 손으로 고친 것으로 보고 담아둔 값을 전부 버렸습니다.');
+    /* ★ 기준정보(meta)도 같이 버린다 (v46e).
+       예전에는 시트 캐시만 버려서, 손으로 고친 '설정'·'법인'·'업무유형'·'문서양식' 이
+       **6시간 동안 반영되지 않았습니다.** 회사명을 UNION-ONE 으로 고쳐놔도
+       화면에는 계속 옛 이름이 떴습니다 (2026-08-28).
+       사람이 시트를 손으로 고치는 것은 드문 일이라 다시 만드는 비용을 물어도 됩니다. */
+    bumpMeta_();
+    console.log('[캐시] 시트를 손으로 고친 것으로 보고 담아둔 값과 기준정보를 전부 버렸습니다.');
   } catch (err) {}
 }
 
