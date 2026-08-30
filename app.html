@@ -111,7 +111,27 @@ a{color:inherit}
   background:var(--wn-bg);color:var(--wn);border:1px solid var(--wn-line)}
 .calcell .chip.half{background:var(--panel);color:var(--t2);border-color:var(--line2)}
 .calcell .chip.ev{background:var(--panel);color:var(--t2);border-color:var(--line2)}
+/* 공휴일 — 무슨 날인지 칸 안에서 바로 읽히게 (v50).
+   예전에는 날짜 숫자만 빨갛고 이름은 마우스를 올려야 나왔습니다.
+   폰에는 마우스가 없으니 사실상 아무도 못 봤습니다. */
+.calcell .chip.hol{background:var(--dg-bg);color:var(--dg);
+  border-color:var(--dg-line);font-weight:700}
 .calcell .more{font-size:var(--fs-xs);color:var(--t3);margin-top:1px}
+
+/* 달을 넘길 때 (v50) — 창을 통째로 다시 그리지 않고 달력 안쪽만 바꿉니다.
+   예전에는 모달 전체를 다시 그려서 .sheet 의 sheetUp(0.38초, 아래에서 위로)이
+   ▶ 를 누를 때마다 처음부터 다시 돌았습니다. 지워졌다 떴다 해 보인 원인입니다.
+   지금은 0.16초 동안 옆으로 살짝 스치기만 합니다. transform·opacity 만 씁니다. */
+@keyframes calNext{from{opacity:.4;transform:translateX(8px)}to{opacity:1;transform:none}}
+@keyframes calPrev{from{opacity:.4;transform:translateX(-8px)}to{opacity:1;transform:none}}
+.calbody.next{animation:calNext .16s ease-out}
+.calbody.prev{animation:calPrev .16s ease-out}
+
+/* 달력 창은 위에 붙인다 (v50). 날짜를 눌러 아래가 펼쳐지거나 접혀도
+   ◀▶ 버튼이 손 밑에서 위아래로 움직이지 않게 하려는 것입니다. */
+.veil.calveil{align-items:flex-start}
+.calsheet{border-radius:0 0 16px 16px}
+@media (min-width:720px){ .calsheet{margin-top:4vh;border-radius:16px} }
 
 .calday{margin-top:var(--sp-4);border-top:1px solid var(--line);padding-top:var(--sp-3)}
 .calday h4{margin:0 0 var(--sp-2);font-size:var(--fs-h2)}
@@ -232,6 +252,11 @@ label.fl{display:block;font-size:var(--fs-xs);color:var(--t3);margin:0 0 6px;fon
 .field{margin-bottom:16px}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+/* 시각 고르기 (v50) — 브라우저가 그리는 시계 상자 대신 드롭다운 두 개.
+   ★ min-width:0 이 없으면 격자 칸이 글자 길이만큼 버텨서 폰에서 옆으로 삐져나갑니다. */
+.tsel{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.tsel select{min-width:0}
+.grid2 > .field select,.grid2 > .field input{min-width:0}
 .req::after{content:" *";color:var(--accent)}
 .err{border-color:var(--dg-line) !important;background:var(--dg-bg)}
 
@@ -2836,6 +2861,21 @@ function drawTaskForm(id, t){
   syncDemo();
 }
 /**
+ * 직급 순서 — 위에서 아래로 높은 사람부터 (v50).
+ * 대표이사 · 전무 · 실장 · 과장 · 주임 …  여기 없는 직급은 맨 아래, 그 안에서는 이름 순.
+ *
+ * ★ 글자가 조금 달라도 같은 자리에 놓이도록 '들어 있는지' 로 봅니다
+ *   (대표 / 대표이사,  실장 / 전략기획실장).
+ * ★ 순서를 바꾸려면 아래 한 줄만 고치면 됩니다. 다른 곳은 손댈 필요가 없습니다.
+ */
+var RANK_ORDER=['대표','부사장','전무','상무','이사','실장','부장','차장','과장','대리','주임','사원'];
+function rankNo(rank){
+  var r=String(rank||'');
+  for(var i=0;i<RANK_ORDER.length;i++) if(r.indexOf(RANK_ORDER[i])>=0) return i;
+  return 99;                              // 직급이 비었거나 목록에 없는 직급 → 맨 아래
+}
+
+/**
  * 담당자 드롭다운 (v46c에서 다시 짬).
  *
  * 예전에는 '이미 업무를 맡고 있는 사람 + 나' 만 모았다.
@@ -2843,7 +2883,12 @@ function drawTaskForm(id, t){
  * 담당자로 고를 수가 없었다. 이제는 board 가 실어 보낸 명부(staff)로 만든다.
  */
 function staffOptions(sel){
-  var list=(S.data && S.data.staff) || [];
+  /* ★ board 가 준 배열을 고쳐 쓰지 않는다 — slice 로 베낀 뒤에 정렬한다 (v50) */
+  var list=((S.data && S.data.staff) || []).slice().sort(function(a,b){
+    var d=rankNo(a.rank)-rankNo(b.rank);
+    if(d) return d;
+    return (a.name||'')<(b.name||'') ? -1 : ((a.name||'')>(b.name||'') ? 1 : 0);
+  });
   var opts='', seen={};
   list.forEach(function(s){
     if(!s.phone || seen[s.phone]) return;
@@ -3249,12 +3294,12 @@ function calMove(n){
   while(m > 12){ m -= 12; y += 1; }
   CAL.ym = y + '-' + p2(m);
   CAL.pick = '';
-  drawCal();
+  if(!calFill(n)) drawCal();          // 창 전체가 아니라 달력 안쪽만 바꾼다 (v50)
 }
 
 function calPick(d){
   CAL.pick = (CAL.pick === d) ? '' : d;
-  drawCal();
+  if(!calFill(0)) drawCal();
 }
 
 /* ---- 그 날에 걸린 것들 ---- */
@@ -3309,12 +3354,51 @@ function calChips(ds){
 /* 뒤에서 응답이 왔을 때 쓴다. 그 사이 사람이 창을 닫았을 수 있으므로,
    달력이 아직 열려 있을 때만 다시 그린다 (닫은 창을 되살리지 않는다) */
 function calRedraw(){
-  var box = $('modal');
-  if(!box || !box.innerHTML || box.innerHTML.indexOf('calgrid') < 0) return;
-  drawCal();
+  calFill(0);                       // 달력이 안 열려 있으면 아무것도 하지 않는다
 }
 
+/**
+ * 달력 창을 통째로 그린다 — 창을 처음 열 때, 그리고 일정 창에서 돌아올 때만.
+ *
+ * ★ 달을 넘길 때는 이것을 부르지 마세요 (v50).
+ *   modal 을 통째로 다시 그리면 .sheet 의 등장 애니메이션이 매번 다시 돌아서
+ *   화면이 지워졌다 떴다 하는 것처럼 보입니다. 그때는 calFill() 을 씁니다.
+ */
 function drawCal(){
+  $('modal').innerHTML='<div class="veil calveil"><div class="sheet calsheet">'+
+    '<div class="sheethead"><h3 class="tt">일정</h3>'+
+    '<button class="btn sm" onclick="closeModal(true)">닫기</button></div>'+
+    '<div class="cal">'+
+      '<div class="calhd">'+
+        '<button class="btn sm" onclick="calMove(-1)" title="지난 달">◀</button>'+
+        '<span class="m" id="calM">'+calTitle()+'</span>'+
+        '<button class="btn sm" onclick="calMove(1)" title="다음 달">▶</button>'+
+      '</div>'+
+      '<div class="calbody" id="calBody">'+calBody()+'</div>'+
+    '</div></div></div>';
+}
+
+function calTitle(){
+  return Number(CAL.ym.substring(0,4))+'년 '+Number(CAL.ym.substring(5,7))+'월';
+}
+
+/**
+ * 달력 안쪽만 다시 그린다 (v50). 창도, 제목줄도, ◀▶ 버튼도 그대로 있습니다.
+ *   dir  1 다음 달 · -1 지난 달 · 0 제자리 (날짜를 눌렀을 때 · 저장·삭제 뒤)
+ * 달력이 열려 있지 않으면 아무것도 하지 않고 false 를 돌려줍니다.
+ */
+function calFill(dir){
+  var box=$('calBody'), ttl=$('calM');
+  if(!box || !ttl) return false;
+  ttl.textContent=calTitle();
+  box.innerHTML=calBody();
+  box.className='calbody';
+  if(dir){ void box.offsetWidth; box.classList.add(dir>0?'next':'prev'); }
+  return true;
+}
+
+/** 요일줄 + 날짜칸 + 한 줄 요약 + 그날 상세 */
+function calBody(){
   var y = Number(CAL.ym.substring(0,4));
   var m = Number(CAL.ym.substring(5,7));
   var td = todayStr();
@@ -3345,36 +3429,33 @@ function drawCal(){
     if(ds === td) cls += ' today';
     if(ds === CAL.pick) cls += ' pick';
 
-    /* 세 개까지는 그대로 보이고, 그보다 많으면 두 개만 보이고 +n 을 단다.
-       칸 높이(80px)에 들어가는 만큼만 그린다 */
-    var show = (items.length > 3) ? items.slice(0,2) : items;
+    /* 공휴일이면 무슨 날인지 첫 줄에 놓고, 남는 자리에 휴가·일정을 채운다.
+       칸 높이(80px)에 들어가는 만큼만 그린다 — 공휴일이 있으면 두 줄, 없으면 세 줄. */
+    var holChip = hol ? '<span class="chip hol">'+esc(hol)+'</span>' : '';
+    var cap = hol ? 2 : 3;
+    var show = (items.length > cap) ? items.slice(0, cap-1) : items;
     var chips = show.map(function(c){
       return '<span class="'+c.cls+'">'+esc(c.text)+'</span>';
     }).join('');
     if(items.length > show.length) chips += '<span class="more">+'+(items.length-show.length)+'</span>';
 
-    cells.push('<div class="'+cls+'" onclick="calPick(\''+ds+'\')"'+
-      (hol? ' title="'+esc(hol)+'"' : '')+'>'+
-      '<span class="d'+(hol?' hol':'')+'">'+i+'</span>'+chips+'</div>');
+    cells.push('<div class="'+cls+'" onclick="calPick(\''+ds+'\')">'+
+      '<span class="d'+(hol?' hol':'')+'">'+i+'</span>'+holChip+chips+'</div>');
   }
+
+  /* ★ 언제나 여섯 줄로 그린다 (v50).
+     달마다 4~6줄로 달라지면 달력 아래에 있는 것들과 창 높이가 같이 움직여서,
+     ▶ 를 연달아 누를 때 버튼이 손 밑에서 도망갔습니다.
+     요일줄 7칸 + 날짜 42칸 = 49칸. 남는 칸은 빈 칸으로 채웁니다. */
+  while(cells.length < 49) cells.push('<div class="calcell off"></div>');
 
   var head = monthLeave + monthEvent
     ? ('이 달 휴가 '+monthLeave+'건 · 일정 '+monthEvent+'건 · 날짜를 누르면 자세히 보입니다')
     : '이 달에 등록된 휴가·일정이 없습니다';
 
-  $('modal').innerHTML='<div class="veil"><div class="sheet">'+
-    '<div class="sheethead"><h3 class="tt">일정</h3>'+
-    '<button class="btn sm" onclick="closeModal(true)">닫기</button></div>'+
-    '<div class="cal">'+
-      '<div class="calhd">'+
-        '<button class="btn sm" onclick="calMove(-1)">◀</button>'+
-        '<span class="m">'+y+'년 '+m+'월</span>'+
-        '<button class="btn sm" onclick="calMove(1)">▶</button>'+
-      '</div>'+
-      '<div class="calgrid">'+cells.join('')+'</div>'+
-      '<p class="muted" style="margin:var(--sp-3) 0 0;font-size:var(--fs-sm)">'+head+'</p>'+
-      calDayBox()+
-    '</div></div></div>';
+  return '<div class="calgrid">'+cells.join('')+'</div>'+
+    '<p class="muted" style="margin:var(--sp-3) 0 0;font-size:var(--fs-sm)">'+head+'</p>'+
+    calDayBox();
 }
 
 /** 날짜를 눌렀을 때 아래에 펼쳐지는 그날 내용 */
@@ -3460,18 +3541,21 @@ function openEventForm(ds, id){
       '<div class="field"><label class="fl">종료일</label>'+
         '<input type="date" id="evTo" value="'+esc(ev&&ev.to!==ev.from?ev.to:'')+'"></div>'+
     '</div>'+
+    /* ★ 시각은 한 줄을 통째로 씁니다 (v50). 구분과 반씩 나눠 쓰면 폰에서
+         칸 하나가 70px 남짓이 되어 '오전 12시' 가 잘립니다.
+         대신 드롭다운인 구분·대상자를 나란히 놓아 줄 수는 그대로입니다. */
+    '<div class="field"><label class="fl req">시각</label>'+
+      timeSelect(ev?ev.time:'09:00')+'</div>'+
     '<div class="grid2">'+
-      '<div class="field"><label class="fl req">시각</label>'+
-        '<input type="time" id="evTime" value="'+esc(ev?ev.time:'09:00')+'"></div>'+
       '<div class="field"><label class="fl req">구분</label><select id="evKind">'+
         kinds.map(function(k){
           return '<option value="'+esc(k.code)+'"'+((ev&&ev.kind===k.code)?' selected':'')+'>'+
                  esc(k.name)+'</option>';
         }).join('')+
       '</select></div>'+
+      '<div class="field"><label class="fl req">대상자</label><select id="evWho">'+
+        staffOptions(ev? ev.phone : (S.me? S.me.phone : ''))+'</select></div>'+
     '</div>'+
-    '<div class="field"><label class="fl req">대상자</label><select id="evWho">'+
-      staffOptions(ev? ev.phone : (S.me? S.me.phone : ''))+'</select></div>'+
     '<div class="field"><label class="fl req">제목</label>'+
       '<input type="text" id="evTitle" value="'+esc(ev?ev.title:'')+'"></div>'+
     '<div class="field"><label class="fl">내용</label>'+
@@ -3481,6 +3565,41 @@ function openEventForm(ds, id){
     '<p class="muted" id="evMsg" style="margin-top:8px"></p></div></div>';
 
   $('modal').innerHTML=h;
+}
+
+/**
+ * 시각 고르기 (v50) — 시 · 분 드롭다운 두 개.
+ *
+ * 예전에는 <input type="time"> 이었습니다. 브라우저가 그리는 시계 상자라
+ * 우리 CSS 가 닿지 않아 [오전][09][00] 세 칸이 제멋대로 뜨고, 손가락으로
+ * 맞추기도 어려웠습니다. 화면의 다른 선택칸(구분·대상자)과 같은 모양으로 바꿉니다.
+ *
+ * ★ 분은 5분 단위입니다. 예전에 그 밖의 값으로 넣어둔 일정을 고칠 때는
+ *   그 값도 목록에 넣습니다 — 안 그러면 제목만 고쳤는데 시각이 몰래 바뀝니다.
+ */
+function timeSelect(val){
+  var v = /^\d{1,2}:\d{2}$/.test(val||'') ? val : '09:00';
+  var hh = p2(Number(v.split(':')[0])), mm = p2(Number(v.split(':')[1]));
+
+  var h='', i;
+  for(i=0;i<24;i++){
+    var lab = (i<12?'오전 ':'오후 ') + ((i%12)===0 ? 12 : (i%12)) + '시';
+    h += '<option value="'+p2(i)+'"'+(p2(i)===hh?' selected':'')+'>'+lab+'</option>';
+  }
+
+  var mins=['00','05','10','15','20','25','30','35','40','45','50','55'];
+  if(mins.indexOf(mm)<0){ mins.push(mm); mins.sort(); }
+  var mh = mins.map(function(x){
+    return '<option value="'+x+'"'+(x===mm?' selected':'')+'>'+Number(x)+'분</option>';
+  }).join('');
+
+  return '<div class="tsel"><select id="evH">'+h+'</select>'+
+         '<select id="evM">'+mh+'</select></div>';
+}
+
+function timeValue(){
+  var h=$('evH'), m=$('evM');
+  return (h && m) ? h.value+':'+m.value : '';
 }
 
 /** 일정 창을 닫고 달력으로 돌아간다. 쓰던 내용이 있으면 한 번 묻는다 */
@@ -3494,7 +3613,7 @@ function saveEvent(){
     id: $('evId').value,
     from: $('evFrom').value,
     to: $('evTo').value,
-    time: $('evTime').value,
+    time: timeValue(),
     kind: $('evKind').value,
     phone: $('evWho').value,
     title: $('evTitle').value.trim(),
@@ -3502,7 +3621,7 @@ function saveEvent(){
   };
   if(!p.from){ $('evMsg').textContent='날짜를 정해주세요.'; return; }
   if(p.to && p.to < p.from){ $('evMsg').textContent='종료일이 시작일보다 앞설 수 없습니다.'; return; }
-  if(!p.time){ $('evMsg').textContent='시각을 입력해주세요.'; $('evTime').classList.add('err'); return; }
+  if(!p.time){ $('evMsg').textContent='시각을 골라주세요.'; return; }
   if(!p.title){ $('evMsg').textContent='제목을 입력해주세요.'; $('evTitle').classList.add('err'); return; }
 
   var btn=$('evSave');
@@ -3544,7 +3663,7 @@ function deleteEvent(id){
 
   var backup = (S.data && S.data.events) ? S.data.events.slice() : [];
   dropEventLocal(id);
-  drawCal();
+  if(!calFill(0)) drawCal();          // 달력 안쪽만 (v50)
   toast('삭제되었습니다');
 
   call('api_deleteEvent', S.token, id, S.corp).then(function(r){
