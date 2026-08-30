@@ -130,8 +130,14 @@ a{color:inherit}
   flex:0 0 auto}
 /* 달력에서 색이 뜻을 갖는 곳은 셋뿐이다 — 일요일·공휴일 빨강, 토요일 파랑, 오늘 강조.
    일정 구분마다 색을 다르게 주지 않는다. 구분은 글자로 보여준다. */
-.calcell.sun .d,.calcell .d.hol{color:var(--cal-sun);font-weight:800}
+.calcell.sun .d{color:var(--cal-sun);font-weight:800}
 .calcell.sat .d{color:var(--cal-sat);font-weight:800}
+/* ★★ 공휴일은 무슨 요일이든 빨강입니다 (v52). 달력의 기본 규칙입니다.
+   선택자를 한 단계 더 좁게(.calgrid 를 앞에) 적은 이유가 있습니다 —
+   앞의 두 줄과 세기가 같으면 **나중에 적힌 토요일 파랑이 이깁니다.**
+   실제로 2026-08-15 광복절(토)·10-03 개천절(토)이 파랑으로 나왔습니다.
+   이렇게 해두면 줄 순서를 바꿔도 공휴일 빨강이 유지됩니다. */
+.calgrid .calcell .d.hol{color:var(--cal-sun);font-weight:800}
 .calcell .chip{display:block;font-size:var(--fs-xs);line-height:1.5;
   border-radius:3px;padding:0 3px;margin-top:2px;
   white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
@@ -140,9 +146,20 @@ a{color:inherit}
 .calcell .chip.ev{background:var(--panel);color:var(--t2);border-color:var(--line2)}
 /* 공휴일 — 무슨 날인지 칸 안에서 바로 읽히게 (v50).
    예전에는 날짜 숫자만 빨갛고 이름은 마우스를 올려야 나왔습니다.
-   폰에는 마우스가 없으니 사실상 아무도 못 봤습니다. */
+   폰에는 마우스가 없으니 사실상 아무도 못 봤습니다.
+
+   ★ 이름을 줄이지 않습니다 (v52). '대체공휴일' 을 '대체' 로 줄여 놨더니
+     무슨 날인지 알 수 없었습니다. 대신 **두 줄까지 접어서** 온전히 보여줍니다.
+     좌우 여백도 1px 로 줄여 글자 자리를 최대한 넓혔습니다.
+     (가장 긴 이름이 '부처님오신날' 6자인데, 320px 폰에서도 두 줄로 다 들어갑니다.) */
 .calcell .chip.hol{background:var(--dg-bg);color:var(--cal-sun);
-  border-color:var(--dg-line);font-weight:700}
+  border-color:var(--dg-line);font-weight:700;
+  padding:0 1px;line-height:1.35;
+  /* ★ word-break:keep-all 을 주면 안 됩니다. '대체공휴일' 처럼 띄어쓰기가 없는
+     이름은 아예 줄바꿈이 안 되어 한 줄로 삐져나갑니다. 한글은 기본값(normal)이
+     글자 사이에서 알아서 넘어갑니다. */
+  white-space:normal;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .calcell .more{font-size:var(--fs-xs);color:var(--t3);flex:0 0 auto;
   font-variant-numeric:tabular-nums}
 
@@ -3394,12 +3411,11 @@ function holidayOn(ds){
   return hit;
 }
 
-/* 칸이 좁아 긴 공휴일 이름은 줄여서 넣는다 (v51).
-   전체 이름은 날짜를 눌렀을 때 아래에 그대로 보이므로 뜻이 사라지지 않는다.
-   ★ 여기 없는 이름은 그대로 나가고, 그래도 길면 말줄임표로 잘립니다. */
-var HOL_SHORT = { '설날 연휴':'설날', '추석 연휴':'추석', '대체공휴일':'대체',
-                  '부처님오신날':'부처님', '추석·개천절':'추석' };
-function shortHol(name){ return HOL_SHORT[name] || name; }
+/* ★ 공휴일 이름을 줄이는 표가 여기 있었습니다 (v51). v52에서 없앴습니다.
+     '대체공휴일' 을 '대체' 로, '부처님오신날' 을 '부처님' 으로 줄여 놨더니
+     무슨 날인지 알 수 없었습니다. 지금은 이름을 그대로 넣고,
+     칩이 두 줄까지 접히게 해서 온전히 보여줍니다 (.calcell .chip.hol 참고).
+     ★ 다시 줄이는 표를 만들지 마세요. */
 
 /** 달력 칸에 넣을 한 줄짜리 글 */
 function calChips(ds){
@@ -3495,15 +3511,18 @@ function calBody(){
     if(ds === td) cls += ' today';
     if(ds === CAL.pick) cls += ' pick';
 
-    /* 공휴일이면 무슨 날인지 첫 줄에 놓고, 남는 자리에 휴가·일정을 채운다.
+    /* 공휴일이면 무슨 날인지 먼저 놓고, 남는 자리에 휴가·일정을 채운다.
        ★ 칸 높이에 실제로 들어가는 줄 수만 그린다 (v51).
          날짜 줄 18 + 칩 20 x 2 = 58 이라 칩은 두 줄까지다.
          세 줄을 그리면 82px 가 되는데 자리는 72~78px 뿐이라
          마지막 줄이 반쯤 잘려 있었다 (실측).
+       ★ 공휴일 칩은 이름을 줄이지 않으려고 두 줄까지 차지합니다 (v52).
+         그래서 공휴일이 있는 날은 휴가·일정을 칸 안에 따로 그리지 않고
+         개수(+n)로만 알립니다. 자세한 것은 날짜를 누르면 나옵니다.
        ★ 못 그린 개수(+n)는 아래에 줄을 더 만들지 않고
          날짜 줄 오른쪽 빈자리에 붙인다. 그래야 줄 하나를 되찾는다. */
-    var holChip = hol ? '<span class="chip hol">'+esc(shortHol(hol))+'</span>' : '';
-    var cap = hol ? 1 : 2;
+    var holChip = hol ? '<span class="chip hol">'+esc(hol)+'</span>' : '';
+    var cap = hol ? 0 : 2;
     var show = items.slice(0, cap);
     var rest = items.length - show.length;
     var chips = show.map(function(c){
