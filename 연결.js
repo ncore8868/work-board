@@ -49,6 +49,7 @@ var 허용함수 = {
   api_savePost: 1,
   api_saveEvent: 1,
   api_deleteEvent: 1,
+  api_deleteLeave: 1,
   api_deletePost: 1,
   api_saveComment: 1,
   api_deleteComment: 1,

@@ -114,9 +114,18 @@ a{color:inherit}
   background:var(--card);padding:3px 4px;cursor:pointer;overflow:hidden}
 .calcell.off{background:var(--bg);border-color:transparent;cursor:default}
 /* 오늘 — 칸을 채우지 않습니다 (v51). 배경을 채우면 그 칸 글자가 묻히고
-   주말·공휴일 색과도 싸웁니다. 테두리 한 겹과 작은 점으로만 알립니다. */
-.calcell.today{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
-.calcell.pick{background:var(--panel);border-color:var(--line2)}
+   주말·공휴일 색과도 싸웁니다. 테두리 한 겹과 작은 점으로만 알립니다.
+
+   ★★ 오늘 표시를 약하게, 고른 날짜를 세게 (v52).
+     예전에는 오늘 칸에 빨간 테두리를 두 겹(테두리 + 안쪽 그림자)으로 둘렀는데,
+     그것이 언제나 켜져 있어서 **지금 내가 무슨 날짜를 눌렀는지 알 수 없었습니다.**
+     오늘은 얇은 테두리 한 겹 + 점으로 충분합니다(달력에 하루뿐이라 금방 찾습니다).
+     고른 날짜는 배경을 채우고 테두리를 두 겹으로 둘러 확실히 드러냅니다.
+     ★ 고른 날짜에는 색을 쓰지 않습니다. 달력에서 색이 뜻을 갖는 곳은
+       공휴일·주말뿐이고, 여기에 색을 더하면 그 뜻이 흐려집니다. */
+.calcell.today{border-color:var(--accent)}
+.calcell.pick{background:var(--panel2);border-color:var(--t2);
+  box-shadow:inset 0 0 0 1px var(--t2)}
 
 /* 날짜 줄 — 숫자와 오늘 점이 한 줄에 나란히. 넘치면 잘립니다 */
 .calcell .ch{display:flex;align-items:center;gap:3px;min-width:0;overflow:hidden}
@@ -767,6 +776,13 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lrow .b{margin:2px 0 0;font-size:var(--fs-sm);color:var(--t3);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* ★★ 목록 줄 안의 '누가 언제' 는 위로 끌어올리지 않습니다 (v52).
+   `.byline` 은 기본으로 `margin-top:-8px` 을 갖고 있습니다. 제목(h3·h4)처럼
+   아래 여백이 있는 것 바로 밑에 놓으려고 만든 값인데, 목록 줄에서는 바로 위가
+   여백 0 인 `.t` 라 **제목 글자 위로 8px 올라타 겹쳤습니다.**
+   달력에서 날짜를 누르면 나오는 휴가·일정 줄이 전부 그랬습니다.
+   같은 자리에 쓰는 `.b` 와 똑같이 맞춥니다. */
+.lrow .byline{margin:2px 0 0}
 .lrow > .r{text-align:right;white-space:nowrap;flex:none}
 .lrow .v{font-size:var(--fs-body);font-weight:600;color:var(--t1);
   font-family:"A2Z","A2Z Fallback",inherit}
@@ -3567,11 +3583,17 @@ function calDayBox(){
   if(lv.length){
     h += sechead('휴가', lv.length);
     h += lv.map(function(v){
+      /* 휴가는 결재로만 생깁니다. 잘못 올라간 줄을 치우는 길만 관리자에게 엽니다 (v52).
+         ★ canDel 은 서버가 정해서 보낸 값입니다. 화면에서 등급을 비교하지 마세요.
+         ★ 고치기는 없습니다. 고칠 일이 있으면 결재를 다시 올립니다. */
+      var btn = v.canDel
+        ? '<button class="btn sm" onclick="deleteLeave(\''+esc(v.id)+'\')">지우기</button>'
+        : '';
       return '<div class="lrow plain"><div class="m">'+
         '<p class="t">'+esc(v.name)+' <span class="tag wn">'+esc(v.kind||'휴가')+'</span></p>'+
         byline([v.from + (v.to!==v.from ? (' ~ '+v.to) : ''),
                 v.days ? (String(v.days)+'일') : ''])+
-        '</div></div>';
+        '</div>'+(btn? '<div class="r">'+btn+'</div>' : '')+'</div>';
     }).join('');
   }
 
@@ -3764,6 +3786,33 @@ function deleteEvent(id){
   call('api_deleteEvent', S.token, id, S.corp).then(function(r){
     if(!r || !r.ok){
       if(S.data) S.data.events = backup;
+      calRedraw();
+      toast('삭제 실패: '+((r&&r.msg)||'다시 시도해주세요'));
+      return;
+    }
+    softRefresh();
+  });
+}
+
+/**
+ * 휴가 지우기 — 관리자만 (v52).
+ *
+ * ★ 휴가는 결재로만 생깁니다. 잘못 올라간 줄을 치우는 용도입니다.
+ *   **이미 승인된 결재 문서는 그대로 남습니다** — 결재 기록은 지우지 않습니다.
+ *   되돌릴 수 없으므로 물어볼 때 그 점을 분명히 적습니다.
+ * ★ 판정은 서버에서 다시 합니다 (api_deleteLeave).
+ */
+function deleteLeave(id){
+  if(!confirm('이 휴가 기록을 달력에서 지울까요?\n\n승인된 결재 문서는 그대로 남습니다.\n되돌릴 수 없습니다.')) return;
+
+  var backup = (S.data && S.data.leaves) ? S.data.leaves.slice() : [];
+  if(S.data) S.data.leaves = (S.data.leaves || []).filter(function(v){ return v.id !== id; });
+  if(!calFill(0)) drawCal();
+  toast('삭제되었습니다');
+
+  call('api_deleteLeave', S.token, id, S.corp).then(function(r){
+    if(!r || !r.ok){
+      if(S.data) S.data.leaves = backup;
       calRedraw();
       toast('삭제 실패: '+((r&&r.msg)||'다시 시도해주세요'));
       return;

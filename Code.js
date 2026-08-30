@@ -3179,7 +3179,7 @@ function board_(me, corp) {
   add_('단계:출퇴근', _t);
 
   _t = new Date().getTime();
-  var leaves = leavesFor_(nameOf);
+  var leaves = leavesFor_(nameOf, me);
   var events = eventsFor_(nameOf, me);
   var ekinds = eventKinds_();
   add_('단계:휴가·일정', _t);
@@ -3422,6 +3422,38 @@ function api_deleteEvent(token, id, corp) {
 }
 
 /**
+ * 휴가 지우기 — 관리자(9)만 (v52).
+ *
+ * ★ 휴가는 원래 결재로만 생기고 사라집니다 (휴가 신청서가 최종 승인될 때
+ *   addLeave_ 가 한 줄 쌓습니다). 잘못 올라간 줄을 관리자가 달력에서 바로
+ *   치울 수 있게 이 통로 하나만 열어 둡니다.
+ *
+ * ★ 이것은 **달력에서 그 줄을 지우는 것뿐**입니다.
+ *   이미 승인된 결재 문서는 그대로 남습니다 (결재 기록을 지우면 안 되니까).
+ *   그래서 화면에서 물어볼 때도 그 점을 분명히 말합니다.
+ *
+ * ★ 판정은 여기서 합니다. 화면에서 버튼을 숨기는 것으로 막지 않습니다.
+ */
+function api_deleteLeave(token, id, corp) {
+  var me = userInfo_(requireUser_(token));
+  if (Number(me.grade || 0) < 9) {
+    return { ok: false, msg: '관리자만 지울 수 있습니다.' };
+  }
+  id = String(id || '').trim();
+  if (!id) return { ok: false, msg: '휴가를 찾을 수 없습니다.' };
+
+  var target = null;
+  readObjects_('휴가').forEach(function (r) { if (String(r['휴가ID']) === id) target = r; });
+  if (!target) return { ok: false, msg: '휴가를 찾을 수 없습니다.' };
+
+  deleteRows_('휴가', [target._row]);
+
+  var res = { ok: true, id: id, ms: took_() };
+  log_(me.phone, '휴가삭제', id + ' / ' + String(target['문서번호'] || ''), token);
+  return res;
+}
+
+/**
  * 휴가 달력 재료 (v46).
  *
  * '휴가' 시트는 휴가 신청서가 최종 승인될 때 addLeave_ 가 한 줄씩 쌓는다.
@@ -3431,7 +3463,7 @@ function api_deleteEvent(token, id, corp) {
  *   board_ 가 이미 한 번에 가져온 것 안에 들어 있다 (구글 왕복 0회).
  * ★ 최근 6개월 + 앞으로 6개월만 보낸다. 응답이 해마다 커지지 않게.
  */
-function leavesFor_(nameOf) {
+function leavesFor_(nameOf, me) {
   var td = today_();
   var from = shiftMonth_(td, -6);
   var to = shiftMonth_(td, 6);
@@ -3454,7 +3486,10 @@ function leavesFor_(nameOf) {
       kind: String(r['휴가종류'] || ''),
       from: s1, to: s2,
       days: Number(r['일수'] || 0),
-      docNo: String(r['문서번호'] || '')
+      docNo: String(r['문서번호'] || ''),
+      /* 지울 수 있는지 — 관리자(9)만 (v52). 판정은 여기서 하고
+         화면은 이 값만 보고 버튼을 그린다. api_deleteLeave 가 다시 확인한다. */
+      canDel: Number((me && me.grade) || 0) >= 9
     });
   });
 
