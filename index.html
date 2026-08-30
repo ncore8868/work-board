@@ -107,10 +107,27 @@ var splash = document.getElementById('splash');
 var msg = document.getElementById('msg');
 var retry = document.getElementById('retry');
 
-/* 주소 끝에 매번 다른 숫자를 붙인다.
-   이게 없으면 브라우저가 예전에 받아둔 앱 화면을 계속 꺼내 써서,
-   새로 올려도 옛 화면이 뜬다. (2026-08 실제로 겪음) */
-frame.src = APP_URL + '?dt=' + encodeURIComponent(token) + '&v=' + Date.now();
+/* ★ 앱 화면의 판 번호 — 화면(app.html)을 고쳐 올릴 때 하나 올리세요.
+      sw.js 의 CACHE 번호와 같은 숫자로 맞춰두면 헷갈리지 않습니다.
+
+   예전에는 여기에 Date.now() 를 넣어 **열 때마다 다른 주소**를 만들었습니다.
+   "새로 올려도 옛 화면이 뜬다" 를 막으려던 것인데, 대가가 컸습니다.
+
+     · 주소가 매번 달라서 브라우저·서비스워커 캐시가 **한 번도 맞은 적이 없다**
+       → 앱을 열 때마다 app.html 225KB 를 통째로 다시 받았습니다
+     · 캐시에는 열 때마다 새 칸이 쌓였습니다 (100번 열면 22MB)
+       폰 저장 한도에 닿으면 캐시가 통째로 지워집니다
+     · 캐시가 맞은 적이 없으니 **오프라인에서는 앱 화면이 아예 안 떴습니다**
+
+   이제 서비스워커가 열 때마다 서버에 "바뀌었나" 를 물어봅니다(no-cache).
+   안 바뀌었으면 서버가 '그대로다' 한 줄만 보내므로 옛 화면이 남을 수 없습니다.
+   그래서 주소를 매번 바꿀 이유가 없어졌습니다.
+
+   ▶ 이 번호를 안 올려도 새 화면은 그대로 반영됩니다(서비스워커가 확인하므로).
+     올리면 확실하게 한 번 더 눌러주는 것뿐이라 부담 없이 두셔도 됩니다. */
+var APP_VER = 'v16';
+
+frame.src = APP_URL + '?dt=' + encodeURIComponent(token) + '&v=' + APP_VER;
 
 var done = false;
 function hideSplash() {

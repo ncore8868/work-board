@@ -101,6 +101,7 @@ function 점검_지금하기() {
     ensureSignSheet_();
     ensureSyncSheet_();
     ensureLeaveSheet_();
+    ensureCalendarSheets_();
     ensureReadSheet_();
     ensurePostSheets_(true);
     ensureFormSheets_();
@@ -161,6 +162,90 @@ function ensureLeaveSheet_() {
   sh.getRange('E2:F').setNumberFormat('@');
   delete _VALS['휴가']; delete _OBJ['휴가'];
   delete _HEAD['휴가'];
+}
+
+/**
+ * 일정 · 일정구분 시트 (회사 일정표 — v47)
+ *
+ * '휴가' 와 섞지 않는다. 휴가는 휴가 신청서가 결재로 승인될 때 서버가 자동으로
+ * 쌓는 것이고, 일정은 사람이 달력에서 직접 넣는 것이라 성격이 다르다.
+ *
+ * ★ 시트가 없으면 **실제로 만든다.** ensureSettings_ 처럼 '없으면 조용히 넘어가기'
+ *   로 두면 달력이 영영 비어 있고 왜 그런지 찾기 어렵다.
+ * ★ 날짜·시각·전화번호 열은 글자(@)로 굳힌다.
+ *   시트가 날짜로 바꿔 담으면 시차 때문에 하루가 밀리고,
+ *   전화번호는 앞자리 0 이 떨어져 사람을 못 찾는다.
+ */
+var EVENT_HEAD = ['일정ID', '시작일', '종료일', '시각', '구분', '대상자전화',
+                  '제목', '내용', '등록자전화', '등록일시', '수정일시'];
+var EVENT_KIND_HEAD = ['구분코드', '구분명', '표시순서', '사용여부'];
+var EVENT_KIND_SEED = [
+  ['VISIT', '현장방문', 1, 'Y'],
+  ['MEET', '미팅', 2, 'Y'],
+  ['PERSONAL', '개인일정', 3, 'Y']
+];
+
+function ensureCalendarSheets_() {
+  var ss = ss_();
+
+  if (!ss.getSheetByName('일정')) {
+    var sh = ss.insertSheet('일정');
+    sh.getRange(1, 1, 1, EVENT_HEAD.length).setValues([EVENT_HEAD])
+      .setFontWeight('bold').setBackground('#F1F3F4');
+    sh.setFrozenRows(1);
+    sh.setColumnWidth(7, 240); sh.setColumnWidth(8, 320);
+    sh.getRange('B2:D').setNumberFormat('@');    // 시작일 · 종료일 · 시각
+    sh.getRange('F2:F').setNumberFormat('@');    // 대상자전화
+    sh.getRange('I2:I').setNumberFormat('@');    // 등록자전화
+    delete _VALS['일정']; delete _OBJ['일정']; delete _HEAD['일정'];
+  } else {
+    EVENT_HEAD.forEach(function (c) { ensureColumn_('일정', c); });
+  }
+
+  if (!ss.getSheetByName('일정구분')) {
+    var sh2 = ss.insertSheet('일정구분');
+    sh2.getRange(1, 1, 1, EVENT_KIND_HEAD.length).setValues([EVENT_KIND_HEAD])
+      .setFontWeight('bold').setBackground('#F1F3F4');
+    sh2.setFrozenRows(1);
+    sh2.getRange(2, 1, EVENT_KIND_SEED.length, EVENT_KIND_HEAD.length)
+       .setValues(EVENT_KIND_SEED);
+    delete _VALS['일정구분']; delete _OBJ['일정구분']; delete _HEAD['일정구분'];
+  } else {
+    EVENT_KIND_HEAD.forEach(function (c) { ensureColumn_('일정구분', c); });
+    /* 기본 세 줄이 통째로 지워졌으면 되살린다. 있으면 아무것도 쓰지 않는다.
+       ★ 줄을 지우지 않는다 — 이미 그 구분으로 등록된 일정이 이름을 잃는다.
+         그만 쓰려면 사용여부만 'N' 으로 (업무유형과 같은 방식). */
+    var have = {};
+    readObjects_('일정구분').forEach(function (r) {
+      if (r['구분코드']) have[String(r['구분코드'])] = 1;
+    });
+    EVENT_KIND_SEED.forEach(function (s) {
+      if (have[s[0]]) return;
+      appendObject_('일정구분', {
+        '구분코드': s[0], '구분명': s[1], '표시순서': s[2], '사용여부': s[3]
+      });
+    });
+  }
+}
+
+/** 편집기에서 직접 실행 — 달력 시트를 지금 만든다 (하루 1회 점검을 기다리지 않고) */
+function 달력시트_만들기() {
+  _VALS = {}; _HEAD = {}; _OBJ = {};
+  ensureCalendarSheets_();
+
+  var ss = ss_();
+  var 줄 = [];
+  줄.push('일정 시트      →  ' + (ss.getSheetByName('일정') ? '있음' : '없음'));
+  줄.push('일정구분 시트  →  ' + (ss.getSheetByName('일정구분') ? '있음' : '없음'));
+  readObjects_('일정구분').forEach(function (r) {
+    줄.push('   ' + r['구분코드'] + '  ' + r['구분명'] +
+            '  (표시순서 ' + (r['표시순서'] || '') + ' · 사용 ' + (r['사용여부'] || 'Y') + ')');
+  });
+  줄.push('등록된 일정    →  ' + readObjects_('일정').length + '건');
+
+  var 결과 = 줄.join('\n');
+  Logger.log(결과);
+  return 결과;
 }
 
 /**
@@ -741,7 +826,7 @@ var _TOUCHED = false;              // 이번 요청에서 이미 시각을 찍�
 var _LASTUP = '';                  // 이번 요청에서 찍은 바뀜시각 (다시 물어보지 않으려고)
 var _META = null;                  // 기준정보 캐시 (요청 안에서 재사용)
 var _START = new Date().getTime(); // 이 요청이 시작된 시각 (응답에 처리시간 표시용)
-var SETUP_VER = 'v46e';             // 시트 구조가 바뀌면 이 값을 올린다. 점검이 한 번 다시 돈다
+var SETUP_VER = 'v49';             // 시트 구조가 바뀌면 이 값을 올린다. 점검이 한 번 다시 돈다
 
 /* -------------------------------------------------------------
  *  속도 재기 (v37m)
@@ -805,7 +890,9 @@ var CACHE_SEC = 21600;             // 6시간 (구글 최대)
 var CACHE_MAX_BYTES = 95000;       // 한 칸 100KB 한도. 실제 바이트로 재서 여유를 다 쓴다 (v43)
 var CACHE_SHEETS = ['직원', '업무', '업무일지', '결재문서', '결재선', '결재내역', '문서상세',
                     '정산내역', '댓글', '첨부', '게시글', '알림', '연동캐시', '설정', '서명',
-                    '읽음', '휴가'];   // ★ 휴가 추가 (v46) — 달력이 board 와 같은 한 번에 실려 온다
+                    '읽음', '휴가', '일정', '일정구분'];
+/* ★ '휴가'(v46) · '일정'·'일정구분'(v47) 이 여기 들어 있어야 달력이 board 와
+     **같은 한 번(getAll)** 에 실려 온다. 빼면 달력을 열 때마다 시트를 새로 읽는다. */
 
 /* 여기 적힌 시트에 쓰는 것은 '바뀜 시각'(LAST_UPDATE)을 건드리지 않는다 (v43).
    ★ 업무 상세를 **열기만** 해도 읽음 기록이 쌓이는데, 그때마다 바뀜 시각이 올라가면
@@ -965,6 +1052,7 @@ function areaVers_() {
   return {
     doc:  v(['결재문서', '결재선', '결재내역', '문서상세', '첨부']),
     post: v(['게시글', '댓글']),
+    cal:  v(['일정', '일정구분']),
     set:  v(['설정', '직원', '서명'])
   };
 }
@@ -3092,7 +3180,9 @@ function board_(me, corp) {
 
   _t = new Date().getTime();
   var leaves = leavesFor_(nameOf);
-  add_('단계:휴가', _t);
+  var events = eventsFor_(nameOf, me);
+  var ekinds = eventKinds_();
+  add_('단계:휴가·일정', _t);
 
   _t = new Date().getTime();
   var recent = recentLogs_(logs, nameOf, tasks);
@@ -3128,6 +3218,9 @@ function board_(me, corp) {
     approvals: approvals,
     attendance: attendance,
     leaves: leaves,             // 휴가 달력 (v46) — 달력을 열 때 서버에 다시 묻지 않는다
+    events: events,             // 회사 일정 (v47) — 같은 이유로 여기 실어 보낸다
+    eventKinds: ekinds.use,     // 새로 넣을 때 고를 수 있는 구분
+    eventKindAll: ekinds.all,   // 이름을 붙이는 데 쓰는 전체 (사용 안 하는 것 포함)
     staff: staffList_(),        // 담당자 드롭다운 (v46c) — 업무가 없어도 목록에 뜨게
     recent: recent,
     stat: stat,
@@ -3139,6 +3232,192 @@ function board_(me, corp) {
     ms: took_()
   };
   res.t = timing_();
+  return res;
+}
+
+/**
+ * 회사 일정 (v47) — 달력이 board 와 같은 한 번에 실려 온다.
+ *
+ * ★ '일정' 은 CACHE_SHEETS 에 들어 있어 이미 한 번에 가져온 것(getAll) 안에 있다.
+ *   시트를 새로 열지 않으므로 **구글에 묻는 횟수가 늘지 않는다** (휴가와 같은 방식).
+ * ★ 최근 6개월 + 앞으로 6개월만 보낸다. 응답이 해마다 커지지 않게.
+ * ★ 고칠 수 있는지(canEdit)를 서버가 판정해서 실어 보낸다.
+ *   화면은 이 값만 보고 버튼을 그리고, 저장·삭제 API 가 같은 규칙을 다시 확인한다.
+ */
+function eventsFor_(nameOf, me) {
+  var td = today_();
+  var from = shiftMonth_(td, -6);
+  var to = shiftMonth_(td, 6);
+
+  var out = [];
+  readObjects_('일정').forEach(function (r) {
+    var s1 = fmtD_(r['시작일']);
+    if (!s1) return;
+    var s2 = fmtD_(r['종료일']) || s1;
+    if (s2 < s1) s2 = s1;
+
+    /* 기간이 창 밖으로 완전히 벗어난 것만 뺀다 (걸쳐 있으면 넣는다) */
+    if (s2 < from || s1 > to) return;
+
+    var who = normPhone_(r['대상자전화']);
+    var by = normPhone_(r['등록자전화']);
+    out.push({
+      id: String(r['일정ID'] || ''),
+      from: s1, to: s2,
+      time: fmtT_(r['시각']),
+      kind: String(r['구분'] || ''),
+      phone: who,
+      name: String(nameOf[who] || ''),
+      title: cellText_(r['제목']),
+      body: cellText_(r['내용']),
+      by: by,
+      byName: String(nameOf[by] || ''),
+      canEdit: canEditEvent_(me, r)
+    });
+  });
+
+  out.sort(function (a, b) {
+    if (a.from !== b.from) return a.from < b.from ? -1 : 1;
+    if (a.time !== b.time) return a.time < b.time ? -1 : 1;
+    return a.title < b.title ? -1 : 1;
+  });
+  return out;
+}
+
+/**
+ * 일정 구분 — 고를 수 있는 것(use)과 이름을 붙이는 데 쓰는 전체(all).
+ * 업무유형(types / typeAll)과 같은 방식이다.
+ * ★ 사용여부가 'N' 이어도 all 에는 남긴다. 안 그러면 이미 그 구분으로 등록된
+ *   일정이 'VISIT' 같은 코드로 보인다.
+ */
+function eventKinds_() {
+  var rows = readObjects_('일정구분').filter(function (r) { return r['구분코드']; });
+  rows = rows.slice().sort(function (a, b) {
+    return Number(a['표시순서'] || 99) - Number(b['표시순서'] || 99);
+  });
+  return {
+    use: rows.filter(function (r) { return String(r['사용여부'] || 'Y') !== 'N'; })
+             .map(function (r) {
+               return { code: String(r['구분코드']), name: String(r['구분명'] || r['구분코드']) };
+             }),
+    all: rows.map(function (r) {
+      return { code: String(r['구분코드']), name: String(r['구분명'] || r['구분코드']),
+               off: String(r['사용여부'] || 'Y') === 'N' };
+    })
+  };
+}
+
+/**
+ * 일정을 고치고 지울 수 있는 사람 — 넣은 사람 · 대상자 · 관리자(9).
+ *
+ * ★ 판정은 반드시 서버에서 한다. 화면에서 버튼을 숨기는 것만으로는 막히지 않는다
+ *   (요청을 직접 만들어 보내면 그대로 통과한다).
+ */
+function canEditEvent_(me, row) {
+  if (!me || !row) return false;
+  if (Number(me.grade || 0) >= 9) return true;
+  return normPhone_(row['등록자전화']) === me.phone ||
+         normPhone_(row['대상자전화']) === me.phone;
+}
+
+// =============================================================
+//  API - 회사 일정 (달력)
+// =============================================================
+
+/**
+ * 일정 저장 (새로 넣기 / 고치기) — 서버 왕복 1회.
+ *
+ * ★ 응답에 board 를 싣지 않는다 (v33 규칙).
+ *   방금 넣은 한 건만 돌려주고 화면이 그것으로 달력을 고친다.
+ *   정확한 값은 뒤에서 도는 softRefresh 가 맞춘다.
+ * ★ 남의 일정도 넣을 수 있다 (대상자를 명부에서 고른다).
+ *   고치고 지우는 것만 넣은 사람 · 대상자 · 관리자로 제한한다.
+ */
+function api_saveEvent(token, p, corp) {
+  var me = userInfo_(requireUser_(token));
+  ensureCalendarSheets_();
+  p = p || {};
+
+  var from = String(p.from || '').trim().substring(0, 10);
+  var to = String(p.to || '').trim().substring(0, 10);
+  var time = String(p.time || '').trim().substring(0, 5);
+  var kind = String(p.kind || '').trim();
+  var who = normPhone_(p.phone) || me.phone;
+  var title = String(p.title || '').trim();
+  var body = String(p.body || '').trim();
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(from)) return { ok: false, msg: '날짜를 정해주세요.' };
+  if (to && !/^\d{4}-\d{2}-\d{2}$/.test(to)) return { ok: false, msg: '종료일이 올바르지 않습니다.' };
+  if (to && to < from) return { ok: false, msg: '종료일이 시작일보다 앞설 수 없습니다.' };
+  if (!/^\d{2}:\d{2}$/.test(time)) return { ok: false, msg: '시각을 입력해주세요.' };
+  if (!title) return { ok: false, msg: '제목을 입력해주세요.' };
+
+  var known = {};
+  eventKinds_().all.forEach(function (k) { known[k.code] = k; });
+  if (!kind || !known[kind]) return { ok: false, msg: '일정 구분을 골라주세요.' };
+
+  // 대상자는 재직 중인 직원이어야 한다
+  var okWho = false, whoName = '';
+  staffList_().forEach(function (s) {
+    if (s.phone === who) { okWho = true; whoName = s.name; }
+  });
+  if (!okWho) return { ok: false, msg: '대상자를 다시 골라주세요.' };
+
+  var nowS = fmtDT_(now_());
+  var id = String(p.id || '').trim();
+  var isEdit = !!id;
+
+  if (isEdit) {
+    var target = null;
+    readObjects_('일정').forEach(function (r) { if (String(r['일정ID']) === id) target = r; });
+    if (!target) return { ok: false, msg: '일정을 찾을 수 없습니다.' };
+    if (!canEditEvent_(me, target)) {
+      return { ok: false, msg: '넣은 사람과 대상자만 고칠 수 있습니다.' };
+    }
+    updateObject_('일정', target._row, {
+      '시작일': from, '종료일': to, '시각': time, '구분': kind,
+      '대상자전화': who, '제목': title, '내용': body, '수정일시': nowS
+    });
+  } else {
+    id = nextId_('일정', '일정ID', 'E');
+    appendObject_('일정', {
+      '일정ID': id, '시작일': from, '종료일': to, '시각': time, '구분': kind,
+      '대상자전화': who, '제목': title, '내용': body,
+      '등록자전화': me.phone, '등록일시': nowS, '수정일시': ''
+    });
+  }
+
+  var res = {
+    ok: true,
+    event: {
+      id: id, from: from, to: (to || from), time: time, kind: kind,
+      phone: who, name: whoName,
+      title: title, body: body,
+      by: me.phone, byName: me.name,
+      canEdit: true                       // 방금 내가 넣었거나 고친 것이다
+    },
+    ms: took_()
+  };
+  log_(me.phone, isEdit ? '일정수정' : '일정등록', id, token);   // 로그는 응답을 만든 뒤에
+  return res;
+}
+
+/** 일정 삭제 — 넣은 사람 · 대상자 · 관리자(9) */
+function api_deleteEvent(token, id, corp) {
+  var me = userInfo_(requireUser_(token));
+  id = String(id || '').trim();
+
+  var target = null;
+  readObjects_('일정').forEach(function (r) { if (String(r['일정ID']) === id) target = r; });
+  if (!target) return { ok: false, msg: '일정을 찾을 수 없습니다.' };
+  if (!canEditEvent_(me, target)) {
+    return { ok: false, msg: '넣은 사람과 대상자만 지울 수 있습니다.' };
+  }
+
+  deleteRows_('일정', [target._row]);
+
+  var res = { ok: true, id: id, ms: took_() };
+  log_(me.phone, '일정삭제', id, token);
   return res;
 }
 
