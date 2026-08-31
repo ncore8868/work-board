@@ -29,42 +29,23 @@ var DEFAULT_SETTINGS = [
 // =============================================================
 //  진입점
 // =============================================================
-
-function doGet(e) {
-  // 시트 점검은 앱을 열 때마다 할 필요가 없다. 하루 1번이면 충분.
-  var _t = new Date().getTime();
-  try {
-    var props = PropertiesService.getScriptProperties();
-    var mark = props.getProperty('SETUP_DAY');
-    var today = today_() + '|' + SETUP_VER;
-    if (mark !== today) {
-      // 점검이 실제로 끝났을 때만 '오늘 했음' 표시를 남긴다.
-      // 잠금을 못 잡아 건너뛴 경우까지 표시하면 그날은 다시 시도하지 않는다.
-      if (점검_지금하기() === '점검 완료') props.setProperty('SETUP_DAY', today);
-    }
-  } catch (e) {}
-  add_('단계:점검', _t);
-
-  _t = new Date().getTime();
-  var t = HtmlService.createTemplateFromFile('화면');
-
-  // 런처(GitHub Pages)가 넘겨준 기기 식별값을 화면에 심어준다
-  var dt = '';
-  try {
-    if (e && e.parameter && e.parameter.dt) {
-      dt = String(e.parameter.dt).replace(/[^A-Za-z0-9_\-]/g, '').substring(0, 64);
-    }
-  } catch (err) { dt = ''; }
-  t.launchToken = dt;
-
-  var out = t.evaluate()
-    .setTitle('UNION ONE WORK BOARD')
-    .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover')
-    .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
-  add_('단계:화면그리기', _t);
-  logTiming_('doGet');
-  return out;
-}
+//
+//  ★★ 이 파일에는 doGet 이 없습니다. 만들지 마세요 (v54에서 지웠습니다).
+//
+//  2026-08-27 구글 계정 정지의 원인으로 지목된 것이 바로 이 조합이었습니다.
+//      HtmlService 로 PIN 로그인 화면을 구글 도메인에 띄우고
+//      setXFrameOptionsMode(ALLOWALL) 로 바깥 사이트가 iframe 으로 감싸게 둔 것.
+//  자동 탐지 입장에서 피싱 페이지와 구분되지 않습니다.
+//
+//  그런데 그 doGet 이 코드에 그대로 남아 있었습니다 (2026-08-30 점검에서 발견).
+//  화면 파일이 없어 오류가 나긴 했지만, 오류가 나기 전에 시트 점검이 먼저 돌았고
+//  웹앱이 ANYONE_ANONYMOUS 라 인터넷의 누구나 그것을 돌릴 수 있었습니다.
+//
+//  · 바깥 통로는 연결.js 의 doPost 하나뿐입니다.
+//  · 하루 1회 시트 점검은 연결.js 의 하루점검_() 이 맡습니다
+//    (api_start · api_boot 를 부를 때 돕니다). 여기서 할 일이 아닙니다.
+//  · 브라우저로 배포 주소를 열면 아무것도 나오지 않는 것이 정상입니다.
+// =============================================================
 
 /**
  * 시트 구조 점검 (하루 1번 자동 실행 / 편집기에서 직접 실행 가능)
@@ -85,6 +66,11 @@ function 점검_지금하기() {
     try { got = lock.tryLock(3000); } catch (e2) { got = false; }
     if (!got) return '다른 점검이 진행 중이라 건너뛰었습니다.';   // 조용히 종료
   }
+
+  /* ★ 이미 우리가 잠금을 잡았다고 알려둔다 (v54).
+     점검은 잠금을 쥔 채로 시트에 여러 줄을 씁니다. 그 안쪽 쓰기가 또 잠그려 하면
+     **자기 자신을 기다리다 멈춥니다.** 이 표시가 그것을 막습니다. */
+  if (lock) markInLock_(true);
 
   try {
     // 잠그기 전에 읽어둔 값은 낡았을 수 있다. 캐시를 버리고 지금 상태를 다시 읽는다.
@@ -116,6 +102,7 @@ function 점검_지금하기() {
        시트를 새로 만드는 경우는 애초에 캐시에 담긴 적이 없으므로 버릴 것도 없다
        (values_ 는 시트가 없으면 캐시에 담지 않는다). */
   } finally {
+    markInLock_(false);
     if (lock) { try { lock.releaseLock(); } catch (e3) {} }
   }
   return '점검 완료';
@@ -536,6 +523,8 @@ function dedupForms_() {
 function 양식_정리하기() {
   var lock = null;
   try { lock = LockService.getScriptLock(); lock.tryLock(20000); } catch (e) { lock = null; }
+  /* 잠금을 쥔 채 시트에 쓰므로, 안쪽 쓰기가 또 잠그지 않게 표시해 둔다 (v54) */
+  if (lock) markInLock_(true);
 
   var msg = '';
   try {
@@ -561,6 +550,7 @@ function 양식_정리하기() {
     lines.push('앱을 새로고침하면 바로 반영됩니다.');
     msg = lines.join('\n');
   } finally {
+    markInLock_(false);
     if (lock) { try { lock.releaseLock(); } catch (e2) {} }
   }
 
@@ -675,9 +665,9 @@ function ensureFormSheets_() {
   if (newForms.length) appendObjects_('문서양식', newForms);
 }
 
-function include_(name) {
-  return HtmlService.createHtmlOutputFromFile(name).getContent();
-}
+// ★ 여기에 있던 include_() 를 지웠습니다 (v54).
+//   HtmlService 로 화면 조각을 읽어오던 함수인데 아무도 부르지 않는 죽은 코드였고,
+//   HtmlService 를 프로젝트에서 완전히 몰아내기 위해 같이 지웠습니다.
 
 // =============================================================
 //  공통 유틸
@@ -1300,6 +1290,54 @@ function appendAt_(name, sh) {
   return Math.max(byCache, bySheet);
 }
 
+/* =============================================================
+ *  저장 잠금 (v54)
+ * -------------------------------------------------------------
+ *  왜 넣었나 — 2026-08-30 점검에서 나온 것입니다.
+ *
+ *  직원 여섯 명이 아침에 동시에 저장하면 이런 일이 생길 수 있었습니다.
+ *    · nextId_ 가 둘 다 같은 번호를 내준다 (문서번호가 두 건)
+ *    · appendAt_ 이 둘 다 같은 줄 번호를 내준다
+ *      → 뒤에 쓴 사람이 앞사람 줄을 **덮어써서 한 건이 통째로 사라진다**
+ *  오류가 나지 않아 사라진 사람은 알 수도 없었습니다.
+ *
+ *  현장견적의 issueEstimateCode_ 가 쓰던 방식을 그대로 가져왔습니다.
+ *  새로 설계하지 않았습니다.
+ *
+ *  ★ 지킬 것
+ *    · 기다리는 시간은 짧게 (4초). 20초를 기다리면 사람은 흰 화면을 봅니다.
+ *      못 잡으면 오류를 던지고, 연결.js 의 doPost 가
+ *      '잠시 후 다시 시도해 주세요' 로 바꿔 돌려줍니다.
+ *    · 잡았으면 반드시 푼다 (finally).
+ *    · 잠금 안에서는 번호 매기기와 쓰기만 한다. 읽기·계산은 밖에서.
+ *    · _INLOCK — 한 실행이 이미 잡고 있으면 다시 잡지 않는다.
+ *      점검_지금하기() 처럼 잠금을 잡은 채 여러 줄을 쓰는 곳이 있는데,
+ *      거기서 또 잡으려 하면 **자기 자신을 기다리다 멈춥니다.**
+ * ============================================================= */
+var LOCK_WAIT_MS = 4000;
+var _INLOCK = false;
+
+function withLock_(work) {
+  if (_INLOCK) return work();          // 이 실행이 이미 잡고 있다
+  var lock = null;
+  try { lock = LockService.getScriptLock(); } catch (e) { lock = null; }
+  if (!lock) return work();            // 잠금을 못 쓰는 환경이면 예전처럼 (멈추는 것보다 낫다)
+
+  var got = false;
+  try { got = lock.tryLock(LOCK_WAIT_MS); } catch (e) { got = false; }
+  if (!got) throw new Error('저장이 몰리고 있습니다. 잠시 후 다시 시도해 주세요.');
+
+  _INLOCK = true;
+  try { return work(); }
+  finally {
+    _INLOCK = false;
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
+/** 이미 잠금을 잡고 있는 곳(점검·정리)이 안쪽 쓰기와 부딪히지 않게 알려준다 */
+function markInLock_(on) { _INLOCK = !!on; }
+
 /** 객체 한 건을 시트 맨 아래에 추가 (쓰기 1회, 읽기 0회) */
 function appendObject_(name, obj) {
   var sh = sheet_(name);
@@ -1312,10 +1350,18 @@ function appendObject_(name, obj) {
     var v = obj[head[i]];
     row.push(v === undefined || v === null ? '' : v);
   }
-  var target = appendAt_(name, sh);
-  var _t0 = new Date().getTime();
-  sh.getRange(target, 1, 1, head.length).setValues([row]);
-  add_('쓰기:' + name, _t0);
+  /* ★ 붙일 자리를 정하는 것과 쓰는 것을 같은 잠금 안에서 한다 (v54).
+     밖에서 정하면 두 사람이 같은 줄 번호를 받아 한 건이 사라진다.
+     flush() 는 쓴 것을 바로 시트에 반영해, 다음 사람이 getLastRow() 로
+     이 줄을 보게 하려는 것이다. 이것이 없으면 잠금이 있어도 소용이 없다. */
+  var target = withLock_(function () {
+    var at = appendAt_(name, sh);
+    var _t0 = new Date().getTime();
+    sh.getRange(at, 1, 1, head.length).setValues([row]);
+    SpreadsheetApp.flush();
+    add_('쓰기:' + name, _t0);
+    return at;
+  });
   if (_VALS[name] && _VALS[name].length) _VALS[name].push(row);   // 캐시도 같이 갱신
   dropObj_(name);
   touchFor_(name);
@@ -1366,16 +1412,21 @@ function deleteRows_(name, rowIndexes) {
   var sh = sheet_(name);
   var rows = rowIndexes.slice().sort(function (a, b) { return b - a; });  // 아래에서부터
 
-  var _t0 = new Date().getTime();
-  var i = 0;
-  while (i < rows.length) {
-    var end = rows[i];      // 큰 번호
-    var start = end;
-    while (i + 1 < rows.length && rows[i + 1] === start - 1) { start = rows[i + 1]; i++; }
-    sh.deleteRows(start, end - start + 1);
-    i++;
-  }
-  add_('행삭제:' + name, _t0);
+  /* ★ 지우기도 잠금 안에서 (v54). 줄을 지우면 아래 줄 번호가 전부 당겨지는데,
+     그 사이에 다른 사람이 줄을 붙이면 엉뚱한 자리에 들어간다. */
+  withLock_(function () {
+    var _t0 = new Date().getTime();
+    var i = 0;
+    while (i < rows.length) {
+      var end = rows[i];      // 큰 번호
+      var start = end;
+      while (i + 1 < rows.length && rows[i + 1] === start - 1) { start = rows[i + 1]; i++; }
+      sh.deleteRows(start, end - start + 1);
+      i++;
+    }
+    SpreadsheetApp.flush();
+    add_('행삭제:' + name, _t0);
+  });
   delete _VALS[name];
   delete _HEAD[name];
   dropObj_(name);
@@ -1398,10 +1449,15 @@ function appendObjects_(name, list) {
     }
     return row;
   });
-  var target = appendAt_(name, sh);
-  var _t0 = new Date().getTime();
-  sh.getRange(target, 1, rows.length, head.length).setValues(rows);
-  add_('쓰기:' + name, _t0);
+  /* 한 줄짜리(appendObject_)와 같은 이유로 잠금 안에서 자리를 정하고 쓴다 (v54).
+     여러 줄이어도 setValues 한 번이라 잠금을 잡고 있는 시간은 거의 같다. */
+  withLock_(function () {
+    var at = appendAt_(name, sh);
+    var _t0 = new Date().getTime();
+    sh.getRange(at, 1, rows.length, head.length).setValues(rows);
+    SpreadsheetApp.flush();
+    add_('쓰기:' + name, _t0);
+  });
   if (_VALS[name] && _VALS[name].length) {
     rows.forEach(function (r) { _VALS[name].push(r); });
   }
@@ -1631,9 +1687,52 @@ function buildMeta_() {
  * 오늘 것은 항상 시트 맨 아래쪽에 있으므로 뒤에서부터 훑는다.
  * 뒤 400줄에서 오늘 것을 하나도 못 찾으면 그때만 전체를 훑는다.
  */
+/**
+ * 오늘 날짜로 다음 번호를 만든다.  W-260830-003 처럼.
+ *
+ * ★★ 번호를 스크립트 속성에 '예약' 한다 (v54).
+ *   예전에는 시트에서 최대값을 찾아 +1 만 했습니다. 두 사람이 같은 순간에 저장하면
+ *   둘 다 같은 최대값을 보고 **같은 번호를 받았습니다** (문서번호가 두 건).
+ *   현장견적의 issueEstimateCode_ 가 쓰던 방식(속성에 순번을 남겨 두기)을
+ *   그대로 가져왔습니다. 새로 설계하지 않았습니다.
+ *
+ *   시트를 훑는 무거운 일은 **잠금 밖에서** 미리 해둡니다.
+ *   잠금 안에서는 속성을 읽고 하나 올려 쓰는 것뿐이라 아주 짧습니다.
+ *
+ * ★ 속성 칸은 열 이름마다 하나뿐입니다 (SEQ_업무ID = 'W-260830-|3').
+ *   날짜마다 새 칸을 만들면 속성이 끝없이 쌓이고, verAll_() 이 매 요청마다
+ *   그것을 전부 읽어 오므로 앱 전체가 느려집니다.
+ *
+ * ★ 여기서만 속성을 따로 읽습니다. 잠금 안에서는 지금 값이어야 하기 때문입니다
+ *   (요청 처음에 읽어둔 verAll_() 값은 이미 낡았을 수 있습니다).
+ *   저장할 때만 도는 길이라 board_ 같은 읽기 경로는 느려지지 않습니다.
+ */
 function nextId_(sheetName, colName, prefix) {
-  var rows = readObjects_(sheetName);
   var head = prefix + '-' + stamp_() + '-';
+  var fromSheet = maxSeqInSheet_(sheetName, colName, head);   // 잠금 밖에서 (무거운 일)
+
+  return withLock_(function () {
+    var key = 'SEQ_' + colName;
+    var props = PropertiesService.getScriptProperties();
+    var raw = String(props.getProperty(key) || '');            // 'W-260830-|3'
+    var saved = 0;
+    var bar = raw.indexOf('|');
+    if (bar > 0 && raw.substring(0, bar) === head) {
+      saved = Number(raw.substring(bar + 1)) || 0;             // 오늘 것일 때만 이어간다
+    }
+
+    var n = Math.max(saved, fromSheet) + 1;
+    props.setProperty(key, head + '|' + n);
+
+    var seq = String(n);
+    while (seq.length < 3) seq = '0' + seq;
+    return head + seq;
+  });
+}
+
+/** 시트에 이미 들어 있는 오늘 번호 중 가장 큰 순번 (속성이 지워져도 겹치지 않게 하는 안전장치) */
+function maxSeqInSheet_(sheetName, colName, head) {
+  var rows = readObjects_(sheetName);
   var max = 0, found = false;
 
   var stop = Math.max(0, rows.length - 400);
@@ -1652,10 +1751,7 @@ function nextId_(sheetName, colName, prefix) {
       if (n2 > max) max = n2;
     }
   }
-
-  var seq = String(max + 1);
-  while (seq.length < 3) seq = '0' + seq;
-  return head + seq;
+  return max;
 }
 
 function log_(phone, action, targetId, token, result) {

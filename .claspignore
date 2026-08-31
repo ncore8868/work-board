@@ -4,6 +4,7 @@ app.html
 sw.js
 manifest.webmanifest
 *.png
+*.svg
 *.ico
 *.md
 *.bat
