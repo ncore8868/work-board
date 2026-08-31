@@ -5072,8 +5072,9 @@ function openDocForm(code, prefill){
         corps.map(function(c){ return '<option value="'+c.code+'">'+esc(c.name)+'</option>'; }).join('')+
       '</select></div>'+
       (useTask?
-        '<div class="field"><label class="fl">관련 업무</label><select id="dfTask">'+
-          '<option value="">없음</option>'+
+        '<div class="field"><label class="fl'+(f.code==='ADD'?' req':'')+'">관련 업무</label>'+
+        '<select id="dfTask">'+
+          (f.code==='ADD' ? '<option value=""></option>' : '<option value="">없음</option>')+
           tasks.map(function(t){ return '<option value="'+t.id+'">'+esc(t.title)+'</option>'; }).join('')+
         '</select></div>' : '<input type="hidden" id="dfTask" value="">')+
     (useTask? '</div>' : '');
@@ -5109,7 +5110,9 @@ function openDocForm(code, prefill){
   });
 
   if(f.useItems){
-    h+='<h4 class="sech">'+esc(f.itemsTitle)+'</h4>'+
+    /* ★ 내역은 반드시 한 줄 이상 있어야 상신됩니다 (금액도 0원이면 막힙니다).
+       그런데 구역 제목이라 * 가 없어서, 상신을 눌러야만 알 수 있었습니다 (v55에서 붙임) */
+    h+='<h4 class="sech req">'+esc(f.itemsTitle)+'</h4>'+
        '<div id="dfItems"></div>'+
        '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">'+
        '<button class="btn sm" onclick="addItem()">＋ 줄 추가</button>'+
@@ -5263,10 +5266,45 @@ function saveDoc(){
           needSeal: !!(sealChk && sealChk.classList.contains('on')) };
 
   var photoEl=$('dfPhoto');
-  if(!title){ msg.textContent='제목을 입력해주세요.'; if(titleEl) titleEl.focus(); return; }
-  if(f && f.useItems && !items.length){ msg.textContent=f.itemsTitle+'을(를) 입력해주세요.'; return; }
+
+  /* ★ 막는 규칙은 서버(api_saveDoc)와 똑같이 맞춰 둡니다 (v55).
+     예전에는 제목·내역·영수증 셋만 화면에서 보고, 양식별 필수 칸과
+     추가공사의 관련 업무는 **서버까지 갔다가** 되돌아왔습니다.
+     지출결의서는 그 사이에 영수증 사진을 2400px 로 줄여 올린 뒤라
+     사람이 한참 기다리다 '입력해주세요' 를 봤습니다. */
+  function stop(text, id){
+    msg.textContent=text;
+    var el=id? $(id):null;
+    if(el){ el.classList.add('err'); el.focus(); }
+    return true;
+  }
+  [].forEach.call(document.querySelectorAll('#modal .err'), function(e){ e.classList.remove('err'); });
+
+  if(!title) return void stop('제목을 입력해주세요.', 'dfTitle');
+
+  // 양식이 요구하는 칸 (양식항목 시트의 '필수')
+  var miss=null;
+  ((f && f.fields) || []).forEach(function(fd, i){
+    if(miss) return;
+    if(fd.req && !String(fields[fd.name]||'').trim()) miss={ name:fd.name, id:'fd_'+i };
+  });
+  if(miss) return void stop(miss.name+'을(를) 입력해주세요.', miss.id);
+
+  // 추가공사는 어느 업무인지 반드시 고른다 (서버도 같은 것을 본다)
+  if(code==='ADD' && !p.taskId) return void stop('어느 업무의 추가공사인지 골라주세요.', 'dfTask');
+
+  if(f && f.useItems){
+    if(!items.length) return void stop(f.itemsTitle+'을(를) 한 줄 이상 입력해주세요.');
+    var sum=0; items.forEach(function(it){ sum+=Number(it.amount||0); });
+    if(sum<=0){
+      var first=$('dfItems')? $('dfItems').querySelector('.itAmt') : null;
+      msg.textContent='금액을 입력해주세요.';
+      if(first){ first.classList.add('err'); first.focus(); }
+      return;
+    }
+  }
   if(f && f.needReceipt && !(photoEl && photoEl.files[0])){
-    msg.textContent='영수증 사진을 첨부해주세요.'; return;
+    return void stop('영수증 사진을 첨부해주세요.', 'dfPhoto');
   }
 
   /* 돈이 걸린 동작이라 낙관 처리하지 않는다. 서버 확인 후 닫는다.
