@@ -53,7 +53,16 @@
   /* ★ 정해진 단계 밖의 값은 쓰지 않는다 (v45).
      화면마다 px 를 직접 적으면 한 곳을 고칠 때 다른 곳이 어긋난다.
      새 화면을 만들 때도 아래 변수만 쓴다. PC 크기는 아래 미디어쿼리에서 변수만 올린다. */
+  /* ★ 글꼴 (v55에서 고침)
+     예전에는 A2Z 뒤에 `inherit` 을 붙여 적어두었습니다.
+     `inherit` 은 혼자만 쓸 수 있는 값이라, 이 줄이 들어가면 브라우저가
+     **글꼴 지정을 통째로 버립니다.** 그래서 제목 글꼴이 한 번도 걸린 적이 없었습니다.
+     같은 형태가 일곱 군데 있었고 전부 아래 두 변수로 모았습니다. */
+  --font-ui:-apple-system,BlinkMacSystemFont,"Pretendard","Malgun Gothic","맑은 고딕",sans-serif;
+  --font-title:"A2Z","A2Z Fallback",var(--font-ui);
+
   --fs-h1:15px;      /* 화면·모달 제목 */
+  --fs-title:18px;   /* 상세 화면 제목 — 본문과 확실히 갈라지는 자리 (v55) */
   --fs-h2:13px;      /* 구역 제목 · 카드 제목 */
   --fs-body:12px;    /* 본문 */
   --fs-sm:11.5px;    /* 보조 — 라벨·날짜·작성자 */
@@ -99,11 +108,11 @@ html[data-theme="dark"]{
 html{scrollbar-gutter:stable}        /* 스크롤바 유무로 화면이 밀리지 않게 */
 html,body{margin:0;padding:0;background:var(--bg);color:var(--t1)}
 body{
-  font-family:-apple-system,BlinkMacSystemFont,"Pretendard","Malgun Gothic","맑은 고딕",sans-serif;
+  font-family:var(--font-ui);
   font-size:var(--fs-body); line-height:1.55; -webkit-font-smoothing:antialiased;
   letter-spacing:-0.005em;
 }
-h1,h2,h3,.tt,.num{font-family:"A2Z","A2Z Fallback",inherit; font-weight:700; letter-spacing:-0.01em}
+h1,h2,h3,.tt,.num{font-family:var(--font-title); font-weight:700; letter-spacing:-0.01em}
 button,input,select,textarea{font-family:inherit;font-size:var(--fs-body);color:var(--t1)}
 a{color:inherit}
 
@@ -591,7 +600,7 @@ ul.mk li,ol.mk li{margin:2px 0}
 #listRun .card .cn{font-size:var(--fs-h1)}
 #listRun .bar{height:8px;border-radius:var(--r-sm)}
 #listRun .bar > i{background:linear-gradient(90deg,var(--ok2),var(--ok))}
-#listRun .pct{font-size:var(--fs-num-sm);font-weight:700;font-family:"A2Z",inherit;color:var(--t1)}
+#listRun .pct{font-size:var(--fs-num-sm);font-weight:700;font-family:var(--font-title);color:var(--t1)}
 #listRun .stats{margin-top:11px;padding-top:10px;border-top:1px solid var(--line)}
 #listRun .stats .k{font-size:var(--fs-sm);color:var(--t3)}
 #listRun .stats .num{font-size:var(--fs-h2);font-weight:600;color:var(--t1)}
@@ -672,7 +681,7 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
    이제 여기 다섯 줄만 고치면 화면 전체가 같이 움직인다. */
 @media (min-width:1080px){
   :root{
-    --fs-h1:16.5px; --fs-h2:14px; --fs-body:13px; --fs-sm:12px; --fs-xs:11px;
+    --fs-h1:16.5px; --fs-title:20px; --fs-h2:14px; --fs-body:13px; --fs-sm:12px; --fs-xs:11px;
     --fs-num-sm:15px;
   }
 }
@@ -717,10 +726,99 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 .sheet h3{margin:0 0 14px;font-size:var(--fs-h1)}
 /* 모달 안 덩어리 사이를 넉넉히 띄운다 */
 .sheet .actions{margin-top:18px}
-.sheet h4{color:var(--t2)}
+/* ★ 예전에는 여기에 `.sheet h4{color:var(--t2)}` 가 있었습니다 (v55에서 뺌).
+   `.sech{color:var(--t1)}` 보다 구체적이라 **모달 안에서만** 구역 제목이 한 단계
+   흐려졌고, 그 결과 본문이 구역 제목보다 밝아서 뼈대가 안 보였습니다. */
 .sheethead{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
 .sheethead h3{margin:0}
 .actions{display:flex;gap:8px;margin-top:16px}
+
+/* ===================== 업무 상세 (v55에서 다시 짬) =====================
+
+   예전에는 한 창에 세 가지 일이 같이 들어 있었습니다.
+     ① 이 업무가 뭔가   제목 · 내용
+     ② 무슨 일이 있었나  마지막 기록 · 이전 기록 · 댓글  (구역 셋)
+     ③ 뭘 해야 하나      기록남기기 · 수정 · 삭제 · 댓글쓰기
+   셋이 같은 크기로 한 줄에 쌓여 있어서 누를 수 있는 것이 13개였고,
+   기록이 하나도 없는 업무에서도 '없습니다' 를 담는 틀이 실제 내용보다 컸습니다.
+
+   ★ 알고 보니 내용·기록·댓글은 성격이 같습니다 — 전부 '이 업무에 시간순으로 쌓인 것'.
+     셋으로 갈라놨기 때문에 구역 제목 셋, 빈 안내 둘, '기록' 이라는 말 셋이 생겼습니다.
+     그래서 벽을 세우지 않고 **한 줄기로 합쳤습니다.**
+
+   위에서부터  제목 → 상태 → ─선─ → 내용 → ─선─ → 시간 흐름 → 적는 칸 → 맨 아래 작게
+   ★ 덩어리 사이는 반드시 선(.tdsep)으로 끊습니다. 여백만으로는 구분이 안 됩니다
+     (예전 간격이 6 / 13 / 21 / 21px 이라 안쪽과 사이가 사실상 같았습니다). */
+
+.tdhead{display:flex;align-items:flex-start;gap:var(--sp-2);margin:0 0 var(--sp-3)}
+.tdhead h3{margin:0;flex:1;min-width:0;font-size:var(--fs-title);font-weight:700;
+  color:var(--t1);line-height:1.35;letter-spacing:-.01em;font-family:var(--font-title)}
+.tdico{border:none;background:transparent;color:var(--t3);cursor:pointer;
+  font-size:var(--fs-icon);line-height:1;padding:5px 7px;border-radius:var(--r-sm);flex:none}
+.tdico:hover{background:var(--field);color:var(--t1)}
+
+/* ⋯ 를 눌렀을 때만 나오는 줄. 평소에는 화면에 없습니다 */
+.tdmenu{display:none;gap:var(--sp-2);margin:0 0 var(--sp-3)}
+.tdmenu.on{display:flex}
+
+/* 상태 — 가장 자주 보는 것이라 제목 바로 아래.
+   숫자를 크게 하지 않고 막대가 눈길을 담당합니다 (제목보다 커지면 안 됩니다) */
+.tdstat{display:flex;align-items:center;gap:var(--sp-2);margin:0;flex-wrap:wrap}
+.tdstat .pct{font-size:var(--fs-num-sm);font-weight:700;color:var(--t1);line-height:1;
+  min-width:34px;font-family:var(--font-title);font-variant-numeric:tabular-nums}
+.tdstat .bar{flex:1 1 40px;min-width:24px;height:5px;border-radius:3px;
+  background:var(--field);overflow:hidden}
+.tdstat .bar i{display:block;height:100%;background:var(--t2);border-radius:3px}
+/* 글자를 잘라내지 않는다. 자리가 모자라면 막대가 먼저 줄고, 그래도 모자라면 두 줄이 된다 */
+.tdstat .s{font-size:var(--fs-sm);color:var(--t2);min-width:0;text-align:right;line-height:1.5}
+.tdstat .s .hot{color:var(--dg)}
+
+.tdtop{margin:0 0 var(--sp-4)}
+.tdsite{margin:6px 0 0;font-size:var(--fs-sm);color:var(--t3);line-height:1.6}
+.tdsep{border:0;border-top:1px solid var(--line);margin:var(--sp-4) 0}
+
+/* 관련 결재 — 구역 제목을 만들지 않고 한 줄짜리 칩으로 */
+.tdlink{display:flex;align-items:center;gap:var(--sp-2);width:100%;text-align:left;
+  border:1px solid var(--line);background:transparent;border-radius:var(--r);
+  padding:8px 10px;cursor:pointer;color:var(--t1);font-size:var(--fs-body);margin:0 0 var(--sp-2)}
+.tdlink:hover{background:var(--field)}
+.tdlink .g{color:var(--t3);font-size:var(--fs-sm);flex:none}
+.tdlink .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+/* ── 시간 흐름 — 기록과 댓글이 한 줄기 ──
+   날짜를 왼쪽 기둥에 세우면 눈이 세로로 훑을 수 있습니다 */
+.flow{display:flex;flex-direction:column;gap:var(--sp-4)}
+.fitem{display:grid;grid-template-columns:50px 1fr auto;gap:var(--sp-3);align-items:start}
+.fitem .when{font-size:var(--fs-sm);color:var(--t3);padding-top:2px;
+  font-variant-numeric:tabular-nums;white-space:nowrap}
+.fitem .fm{min-width:0}
+.fitem .who{font-size:var(--fs-sm);color:var(--t3);margin:0 0 3px;
+  display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+.fitem .who b{color:var(--t2);font-weight:600}
+.fitem .txt{margin:0;font-size:var(--fs-body);color:var(--t1);line-height:1.75}
+.fitem .txt .mk{font-size:inherit;line-height:inherit;margin:0 0 6px}
+.fitem .txt .mk:last-child{margin-bottom:0}
+/* 기록인지 댓글인지는 색이 아니라 이 뱃지로 갈립니다 (달력 말고는 색에 뜻을 주지 않습니다) */
+.fitem .num{font-size:var(--fs-xs);color:var(--t2);background:var(--field);
+  border-radius:99px;padding:2px 7px;white-space:nowrap}
+.fitem .del{border:none;background:transparent;color:var(--t3);cursor:pointer;
+  font-size:var(--fs-num-sm);line-height:1;padding:2px 4px}
+.fitem .del:hover{color:var(--t1)}
+.fitem .ex{margin:4px 0 0;font-size:var(--fs-sm);color:var(--t3)}
+
+/* 적는 칸 — 버튼 이름을 없애고 칸 하나만 둡니다.
+   무거운 것(진행률·인력·폐기물·사진)은 그 아래 한 줄을 눌러서 엽니다 */
+.tdwrite{display:flex;gap:var(--sp-2);align-items:flex-end;margin-top:var(--sp-4)}
+.tdwrite textarea{flex:1;min-height:38px;height:38px;padding:9px 12px;line-height:1.5;resize:none}
+.tdwrite .btn{flex:none;align-self:stretch}
+.tdopen{display:inline-block;margin:var(--sp-2) 0 0;font-size:var(--fs-sm);color:var(--t3);
+  background:none;border:none;padding:0;cursor:pointer;text-align:left}
+.tdopen:hover{color:var(--t1)}
+
+/* 맨 아래 — 거의 안 보는 것(누가 처음 올렸나 · 읽음)은 여기로 내렸습니다 */
+.tdfoot{margin:var(--sp-5) 0 0;font-size:var(--fs-sm);color:var(--t3)}
+
+@media (max-width:379px){ .fitem{grid-template-columns:44px 1fr auto;gap:var(--sp-2)} }
 .actions .btn{flex:1;padding:11px}
 
 /* 카운터 */
@@ -736,7 +834,7 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 /* 진행률 슬라이더 */
 .prog{border:1px solid var(--line);border-radius:var(--r2);padding:14px 15px;background:var(--field)}
 .prog .top{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:9px}
-.prog .val{font-size:var(--fs-num-lg);font-weight:700;font-family:"A2Z",inherit;line-height:1}
+.prog .val{font-size:var(--fs-num-lg);font-weight:700;font-family:var(--font-title);line-height:1}
 .prog .st{font-size:var(--fs-sm);padding:3px 9px;border-radius:99px;background:var(--panel2);color:var(--t2)}
 .prog .st.run{background:var(--wn-bg);color:var(--wn)}
 .prog .st.done{background:var(--panel2);color:var(--ok)}
@@ -759,7 +857,7 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 .settle{border:1px solid var(--line);border-radius:var(--r2);padding:14px 15px;
   background:var(--field);margin-bottom:16px}
 .settle .top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
-.settle .big{font-size:var(--fs-num-md);font-weight:700;font-family:"A2Z",inherit}
+.settle .big{font-size:var(--fs-num-md);font-weight:700;font-family:var(--font-title)}
 .settle .grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;
   padding-top:10px;border-top:1px solid var(--line)}
 .settle .grid p{margin:0;font-size:var(--fs-body)}
@@ -818,7 +916,7 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 .lrow .byline{margin:2px 0 0}
 .lrow > .r{text-align:right;white-space:nowrap;flex:none}
 .lrow .v{font-size:var(--fs-body);font-weight:600;color:var(--t1);
-  font-family:"A2Z","A2Z Fallback",inherit}
+  font-family:var(--font-title)}
 .lrow .s{display:block;margin-top:3px}
 
 /* ── 카드: 한 건을 통째로 묶어 보여줄 때 (결재 문서·최근 기록 등) ── */
@@ -836,14 +934,14 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 .ucard.hot{border-left:3px solid var(--dg);border-color:var(--dg-line)}
 .ucard > .m{flex:1;min-width:0}
 .ucard .t{margin:0;font-size:var(--fs-h2);font-weight:600;color:var(--t1);
-  font-family:"A2Z","A2Z Fallback",inherit;
+  font-family:var(--font-title);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ucard .b{margin:3px 0 0;font-size:var(--fs-sm);color:var(--t3)}
 .ucard .x{margin:var(--sp-2) 0 0;font-size:var(--fs-body);color:var(--t2);line-height:1.55;
   display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .ucard > .r{text-align:right;white-space:nowrap;flex:none}
 .ucard .v{display:block;font-size:var(--fs-h2);font-weight:700;color:var(--t1);
-  font-family:"A2Z","A2Z Fallback",inherit}
+  font-family:var(--font-title)}
 .ucard .s{display:block;margin-top:var(--sp-1)}
 
 /* ── 구역 제목 + 개수 ── */
@@ -852,7 +950,7 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 .sec h4,.sech{margin:0;font-size:var(--fs-h2);font-weight:600;color:var(--t1)}
 .sech{margin:var(--sp-5) 0 var(--sp-2)}
 .sech.hot{color:var(--dg)}
-.sec .n{font-size:var(--fs-sm);color:var(--t3);font-family:"A2Z","A2Z Fallback",inherit}
+.sec .n{font-size:var(--fs-sm);color:var(--t3);font-family:var(--font-title)}
 
 /* ── 비어 있음 ── */
 .none{margin:0;padding:var(--sp-2) var(--sp-1);font-size:var(--fs-sm);color:var(--t3)}
@@ -1471,13 +1569,31 @@ function applyTheme(){
 }
 function setTheme(v){ localStorage.setItem('ncore_theme',v); applyTheme(); }
 
+/* 제목·숫자에 쓰는 에이투지체.
+
+   ★ 글꼴 파일을 app.html 과 **같은 폴더에** 둡니다 (a2z-bold.woff2 · a2z-medium.woff2).
+     남의 도메인에서 불러오면 글꼴은 CORS 때문에 조용히 막힐 수 있고,
+     같은 폴더에 있으면 서비스워커가 알아서 담아둡니다(.woff2 는 캐시 우선 경로).
+
+   설정 시트의 `폰트URL_제목`·`폰트URL_숫자` 는 **덮어쓰고 싶을 때만** 씁니다.
+   비어 있으면 아래 기본값을 쓰므로 평소에는 그대로 두시면 됩니다. */
+var A2Z_BOLD   = './a2z-bold.woff2';
+var A2Z_MEDIUM = './a2z-medium.woff2';
+var _fontOn = '';
+
 function loadFont(bold, medium){
-  if(!bold && !medium) return;
+  bold   = bold   || A2Z_BOLD;
+  medium = medium || A2Z_MEDIUM;
+  var key = bold+'|'+medium;
+  if(_fontOn === key) return;          // 같은 주소를 두 번 심지 않는다
+  _fontOn = key;
+  var old=$('a2zFont'); if(old && old.parentNode) old.parentNode.removeChild(old);
   var css='';
   if(bold)   css+='@font-face{font-family:"A2Z";src:url("'+bold+'") format("woff2");font-weight:700;font-display:swap}';
   if(medium) css+='@font-face{font-family:"A2Z";src:url("'+medium+'") format("woff2");font-weight:500;font-display:swap}';
   if(!medium && bold) css+='@font-face{font-family:"A2Z";src:url("'+bold+'") format("woff2");font-weight:500;font-display:swap}';
   var st=document.createElement('style');
+  st.id='a2zFont';
   st.textContent=css;
   document.head.appendChild(st);
 }
@@ -1552,6 +1668,8 @@ function boot(){
       try{ localStorage.setItem('ncore_token', S.token); }catch(e){ quiet('기기 기억', e); }
     }
   }
+  loadFont();                    // 글꼴은 서버를 기다리지 않는다. 같은 폴더에 있다
+
   // ① 지난번 화면이 있으면 먼저 그린다 (서버를 기다리지 않음)
   var snap=loadSnap();
   if(snap){
@@ -2337,9 +2455,8 @@ function sendRead(id, force){
 function paintReaders(id){
   var box=$('tdRead'); if(!box) return;
   var names=S.readers[id]||[];
-  box.innerHTML = names.length
-    ? '<p class="muted" style="margin:16px 0 0;font-size:var(--fs-sm)">읽음: '+esc(names.join(', '))+'</p>'
-    : '';
+  /* 맨 아래 '누가 올림' 줄에 이어 붙인다. 아무도 안 읽었으면 줄을 만들지 않는다 (v55) */
+  box.innerHTML = names.length ? ' · 읽음 '+esc(names.join(', ')) : '';
 }
 
 /* ---- 안 읽은 댓글 점 ---- */
@@ -2376,7 +2493,7 @@ function loadTaskAll(id, btnId){
     S.taskCache[id]=r;
     if(r.readers) S.readers[id]=r.readers;
     if(!$('tdBody')) return;                 // 그새 창을 닫았으면 그만
-    FOLD['log:'+id]=true;                    // 더 보기를 눌렀으니 펼친 채로 다시 그린다
+    FOLD['flow:'+id]=1;                      // 더 보기를 눌렀으니 그 뒤로는 다 보여준다
     $('tdBody').innerHTML = taskDetailBody(r);
     paintReaders(id);
   });
@@ -2512,35 +2629,51 @@ function settleHtml(r, t){
 }
 
 /**
- * 업무 상세 (v42에서 다시 짬).
+ * 업무 상세 (v55에서 다시 짬).
  *
- * 중요도와 보이는 크기를 맞춘다. 위에서부터
- *   1) 업무명            가장 크고 굵게
- *   2) 누가 언제 · 상태 · 마감   작고 어둡게 한 줄
- *   3) 내용              본문 크기
- *   4) 버튼 3개
- *   5) 마지막 기록 → 이전 기록 → 정산 → 댓글
- *   6) 읽음
+ * 예전에는 한 창이 세 가지 일을 같이 했습니다 — 뭔지 보여주고, 무슨 일이 있었는지
+ * 보여주고, 할 수 있는 일을 늘어놓았습니다. 셋이 같은 무게라 누를 수 있는 것이 13개였고,
+ * 기록이 하나도 없는 업무에서도 '없습니다' 를 담는 틀이 실제 내용보다 컸습니다.
  *
- * 예전에는 상태·담당·기간·작성을 라벨 붙여 네 줄로 늘어놓았고,
- * 값이 없어도 '기간  - ~ 2026-08-28' 처럼 하이픈이 남았다. 빈 값은 이제 줄을 만들지 않는다.
+ * 지금은 이렇게만 있습니다.
+ *
+ *   제목                          ⋯  ✕     ⋯ 를 눌러야 수정·삭제가 나온다
+ *   95% ▓▓▓▓░ 진행중 · 마감 09-01          가장 자주 보는 것
+ *   ───────────────────────────
+ *   내용                                    (있을 때만)
+ *   ───────────────────────────
+ *   08-31  최원찬  진행률 95%               기록과 댓글이 한 줄기
+ *   08-30  조소희
+ *   ───────────────────────────
+ *   [ 적는 칸 ] [등록]
+ *   최원찬이 08-28 올림 · 읽음 …            거의 안 보는 것은 맨 아래
+ *
+ * ★ 덩어리 사이는 반드시 선으로 끊습니다. 예전에는 간격이 6 / 13 / 21 / 21px 이라
+ *   덩어리 안쪽과 덩어리 사이가 사실상 같았고, 그래서 제목·작성자·본문이 붙어 보였습니다.
+ * ★ 0건인 구역은 그리지 않습니다. '없습니다' 를 담을 틀도 만들지 않습니다.
  */
 function taskSheetHtml(t, r){
   var demo=(t.type==='DEMO');
+  var pct=Math.max(0, Math.min(100, Number(t.progress||0)));
 
-  // 2) 누가 언제 — 이름과 날짜가 제목 바로 아래 오게 한다
-  var head=[];
-  if(t.ownerName) head.push(t.ownerName);
-  if(t.at) head.push(shortDate(t.at));
-  head.push(t.status+(t.progress? ' '+t.progress+'%' : ''));
-  if(t.start && t.due) head.push({ t:shortDate(t.start)+'~'+shortDate(t.due),
-                                   hot:(t.status!=='완료' && isPast(t.due)) });
-  else if(t.due)       head.push({ t:'마감 '+shortDate(t.due),
-                                   hot:(t.status!=='완료' && isPast(t.due)) });
-  else if(t.start)     head.push('시작 '+shortDate(t.start));
-  if(t.status==='완료' && t.done) head.push('완료 '+shortDate(t.done));
+  // 상태 한 줄 — 지금 상태와 언제까지. 이 둘만 남기고 나머지는 맨 아래로 내렸다
+  var st=[];
+  if(t.status==='완료'){
+    /* 끝난 업무에 마감일을 또 붙이지 않는다. 지나간 약속이라 읽을 이유가 없고,
+       320px 에서 '완료 · 마감 2025-09-01 · 완료 2025-09-05' 가 줄을 넘겼다.
+       '완료 · 완료 2025-09-05' 처럼 같은 말이 두 번 나오지 않게 한 덩어리로 만든다 */
+    st.push(t.done ? ('완료 '+shortDate(t.done)) : '완료');
+  } else if(t.due){
+    st.push(t.status);
+    st.push({ t:'마감 '+shortDate(t.due), hot:isPast(t.due) });
+  } else if(t.start){
+    st.push(t.status);
+    st.push('시작 '+shortDate(t.start));
+  } else {
+    st.push(t.status);
+  }
 
-  // 철거 업무의 현장 정보도 라벨 없이 한 줄로 (있는 것만)
+  // 철거 현장 정보도 라벨 없이 한 줄로 (있는 것만)
   var site=[];
   if(demo){
     if(t.site) site.push(t.site);
@@ -2551,19 +2684,46 @@ function taskSheetHtml(t, r){
     if(t.amount) site.push('계약 '+won(t.amount)+'원');
   }
 
+  var safe=esc(t.title).replace(/'/g,'');
   return '<div class="veil"><div class="sheet">'+
-    '<div class="sheethead"><h3 class="tt">'+esc(t.title)+'</h3>'+
-    '<button class="btn sm" onclick="closeModal()">닫기</button></div>'+
-    byline(head)+
-    (site.length? byline(site) : '')+
-    (t.content? '<div style="margin:0 0 18px">'+fmt(t.content)+'</div>' : '')+
-    '<div class="actions" style="margin-bottom:22px">'+
-      '<button class="btn pri" onclick="openLogForm(\''+t.id+'\')">기록 남기기</button>'+
-      '<button class="btn" onclick="openTaskForm(\''+t.id+'\')">수정</button>'+
-      '<button class="btn dg" onclick="deleteTask(\''+t.id+'\',\''+esc(t.title).replace(/'/g,'')+'\')">삭제</button>'+
+    '<div class="tdhead">'+
+      '<h3>'+esc(t.title)+'</h3>'+
+      '<button class="tdico" onclick="taskMenu()" title="수정·삭제" aria-label="수정·삭제">⋯</button>'+
+      '<button class="tdico" onclick="closeModal()" title="닫기" aria-label="닫기">✕</button>'+
     '</div>'+
-    '<div id="tdBody">'+ (r? taskDetailBody(r) : '<p class="muted" style="font-size:var(--fs-sm)">불러오는 중...</p>') +'</div>'+
+    '<div class="tdmenu" id="tdMenu">'+
+      '<button class="btn sm" onclick="openTaskForm(\''+t.id+'\')">수정</button>'+
+      '<button class="btn sm dg" onclick="deleteTask(\''+t.id+'\',\''+safe+'\')">삭제</button>'+
+    '</div>'+
+    '<div class="tdtop">'+
+      '<div class="tdstat">'+
+        '<span class="pct">'+pct+'%</span>'+
+        '<div class="bar"><i style="width:'+pct+'%"></i></div>'+
+        '<span class="s">'+statLine_(st)+'</span>'+
+      '</div>'+
+      (site.length? '<p class="tdsite">'+esc(site.join(' · '))+'</p>' : '')+
+    '</div>'+
+    '<hr class="tdsep">'+
+    (t.content? '<div>'+fmt(t.content)+'</div><hr class="tdsep">' : '')+
+    '<div id="tdBody">'+ (r? taskDetailBody(r) : '') +'</div>'+
     '</div></div>';
+}
+
+/** 상태 줄 — 빈 값은 버리고, 지난 마감만 빨갛게 (byline 과 같은 규칙) */
+function statLine_(parts){
+  var out=[];
+  (parts||[]).forEach(function(x){
+    if(!x) return;
+    if(typeof x==='string'){ if(x.trim()) out.push(esc(x)); return; }
+    if(!x.t || !String(x.t).trim()) return;
+    out.push('<span class="'+(x.hot?'hot':'')+'">'+esc(x.t)+'</span>');
+  });
+  return out.join(' · ');
+}
+
+/** ⋯ — 수정·삭제는 평소에 화면에 없다. 눌러야 나온다 */
+function taskMenu(){
+  var m=$('tdMenu'); if(m) m.classList.toggle('on');
 }
 
 /** 확인창을 이미 눌렀으니 더 기다리게 하지 않는다. 실패하면 되돌린다 */
@@ -2576,7 +2736,7 @@ function deleteLogFromTask(logId, taskId){
   dropLogLocal(taskId, logId);
   toast('삭제되었습니다');
   closeOk();
-  FOLD={}; FOLD['log:'+taskId]=1;      // 보고 있던 기록 구역은 펼친 채로
+  FOLD={};                             // 접는 구역은 정산 하나뿐이다 (v55)
   openTask(taskId, true);              // 다시 여는 것도 왕복 0회
 
   call('api_deleteLog', S.token, logId, S.corp).then(function(r){
@@ -2594,87 +2754,199 @@ function deleteLogFromTask(logId, taskId){
   });
 }
 
-/** 진행 기록 한 건 */
-function logEv(l, taskId){
-  var mine = (S.me && (S.me.grade>=9 || l.who===S.me.name));
-  // '누가 언제' 순서로 통일한다 (v42). 예전에는 날짜가 먼저였다
-  var head=[l.who, shortDate(l.date)];
-  if(l.progress) head.push(l.progress+'%');
-  var h='<div class="ev"><div class="d" style="display:flex;justify-content:space-between;gap:8px">'+
-     '<span>'+esc(head.filter(function(x){ return x; }).join(' · '))+'</span>'+
-     (mine && l.id ? '<button class="del" style="border:none;background:transparent;color:var(--t3);cursor:pointer;font-size:var(--fs-num-sm);line-height:1" title="기록 삭제" onclick="event.stopPropagation();deleteLogFromTask(\''+l.id+'\',\''+taskId+'\')">×</button>' : '')+
-     '</div>'+
-     '<div style="white-space:pre-wrap;line-height:1.7">'+esc(l.text)+'</div>';
-  var extra=[];
-  if(l.g||l.j) extra.push('기공'+l.g+' 조공'+l.j);
-  if(l.wton) extra.push((l.wt||'폐기물')+' '+l.wton+'t');
-  if(l.eq) extra.push(l.eq+(l.eqd?' '+l.eqd+'일':''));
-  if(extra.length) h+='<div class="sub" style="margin-top:3px">'+esc(extra.join(' · '))+'</div>';
-  if(l.extra) h+='<div style="margin-top:4px"><span class="tag wn">추가견적 필요</span></div>';
-  // 빈 값에 괄호만 남기지 않는다 (v42)
-  if(l.next){
-    h+='<div class="muted" style="margin-top:3px">다음: '+esc(l.next)+
-       (l.nextDate? ' ('+esc(shortDate(l.nextDate))+')' : '')+'</div>';
-  }
-  if(l.photo) h+='<div style="margin-top:4px"><a href="'+esc(l.photo)+'" target="_blank" class="sub">사진 보기</a></div>';
-  return h+'</div>';
-}
+/* 예전의 logEv() 는 v55에서 없앴습니다.
+   기록과 댓글을 한 줄기로 합치면서 flowRow() 하나가 둘 다 그립니다. */
 
 /**
- * 상세 본문.
- * 항상 보이는 것: 관련 결재(있을 때) · 마지막 기록 1건
- * 접히는 것: 이전 기록 · 정산(철거만) · 댓글 — 전부 이미 받아둔 데이터라 펼쳐도 왕복 0회
+ * 상세 본문 — 관련 결재 · 정산 · 시간 흐름 · 적는 칸.
+ *
+ * ★ 기록(업무일지)과 댓글을 **한 줄기**로 합쳤습니다 (v55).
+ *   예전에는 `마지막 기록` · `이전 기록 N건` · `댓글 N` 세 구역으로 나뉘어 있었고,
+ *   그래서 '기록' 이라는 말이 한 화면에 세 번, 뜻이 셋 다 다르게 나왔습니다.
+ *   둘 다 '이 업무에 시간순으로 쌓인 것' 이라 나눌 이유가 없었습니다.
+ *
+ *   ▸ 저장되는 시트는 그대로 따로입니다 (`업무일지` / `댓글`).
+ *     기록은 진행률을 옮기고 정산·임금계산의 근거가 되지만 댓글은 아무 영향이 없습니다.
+ *     그 차이는 줄에 붙는 `진행률 95%` 뱃지로 갈라 보입니다. **색으로 가르지 않습니다.**
+ *   ▸ 서버는 한 줄도 고치지 않았습니다. board_ 가 logsByTask 와 commentsByTask 를
+ *     이미 같이 실어 보내므로 화면에서 날짜순으로 섞기만 하면 됩니다 (왕복 0회 그대로).
  */
 function taskDetailBody(r){
   var t=r.task;
-  var logs=r.logs||[];
-  var total=(r.total!=null && r.total>logs.length)? r.total : logs.length;
-  var h='';
+  var h='', top='';
 
+  // 관련 결재 — 구역 제목을 만들지 않고 누를 수 있는 한 줄로
   if(r.docs && r.docs.length){
-    h+='<h4 class="sech">관련 결재</h4>';
     r.docs.forEach(function(d){
-      h+='<div class="lrow" onclick="openDoc(\''+d.no+'\')">'+
-         '<div class="m"><p class="t">'+esc(d.title)+'</p></div>'+
-         '<div class="r">'+(d.amount? '<span class="v">'+won(d.amount)+'원</span>':'')+
-         '<span class="s">'+docBadge(d.status)+'</span></div></div>';
+      top+='<button class="tdlink" onclick="openDoc(\''+d.no+'\')">'+
+        '<span class="n">'+esc(d.title)+'</span>'+
+        (d.amount? '<span class="g">'+won(d.amount)+'원</span>':'')+
+        '<span class="g">'+docBadge(d.status)+'</span></button>';
     });
-    h+='<div style="height:14px"></div>';
   }
 
-  // 마지막 기록 1건은 접지 않는다
-  h+='<h4 class="sech">마지막 기록</h4>';
-  h+= logs.length ? ('<div class="tl">'+logEv(logs[0], t.id)+'</div>')
-                  : empty('아직 기록이 없습니다');
-
-  // 접기 1 — 이전 기록 (마지막 1건은 위에 이미 보이므로 나머지만)
-  var restCount=total-1;
-  if(restCount>0){
-    var body='';
-    var rest=logs.slice(1);
-    if(rest.length) body+='<div class="tl">'+rest.map(function(l){ return logEv(l, t.id); }).join('')+'</div>';
-    if(total>logs.length){
-      body+='<div class="actions" style="margin:8px 0 2px">'+
-        '<button class="btn sm" id="tdMore" onclick="loadTaskAll(\''+t.id+'\',\'tdMore\')">'+
-        '기록 더 보기 ('+(total-logs.length)+'건)</button></div>';
-    }
-    h+=foldBox('log:'+t.id, '이전 기록 '+restCount+'건', body);
-  }
-
-  // 접기 2 — 정산 (서버가 settle 을 보낸 업무 = 철거에만 있다)
+  // 정산 — 서버가 settle 을 보낸 업무(철거)에만 있다
   if(r.settle && r.settle.sum){
-    h+=foldBox('settle:'+t.id,
+    top+=foldBox('settle:'+t.id,
       '정산 · 공급가 '+won(r.settle.sum.supply)+'원', settleHtml(r, t));
   }
+  if(top) h+=top+'<hr class="tdsep">';
 
-  // 댓글은 접지 않는다. 항상 목록과 입력칸이 보인다
-  var cl=r.comments||[];
-  var ct=(r.cmtTotal!=null && r.cmtTotal>cl.length)? r.cmtTotal : cl.length;
-  h+='<div style="border-top:1px solid var(--line);padding-top:14px;margin-top:4px">'+
-     commentsHtml('업무', t.id, cl, ct, true)+'</div>';
+  // 시간 흐름 — 비어 있으면 아무것도 그리지 않는다 ('없습니다' 를 쓰지 않는다).
+  // 빈 칸이라도 남겨두는 이유는 새로 쓴 것을 여기에 바로 끼워 넣기 때문이다
+  var flow=taskFlow_(r);
+  /* 다섯 줄까지만 보여준다. 창을 열자마자 스무 줄이 쏟아지면 '많다' 는 느낌이 그대로 남는다.
+     '더 보기' 를 한 번 누르면 그 뒤로는 전부 보인다 (FOLD 에 표시해 둔다) */
+  var showAll = !!FOLD['flow:'+t.id];
+  var shown   = showAll ? flow : flow.slice(0, 5);
+  h+='<div class="flow" id="tdFlow">'+
+     shown.map(function(it){ return flowRow(it, t.id); }).join('')+'</div>';
 
-  h+='<div id="tdRead"></div>';
+  var more = (flow.length - shown.length)
+           + Math.max(0,(r.total||0)   - (r.logs||[]).length)
+           + Math.max(0,(r.cmtTotal||0)- (r.comments||[]).length);
+  if(more>0){
+    h+='<div class="actions" style="margin-top:var(--sp-3)">'+
+       '<button class="btn sm" id="tdMore" onclick="flowMore(\''+t.id+'\',\'tdMore\')">'+
+       '지난 것 '+more+'건 더 보기</button></div>';
+  }
+
+  // 적는 칸 — 버튼 이름 없이 칸 하나. 무거운 것은 그 아래 한 줄을 눌러서 연다
+  h+='<div class="tdwrite">'+
+       '<textarea id="tdWrite" rows="1" spellcheck="false" '+
+         'onkeydown="flowKey(event,\''+t.id+'\')"></textarea>'+
+       '<button class="btn sm pri" onclick="sendFlow(\''+t.id+'\')">등록</button>'+
+     '</div>'+
+     '<button class="tdopen" onclick="openLogForm(\''+t.id+'\')">'+
+       (t.type==='DEMO' ? '진행률 · 인력 · 폐기물 · 사진도 함께 ▸'
+                        : '진행률 · 사진도 함께 ▸')+
+     '</button>';
+
+  // 맨 아래 — 누가 처음 올렸나, 누가 봤나. 거의 안 보는 것이라 여기로 내렸다
+  var made='';
+  if(t.ownerName) made = t.ownerName + (t.at? ('이 '+shortDate(String(t.at).substring(0,10))+' 올림') : '이 올림');
+  else if(t.at)   made = shortDate(String(t.at).substring(0,10))+' 올림';
+  h+='<hr class="tdsep"><p class="tdfoot">'+esc(made)+
+     '<span id="tdRead"></span></p>';
   return h;
+}
+
+/**
+ * 기록과 댓글을 하나로 섞어 최신순으로 세운다.
+ * 기록은 `date`(yyyy-MM-dd), 댓글은 `at`(yyyy-MM-dd HH:mm) 이라 글자 비교로 정렬된다
+ * — 앞 열 자리가 날짜라 날짜가 다르면 그것으로 갈리고, 같은 날이면 시각이 있는 쪽이 뒤(최신)다.
+ */
+function taskFlow_(r){
+  var out=[];
+  (r.logs||[]).forEach(function(l){
+    out.push({ kind:'log', at:String(l.date||''), o:l });
+  });
+  (r.comments||[]).forEach(function(c){
+    out.push({ kind:'cmt', at:String(c.at||''), o:c });
+  });
+  out.sort(function(x,y){ return y.at.localeCompare(x.at); });
+  return out;
+}
+
+/** 흐름 한 줄. 기록이든 댓글이든 같은 모양으로 그린다 */
+function flowRow(it, taskId){
+  var o=it.o, isLog=(it.kind==='log');
+  var mine = S.me && (S.me.grade>=9 ||
+             (isLog ? o.who===S.me.name : o.phone===S.me.phone));
+  var day  = shortDate(String(it.at).substring(0,10));
+  var time = String(it.at).substring(10).trim();
+
+  var tag = (isLog && o.progress) ? '<span class="num">진행률 '+o.progress+'%</span>' : '';
+
+  var extra=[];
+  if(isLog){
+    if(o.g||o.j) extra.push('기공'+(o.g||0)+' 조공'+(o.j||0));
+    if(o.wton)   extra.push((o.wt||'폐기물')+' '+o.wton+'t');
+    if(o.eq)     extra.push(o.eq+(o.eqd? ' '+o.eqd+'일' : ''));
+    if(o.next)   extra.push('다음: '+o.next+(o.nextDate? ' ('+shortDate(o.nextDate)+')' : ''));
+  }
+
+  var del = (mine && o.id)
+    ? '<button class="del" title="지우기" onclick="'+
+      (isLog ? 'deleteLogFromTask(\''+o.id+'\',\''+taskId+'\')'
+             : 'deleteComment(\''+o.id+'\')')+'">×</button>'
+    : '<span></span>';
+
+  return '<div class="fitem"'+(isLog? '' : ' data-cid="'+esc(o.id||'')+'"')+'>'+
+    '<div class="when">'+esc(day)+'</div>'+
+    '<div class="fm">'+
+      '<p class="who"><b>'+esc(o.who||'')+'</b>'+
+        (time? '<span>'+esc(time)+'</span>' : '')+ tag +
+      '</p>'+
+      '<div class="txt">'+fmt(o.text||'')+'</div>'+
+      (extra.length? '<p class="ex">'+esc(extra.join(' · '))+'</p>' : '')+
+      (isLog && o.extra? '<p class="ex"><span class="tag wn">추가견적 필요</span></p>' : '')+
+      (isLog && o.photo? '<p class="ex"><a href="'+esc(o.photo)+'" target="_blank">사진 보기</a></p>' : '')+
+    '</div>'+
+    del+
+  '</div>';
+}
+
+/**
+ * 흐름에 한 줄 적는다 (댓글로 저장된다).
+ * 낙관 처리 — 누르는 즉시 맨 위에 붙이고, 실패하면 떼어내고 쓴 글을 되돌려준다.
+ */
+function sendFlow(taskId){
+  var el=$('tdWrite'); if(!el) return;
+  var text=String(el.value||'').trim();
+  if(!text) return;
+  el.value='';
+
+  var list=$('tdFlow'), node=null;
+  var c={ id:'', who:(S.me&&S.me.name)||'', phone:(S.me&&S.me.phone)||'',
+          text:text, at:todayStr()+' '+nowHM() };
+  if(list){
+    list.insertAdjacentHTML('afterbegin', flowRow({kind:'cmt', at:c.at, o:c}, taskId));
+    node=list.firstElementChild;
+  }
+
+  call('api_saveComment', S.token, '업무', taskId, text, S.corp).then(function(r){
+    if(!r.ok){
+      if(node && node.parentNode) node.parentNode.removeChild(node);
+      var box=$('tdWrite');
+      if(box && !box.value) box.value=text;          // 쓴 글을 잃지 않게
+      toast('저장하지 못했습니다: '+r.msg);
+      return;
+    }
+    if(node && node.parentNode){
+      node.outerHTML=flowRow({kind:'cmt', at:r.comment.at, o:r.comment}, taskId);
+    }
+    addCommentLocal(taskId, r.comment);
+    softRefresh();
+  });
+}
+
+/**
+ * '더 보기' — 화면이 이미 들고 있는 것만 접혀 있으면 서버에 가지 않는다 (왕복 0회).
+ * 서버에 더 있을 때만 api_taskDetail 을 한 번 부른다.
+ */
+function flowMore(id, btnId){
+  FOLD['flow:'+id]=1;
+  var r=S.taskCache[id];
+  if(!r){
+    var t=null;
+    (S.data? S.data.tasks:[]).forEach(function(x){ if(x.id===id) t=x; });
+    if(!t){ loadTaskAll(id, btnId); return; }      // 진행판에 없는 업무면 서버에 묻는다
+    r=detailFromBoard(id, t);
+  }
+  var srvMore = Math.max(0,(r.total||0)   - (r.logs||[]).length)
+              + Math.max(0,(r.cmtTotal||0)- (r.comments||[]).length);
+  if(srvMore>0){ loadTaskAll(id, btnId); return; }
+  if($('tdBody')) $('tdBody').innerHTML = taskDetailBody(r);
+  paintReaders(id);
+}
+
+/** 엔터로 등록, 줄을 바꾸려면 Shift+엔터 (지금까지 댓글이 쓰던 방식 그대로) */
+function flowKey(e, taskId){
+  if(e.key==='Enter' && !e.shiftKey && !e.isComposing){
+    e.preventDefault();
+    sendFlow(taskId);
+  }
 }
 
 function row(k,v){ return '<div class="k">'+k+'</div><div>'+esc(v)+'</div>'; }
@@ -4218,17 +4490,17 @@ function commentsHtml(kind, targetId, list, total, withHead){
     h+='<div class="actions" style="margin:6px 0"><button class="btn sm" id="cmMore" '+
        'onclick="loadTaskAll(\''+targetId+'\',\'cmMore\')">댓글 더 보기 ('+more+'건)</button></div>';
   }
-  /* 댓글도 서식을 쓸 수 있게 (v44).
-     Enter 는 지금처럼 바로 등록, 줄을 바꾸려면 Shift+Enter. */
-  h+='<div style="margin-top:10px">'+mkBar('cmText')+
-     '<div style="display:flex;gap:6px;align-items:flex-end">'+
-     '<div id="cmText" class="mkin one" contenteditable="true" spellcheck="false" '+
-       'style="flex:1;min-height:38px" '+
-       'onkeydown="cmKey(event,\''+kind+'\',\''+targetId+'\')" '+
-       'onkeyup="mkState(\'cmText\')" onmouseup="mkState(\'cmText\')" '+
-       'onfocus="mkState(\'cmText\')" onpaste="mkPaste(event)"></div>'+
+  /* ★ 댓글에는 서식 도구를 두지 않습니다 (v55에서 뺌).
+     굵게·밑줄·목록 버튼 다섯 개가 댓글 한 줄 위에 늘 떠 있어서, 댓글이 하나도
+     없는 화면에서도 자리를 다섯 줄이나 썼습니다. 한두 줄 적는 자리라 서식이 필요 없습니다.
+     ▸ 보여줄 때는 그대로 fmt() 를 씁니다. 예전에 서식을 넣어 쓴 댓글이 별표가
+       그대로 보이는 채로 남으면 안 되기 때문입니다.
+     Enter 는 바로 등록, 줄을 바꾸려면 Shift+Enter — 예전 그대로입니다. */
+  h+='<div class="tdwrite" style="margin-top:10px">'+
+     '<textarea id="cmText" rows="1" spellcheck="false" '+
+       'onkeydown="cmKey(event,\''+kind+'\',\''+targetId+'\')"></textarea>'+
      '<button class="btn sm pri" onclick="sendComment(\''+kind+'\',\''+targetId+'\')">등록</button>'+
-     '</div></div>';
+     '</div>';
   return h;
 }
 
@@ -4255,17 +4527,15 @@ function cmKey(e, kind, targetId){
   if(e.key==='Enter' && !e.shiftKey && !e.isComposing){
     e.preventDefault();
     sendComment(kind, targetId);
-    return;
   }
-  mkKey(e, 'cmText');
 }
 
 /** 낙관 처리 — 화면에 먼저 붙이고 뒤에서 보낸다. 실패하면 되돌린다 */
 function sendComment(kind, targetId){
   var el=$('cmText'); if(!el) return;
-  var text=mkValue('cmText');
+  var text=String(mkValue('cmText')||'').trim();
   if(!text) return;
-  el.innerHTML='';
+  el.value='';
 
   var box=$('cmList');
   var ph=box? box.querySelector('.cmempty') : null;
@@ -4285,7 +4555,8 @@ function sendComment(kind, targetId){
     if(!r.ok){
       if(node && node.parentNode) node.parentNode.removeChild(node);
       syncCommentCount(-1);
-      if($('cmText') && !mkValue('cmText')) $('cmText').innerHTML=fmt(text);   // 쓴 글을 잃지 않게
+      var box=$('cmText');
+      if(box && !box.value) box.value=text;                  // 쓴 글을 잃지 않게
       toast('댓글 저장 실패: '+r.msg);
       return;
     }
@@ -5185,8 +5456,8 @@ function paintAdmin(r){
       cfg('출퇴근시트ID','출퇴근앱 스프레드시트 ID',st['출퇴근시트ID'])+
       cfg('출퇴근시트명','출퇴근 기록 시트 이름',st['출퇴근시트명'])+
       cfg('견적시트ID','현장견적 스프레드시트 ID',st['견적시트ID'])+
-      cfg('폰트URL_제목','에이투지체 Bold woff2 주소',st['폰트URL_제목'])+
-      cfg('폰트URL_숫자','에이투지체 Medium woff2 주소',st['폰트URL_숫자'])+
+      cfg('폰트URL_제목','에이투지체 Bold 주소 (비우면 앱에 들어있는 것을 씁니다)',st['폰트URL_제목'])+
+      cfg('폰트URL_숫자','에이투지체 Medium 주소 (비우면 앱에 들어있는 것을 씁니다)',st['폰트URL_숫자'])+
       '<div class="actions" style="margin:14px 0">'+
         '<button class="btn" id="syncBtn" onclick="syncNow()">지금 연동 동기화</button>'+
         '<button class="btn" onclick="refreshMeta()">기준정보 새로고침</button>'+

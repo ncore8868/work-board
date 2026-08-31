@@ -5,6 +5,7 @@ sw.js
 manifest.webmanifest
 *.png
 *.svg
+*.woff2
 *.ico
 *.md
 *.bat
