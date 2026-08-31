@@ -967,6 +967,24 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 
 /* ── 비어 있음 ── */
 .none{margin:0;padding:var(--sp-2) var(--sp-1);font-size:var(--fs-sm);color:var(--t3)}
+
+/* 고른 사진 미리보기 (2026-08-31) — 결재·기록·공지 세 곳이 같은 것을 쓴다 */
+.thumbs{display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-top:var(--sp-2)}
+.thumbs:empty{display:none}
+.thumb{position:relative;width:72px;height:72px;flex:none}
+.thumb img{width:100%;height:100%;object-fit:cover;border-radius:var(--r-sm);
+  border:1px solid var(--line2);background:var(--field);display:block}
+/* 빼기 단추 — 손가락으로 눌러야 하므로 보이는 것보다 누를 곳을 넓게 잡는다 */
+.thumb .tx{position:absolute;top:-7px;right:-7px;width:24px;height:24px;
+  border-radius:50%;border:1px solid var(--line2);background:var(--card);
+  color:var(--t2);font-size:15px;line-height:1;cursor:pointer;padding:0;
+  display:flex;align-items:center;justify-content:center}
+.thumb .tx:hover{color:var(--dg);border-color:var(--dg-line)}
+.thumb .tx:focus-visible{outline:2px solid var(--t2);outline-offset:2px}
+/* 올라간 사진 보여주기 (글·기록 안) */
+.shots{display:flex;flex-wrap:wrap;gap:var(--sp-2);margin:var(--sp-2) 0}
+.shots img{width:104px;height:104px;object-fit:cover;border-radius:var(--r-sm);
+  border:1px solid var(--line2);background:var(--field);cursor:zoom-in;display:block}
 .none.big{padding:var(--sp-6) var(--sp-1);text-align:center}
 
 /* 의미를 가진 색은 둘뿐 — 빨강(지금 손댈 것) · 노랑(곧 문제) */
@@ -1452,9 +1470,25 @@ function call(fn){
     return r;
   })
   .catch(function(e){
+    /* ★★ 통신이 끊겨도 '실패했다' 는 답을 정상적으로 돌려줍니다 (2026-08-31).
+
+       예전에는 여기서 오류를 다시 던졌습니다. 그러면 부르는 쪽의 .then 이
+       **통째로 건너뛰어져서**, 그 안에 이미 들어 있던 되돌리기와
+       버튼 되살리기가 하나도 실행되지 않았습니다. 그래서
+         · 로그인 버튼이 '확인 중입니다...' 에서 굳어 앱을 껐다 켜야 했고
+         · 결재 상신 버튼이 '상신 중...' 에서 굳었고
+         · 저장 안 된 차감·댓글·업무가 화면에는 남아 있었습니다
+
+       실패를 답으로 돌려주면 54곳이 이미 갖고 있는 `if(!r.ok)` 처리가
+       전부 그대로 작동합니다. 고칠 곳은 여기 한 군데뿐입니다.
+
+       net: true 는 '서버가 거절한 것이 아니라 연결이 안 됐다' 는 표시입니다. */
     console.log('[속도] '+fn+' 실패 '+((Date.now()-t0)/1000).toFixed(2)+'초', e);
-    toast('통신 오류가 발생했습니다. 새로고침해주세요.');
-    throw e;
+    var offline = (typeof navigator!=='undefined' && navigator.onLine===false);
+    toast(offline ? '인터넷이 끊겼습니다. 연결되면 다시 시도해주세요.'
+                  : '통신이 잠시 불안정합니다. 다시 시도해주세요.');
+    return { ok:false, net:true,
+             msg: offline ? '인터넷이 끊겼습니다.' : '통신이 불안정합니다. 다시 시도해주세요.' };
   });
 }
 
@@ -1711,6 +1745,17 @@ function boot(){
       loadFont(r.meta.fontTitle, r.meta.fontNum);
     }
     hideBooting();
+
+    /* ★ 통신이 잠깐 끊긴 것과 '로그인이 필요하다' 는 것을 구분합니다.
+       예전에는 둘을 같이 봐서, 엘리베이터에서 앱을 열면 그대로 로그인 화면이
+       떴습니다. 통신 문제일 때는 지난번 화면을 그대로 두고 낡았다고만 표시합니다. */
+    if(r.net){
+      markStale(true);
+      /* 지난번 화면조차 없으면(이 기기에서 처음 여는 경우) 회색 뼈대를
+         영원히 두지 않고 무엇이 문제인지 알려 줍니다. */
+      if(!snap) showOffline();
+      return;
+    }
     if(!r.ok){ markStale(false); showLogin(); return; }
     renderFilters();
     S.anim = !snap;              // 스냅샷을 이미 그렸으면 조용히 갈아끼운다
@@ -1863,7 +1908,7 @@ function doLogin(phone, first){
     showSkeleton();
     call('api_start', S.token, S.corp).then(function(b){
       hideBooting();
-      if(!b.ok) return;
+      if(!b.ok){ toast(b.msg || '자료를 불러오지 못했습니다.'); return; }
       S.anim=true; applyBoard(b); saveSnap(); startPolling();
     });
   });
@@ -1915,6 +1960,7 @@ function startPolling(){
     if(Date.now() - (S.lastSync||0) < 50000) return;
     S.lastSync=Date.now(); S.lastCheck=Date.now();
     call('api_lastUpdate').then(function(v){
+      if(v && v.net) return;                 // 통신이 안 된 것 — 그냥 넘어간다
       if(v && v !== S.lastUpdate){ refresh(false); }
     });
   }, 60000);
@@ -1926,6 +1972,7 @@ function startPolling(){
     if(Date.now() - (S.lastCheck||0) < 20000) return;
     S.lastCheck=Date.now();
     call('api_lastUpdate').then(function(v){
+      if(v && v.net) return;                 // 통신이 안 된 것 — 그냥 넘어간다
       if(v && v !== S.lastUpdate) refresh(false);
     });
   });
@@ -2236,6 +2283,16 @@ function hideBooting(){
 }
 
 function empty(msg){ return '<p class="none">'+msg+'</p>'; }
+
+/** 이 기기에 지난번 화면이 없는데 통신까지 안 될 때. 뼈대를 계속 두지 않는다. */
+function showOffline(){
+  var box = '<div class="none big">인터넷에 연결되지 않았습니다.<br>'+
+            '<button class="btn pri" style="margin-top:12px" onclick="location.reload()">다시 시도</button></div>';
+  var w=$('listWait'), r=$('listRun'), d=$('listDone');
+  if(w) w.innerHTML=box;
+  if(r) r.innerHTML='';
+  if(d) d.innerHTML='';
+}
 
 /** 구역 제목 + 개수 (모든 화면이 같은 것을 쓴다) */
 function sechead(title, n, hot){
@@ -3031,7 +3088,7 @@ function flowRow(it, taskId){
       '<div class="txt">'+fmt(o.text||'')+'</div>'+
       (extra.length? '<p class="ex">'+esc(extra.join(' · '))+'</p>' : '')+
       (isLog && o.extra? '<p class="ex"><span class="tag wn">추가견적 필요</span></p>' : '')+
-      (isLog && o.photo? '<p class="ex"><a href="'+esc(o.photo)+'" target="_blank">사진 보기</a></p>' : '')+
+      (isLog ? shotsHtml(o.photos && o.photos.length ? o.photos : (o.photo? [o.photo] : [])) : '')+
     '</div>'+
     del+
   '</div>';
@@ -3312,6 +3369,12 @@ function modalSig(){
   [].forEach.call(box.querySelectorAll('input,textarea,select'),function(e){
     if(e.type==='button' || e.type==='submit') return;
     s.push((e.type==='checkbox'||e.type==='radio') ? (e.checked?'1':'0') : String(e.value==null?'':e.value));
+  });
+  /* 고른 사진도 '쓰던 것' 이다 (2026-08-31).
+     사진 칸은 고르는 즉시 비워지므로(같은 사진을 다시 고를 수 있게) 값으로는 안 잡힌다.
+     그대로 두면 영수증 다섯 장을 고른 뒤 [닫기] 를 눌러도 묻지 않고 날아간다. */
+  [].forEach.call(box.querySelectorAll('.thumbs'),function(e){
+    s.push('p'+e.querySelectorAll('.thumb').length);
   });
   return s.join('\u0001');
 }
@@ -3684,8 +3747,7 @@ function openLogForm(taskId){
         '<label onclick="setNextDate(this,7)">다음주</label>'+
       '</div><div style="height:6px"></div>'+
       '<input type="date" id="lgNextDate" value=""></div>'+
-    '<div class="field"><label class="fl">사진</label>'+
-      '<input type="file" id="lgPhoto" accept="image/*" capture="environment"></div>'+
+    photoField('lgPhoto', '사진', 'log')+
     '<div class="actions"><button class="btn" onclick="closeModal()">취소</button>'+
     '<button class="btn pri" id="lgSave" onclick="saveLog()">저장</button></div>'+
     '<p class="muted" id="lgMsg2" style="margin-top:8px"></p></div></div>';
@@ -3743,15 +3805,16 @@ function saveLog(){
   var btn=$('lgSave');
   if(btn.disabled) return;
   btn.disabled=true;
-  var hasPhoto = !!$('lgPhoto').files[0];
+  /* 사진은 고를 때 이미 줄여서 담아 두었다 (photoAdd) */
+  var shots = photoValues('lgPhoto');
 
-  if(hasPhoto){
+  if(shots.length){
     // 사진이 있으면 올리는 시간이 필요하니 기다린다
-    msg.textContent='사진과 함께 저장 중입니다...';
-    shrink($('lgPhoto').files[0]).then(function(data){
-      p.photo=data;
-      return call('api_saveLog', S.token, p, S.corp);
-    }).then(function(r){
+    msg.textContent = shots.length>1
+      ? ('사진 '+shots.length+'장과 함께 저장 중입니다...')
+      : '사진과 함께 저장 중입니다...';
+    p.photos = shots;
+    call('api_saveLog', S.token, p, S.corp).then(function(r){
       btn.disabled=false;
       if(!r.ok){ msg.textContent=r.msg; return; }
       closeOk(); toast('기록이 저장되었습니다');
@@ -3778,6 +3841,82 @@ function saveLog(){
 }
 
 /* 사진 자동 축소 — 업무일지 현장 사진용. 지금 설정을 그대로 둔다 */
+/* ===================== 사진 여러 장 고르기 (2026-08-31) =====================
+   결재 영수증·업무일지 기록·공지 세 곳이 **똑같은 것**을 씁니다.
+   예전에는 어디서나 한 장만 올릴 수 있었고, 공지에는 사진 자리가 아예 없었습니다.
+
+   ★ 화면에 설명문을 두지 않습니다. [라벨] + [칸] + 고른 사진 줄, 그것뿐입니다.
+   ★ 최대 5장. 그보다 많이 고르면 앞의 다섯 장만 담고 알려 줍니다.
+   =========================================================================== */
+var PHOTO_MAX = 5;
+var PICKED = {};            // { 칸이름: [ {url, name} ] }
+
+/** 사진 칸 하나를 그린다. 창을 만들 때 이 한 줄만 넣으면 된다 */
+function photoField(id, label, mode){
+  PICKED[id] = [];
+  return '<div class="field"><label class="fl">'+esc(label)+'</label>'+
+    '<input type="file" id="'+id+'" accept="image/*" multiple '+
+      'onchange="photoAdd(&#39;'+id+'&#39;,&#39;'+mode+'&#39;,this)">'+
+    '<div class="thumbs" id="'+id+'Box"></div></div>';
+}
+
+/** 고른 사진을 줄여서 담는다. 담는 동안 저장 버튼을 잠근다 */
+function photoAdd(id, mode, el){
+  var files = Array.prototype.slice.call(el.files || []);
+  el.value = '';                                  // 같은 사진을 다시 고를 수 있게
+  if(!files.length) return;
+
+  var have = (PICKED[id] || []).length;
+  var room = PHOTO_MAX - have;
+  if(room <= 0){ toast('사진은 '+PHOTO_MAX+'장까지입니다'); return; }
+  if(files.length > room){
+    toast('사진은 '+PHOTO_MAX+'장까지입니다');
+    files = files.slice(0, room);
+  }
+
+  var box = $(id+'Box');
+  if(box) box.innerHTML = '<p class="none">사진을 줄이는 중입니다...</p>';
+
+  /* 영수증은 여러 장이면 한 장당 한도를 나눠 갖는다.
+     그래야 다섯 장을 올려도 보내는 크기가 한 장일 때와 비슷하게 유지된다. */
+  var total = have + files.length;
+  var per = (mode === 'receipt') ? Math.floor(RECEIPT_LIMIT / Math.max(1, total)) : 0;
+
+  var jobs = files.map(function(f){
+    return (mode === 'receipt') ? shrinkReceipt(f, per) : shrink(f);
+  });
+
+  Promise.all(jobs).then(function(urls){
+    urls.forEach(function(u, i){
+      if(u) PICKED[id].push({ url:u, name:(files[i] && files[i].name) || '사진' });
+    });
+    photoDraw(id);
+  });
+}
+
+function photoDrop(id, i){
+  (PICKED[id] || []).splice(i, 1);
+  photoDraw(id);
+}
+
+function photoDraw(id){
+  var box = $(id+'Box'); if(!box) return;
+  var list = PICKED[id] || [];
+  if(!list.length){ box.innerHTML = ''; return; }
+  var h = '';
+  list.forEach(function(o, i){
+    h += '<div class="thumb"><img src="'+o.url+'" alt="">'+
+         '<button type="button" class="tx" onclick="photoDrop(&#39;'+id+'&#39;,'+i+')" '+
+         'aria-label="사진 빼기">&times;</button></div>';
+  });
+  box.innerHTML = h;
+}
+
+/** 저장할 때 꺼내 쓴다 — 사진 주소 배열 */
+function photoValues(id){
+  return (PICKED[id] || []).map(function(o){ return o.url; });
+}
+
 function shrink(file){
   return new Promise(function(res){
     if(!file){ res(''); return; }
@@ -3835,7 +3974,8 @@ function drawJpeg(img, max, q){
  * 영수증을 한도 안에 들어오는 가장 좋은 화질로 만든다.
  * 사용자는 실패를 겪지 않는다 — 마지막 단계까지 안 되면 그때만 빈 값을 돌려준다.
  */
-function shrinkReceipt(file){
+function shrinkReceipt(file, limit){
+  var cap = Number(limit) > 0 ? Number(limit) : RECEIPT_LIMIT;
   return new Promise(function(res){
     if(!file){ res(''); return; }
     loadImg(file).then(function(img){
@@ -3847,7 +3987,7 @@ function shrinkReceipt(file){
         var s=RECEIPT_STEPS[i];
         var out=drawJpeg(img, s.w, s.q);
         var kb=Math.round(out.url.length/1024);
-        if(out.url.length<=RECEIPT_LIMIT){
+        if(out.url.length<=cap){
           console.log('[영수증] '+s.w+'px 품질 '+s.q+' · 실제 '+out.w+'×'+out.h+
                       ' · '+kb+'KB · '+(i? (i+1)+'번째 시도에서 성공':'첫 시도에서 성공'));
           res(out.url); return;
@@ -4506,7 +4646,7 @@ function drawPost(no, src){
       (p.kind==='공지'? '<span class="tag dg">공지</span> ':'')+esc(p.title)+'</h3>'+
       '<button class="btn sm" onclick="closeModal()">닫기</button></div>'+
     byline([p.who, shortDate(p.at), p.edited? '수정 '+shortDate(p.edited) : ''])+
-    '<div style="margin-bottom:20px">'+fmt(p.body)+'</div>'+
+    '<div style="margin-bottom:20px">'+fmt(p.body)+shotsHtml(p.photos)+'</div>'+
     '<div class="actions" style="margin-bottom:22px">'+
       '<button class="btn sm" onclick="openBoard()">목록</button>'+
       (mine? '<button class="btn sm" onclick="openPostForm(\''+p.no+'\')">수정</button>':'')+
@@ -4532,6 +4672,7 @@ function openPostForm(no){
       '<input type="text" id="pfTitle" value="'+esc(p?p.title:'')+'"></div>'+
     '<div class="field"><label class="fl req">내용</label>'+
       mkEditor('pfBody', p?p.body:'', 110)+'</div>'+
+    photoField('pfPhoto', '사진', 'log')+
     '<div class="actions"><button class="btn" onclick="closeModal()">취소</button>'+
     '<button class="btn pri" id="pfSave" onclick="savePost(\''+(p?p.no:'')+'\')">'+
       (p?'수정':'올리기')+'</button></div>'+
@@ -4542,6 +4683,7 @@ function savePost(no){
   var title=$('pfTitle').value.trim();
   var body=mkValue('pfBody');
   var msg=$('pfMsg');
+  var shots=photoValues('pfPhoto');
   if(!title){ msg.textContent='제목을 입력해주세요.'; return; }
   if(!body){ msg.textContent='내용을 입력해주세요.'; return; }
 
@@ -4561,13 +4703,34 @@ function savePost(no){
   var backNotice = S.data ? (S.data.notices||[]).slice() : null;
   var backPosts  = S.postCache ? (S.postCache.posts||[]).slice() : null;
 
+  var send = { no:no||'', kind:'공지', corp:'', title:title, body:body, photos:shots };
+
+  /* ★ 사진이 있으면 즉시 닫지 않습니다 (2026-08-31).
+     사진은 올리는 데 시간이 걸리고, 실패하면 되돌릴 것이 사진까지라
+     '저장됐다' 고 먼저 말하면 안 됩니다.
+     사진이 없을 때는 예전처럼 즉시 닫고 뒤에서 보냅니다. */
+  if(shots.length){
+    var btn2=$('pfSave');
+    if(btn2){ btn2.disabled=true; }
+    msg.textContent='사진 '+shots.length+'장과 함께 올리는 중입니다...';
+    call('api_savePost', S.token, send, S.corp).then(function(r){
+      if(btn2) btn2.disabled=false;
+      if(!r.ok){ msg.textContent = r.msg || '올리지 못했습니다.'; return; }
+      np.no = r.no || tmpNo;
+      np.photos = r.photos || [];
+      putPostLocal(np, no);
+      closeOk();
+      toast(no? '공지가 수정되었습니다' : '공지가 등록되었습니다');
+      softRefresh();
+    });
+    return;
+  }
+
   putPostLocal(np, no);
   closeOk();
   toast(no? '공지가 수정되었습니다' : '공지가 등록되었습니다');
 
-  call('api_savePost', S.token, {
-    no:no||'', kind:'공지', corp:'', title:title, body:body
-  }, S.corp).then(function(r){
+  call('api_savePost', S.token, send, S.corp).then(function(r){
     if(!r.ok){
       // 되돌리고 알린다
       if(backNotice && S.data){ S.data.notices=backNotice; renderNotices(); }
@@ -5030,11 +5193,32 @@ function docDetailBody(r){
    드라이브 링크에서 파일 ID 를 뽑아 미리보기를 만든다.
    미리보기를 못 만들면(주소 모양이 다르면) 예전처럼 링크만 보여준다. */
 var RCPT={};     // 번호 -> 원본 주소
+var RCPT_N=0;    // 사진마다 겹치지 않는 번호를 붙인다 (shotsHtml 이 쓴다)
 
 function driveId(url){
   var m=String(url||'').match(/\/d\/([A-Za-z0-9_\-]{20,})/) ||
         String(url||'').match(/[?&]id=([A-Za-z0-9_\-]{20,})/);
   return m? m[1] : '';
+}
+
+/**
+ * 올라간 사진들을 썸네일로 (2026-08-31).
+ * 눌러 크게 보는 것은 영수증과 같은 길(openReceipt)을 씁니다.
+ * 드라이브 주소가 아니면 그냥 링크로 내려앉습니다.
+ */
+function shotsHtml(urls){
+  if(!urls || !urls.length) return '';
+  var h='<div class="shots">';
+  urls.forEach(function(u){
+    if(!u) return;
+    var id=driveId(u);
+    if(!id){ h+='<a href="'+esc(u)+'" target="_blank" class="btn sm">사진 보기</a>'; return; }
+    var i='s'+(RCPT_N++); RCPT[i]=u;
+    h+='<img src="https://drive.google.com/thumbnail?id='+esc(id)+'&sz=w400" alt="사진" '+
+       'onclick="openReceipt(&#39;'+esc(id)+'&#39;,&#39;'+i+'&#39;)" '+
+       'onerror="this.outerHTML=&#39;<a href=&quot;'+esc(u)+'&quot; target=_blank class=&quot;btn sm&quot;>사진 보기</a>&#39;">';
+  });
+  return h+'</div>';
 }
 
 function receiptThumb(url, i){
@@ -5298,10 +5482,12 @@ function openDocForm(code, prefill){
   // 사진은 영수증이 필요한 양식과 돈이 오가는 양식에만 (인감·휴가는 만들지 않는다)
   var usePhoto = (f.needReceipt || f.useItems);
   if(usePhoto){
-    h+='<div class="field" style="margin-top:14px">'+
-       '<label class="fl'+(f.needReceipt?' req':'')+'">'+
-       (f.needReceipt?'영수증 사진':'첨부 사진')+'</label>'+
-       '<input type="file" id="dfPhoto" accept="image/*" capture="environment"></div>';
+    h+='<div class="field" style="margin-top:14px"><label class="fl'+
+       (f.needReceipt?' req':'')+'">'+(f.needReceipt?'영수증 사진':'첨부 사진')+'</label>'+
+       '<input type="file" id="dfPhoto" accept="image/*" multiple '+
+         'onchange="photoAdd(&#39;dfPhoto&#39;,&#39;receipt&#39;,this)">'+
+       '<div class="thumbs" id="dfPhotoBox"></div></div>';
+    PICKED['dfPhoto']=[];
   }
 
   h+='<div class="field"><label class="fl">비고</label><input type="text" id="dfMemo"></div>'+
@@ -5441,7 +5627,6 @@ function saveDoc(){
           title:title, memo:$('dfMemo').value, items:items, fields:fields,
           needSeal: !!(sealChk && sealChk.classList.contains('on')) };
 
-  var photoEl=$('dfPhoto');
 
   /* ★ 막는 규칙은 서버(api_saveDoc)와 똑같이 맞춰 둡니다 (v55).
      예전에는 제목·내역·영수증 셋만 화면에서 보고, 양식별 필수 칸과
@@ -5489,7 +5674,10 @@ function saveDoc(){
       return;
     }
   }
-  if(f && f.needReceipt && !(photoEl && photoEl.files[0])){
+  /* 사진은 고르는 순간 이미 줄여서 담아 두었다 (photoAdd).
+     그래서 상신을 누른 뒤에는 기다릴 것이 없다. */
+  var shots = photoValues('dfPhoto');
+  if(f && f.needReceipt && !shots.length){
     return void stop('영수증 사진을 첨부해주세요.', 'dfPhoto');
   }
 
@@ -5499,20 +5687,10 @@ function saveDoc(){
   if(btn.disabled) return;
   btn.disabled=true; btn.textContent='상신 중...'; msg.textContent='';
 
-  var file=photoEl? photoEl.files[0] : null;
-  // 사진은 줄이는 데 시간이 걸린다. 몇 단계를 거치든 화면은 '올리는 중' 하나로만 보인다
-  if(file) msg.textContent='사진 올리는 중입니다...';
+  if(shots.length) msg.textContent='사진 '+shots.length+'장 올리는 중입니다...';
+  p.photos = shots;
 
-  shrinkReceipt(file).then(function(data){          // ★ 영수증은 사실상 원본 화질로
-    if(file && !data){
-      btn.disabled=false; btn.textContent='상신';
-      msg.textContent='사진을 올리지 못했습니다. 다시 시도해주세요.';
-      return null;
-    }
-    p.photo=data;
-    return call('api_saveDoc', S.token, p, S.corp);
-  }).then(function(r){
-    if(!r) return;                                  // 사진에서 이미 멈춘 경우
+  call('api_saveDoc', S.token, p, S.corp).then(function(r){
     btn.disabled=false; btn.textContent='상신';
     if(!r.ok){ msg.textContent=r.msg; return; }
     closeOk();

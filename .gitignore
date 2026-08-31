@@ -1,0 +1,9 @@
+# 깃허브에는 화면 파일만 올립니다 (2026-08-31). 자세한 이유는 견적/.gitignore 참고.
+# 아래는 clasp 가 앱스스크립트로 올리는 서버 코드입니다.
+Code.js
+연결.js
+가입승인.js
+시트만들기.js
+.clasp.json
+deploy-id.txt
+워크보드올리기.bat
