@@ -320,6 +320,19 @@ select{padding-right:30px}
 .chip{border:1px solid var(--line2);background:transparent;border-radius:99px;
   padding:4px 11px;cursor:pointer;font-size:var(--fs-sm);color:var(--t2)}
 .chip.on{background:var(--t1);color:var(--bg);border-color:var(--t1)}
+/* 챙길 것 — 미수금 · 답 없는 견적. 0건이면 줄 자체를 만들지 않는다 */
+.todo{display:block;width:100%;text-align:left;border:1px solid var(--line);background:transparent;
+  border-radius:var(--r);padding:8px 10px;margin:0 0 6px;cursor:pointer;color:var(--t2);font:inherit;
+  font-size:var(--fs-sm)}
+.todo:hover{background:var(--field)}
+.todo b{display:block;color:var(--t1);font-size:var(--fs-body);font-weight:600;
+  font-family:var(--font-title)}
+.todo.dgv b{color:var(--dg)}
+/* 담당자 이름 — 카드 안에서 눌러 그 사람 것만 보게 한다 (v55).
+   카드를 누르면 업무가 열리므로 event.stopPropagation() 이 반드시 있어야 한다 */
+.who{border:none;background:transparent;color:inherit;font:inherit;padding:0;cursor:pointer;
+  text-decoration:underline;text-decoration-color:var(--line2);text-underline-offset:2px}
+.who:hover{color:var(--t1);text-decoration-color:var(--t2)}
 .tag{display:inline-block;padding:2px 7px;border-radius:var(--r-sm);font-size:var(--fs-xs);line-height:1.5}
 .tag.dg{background:var(--dg-bg);color:var(--dg)}
 .tag.wn{background:var(--wn-bg);color:var(--wn)}
@@ -1010,6 +1023,7 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
       <div class="rail">
         <div><h4 id="apvTitle" class="dgv">결재 대기</h4><div id="railApv"></div></div>
         <div><h4>오늘 출근</h4><div id="railAtt"></div></div>
+        <div id="railTodo"></div>
         <div><h4>방금 올라온 기록</h4><div id="railLog"></div></div>
       </div>
     </div>
@@ -1075,7 +1089,7 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 
 <script>
 /* ===================== 상태 ===================== */
-var S = { token:'', me:null, meta:null, corp:'ALL', data:null, view:'board',
+var S = { owner:'', token:'', me:null, meta:null, corp:'ALL', data:null, view:'board',
           lastUpdate:'', timer:null, anim:true, seen:{},
           taskCache:{}, docCache:{}, docCacheAt:{}, postCache:null, postCacheAt:null,
           readers:{}, readSent:{}, setCache:null, lastSync:0, lastT:null };
@@ -2044,19 +2058,50 @@ function refresh(showMsg){
 }
 
 /* ===================== 워크보드 ===================== */
+/* 필터 줄 — 법인 칩 + (담당자를 골랐으면) 이름 칩.
+   ★ 예전에는 setCorp 가 칸 번호를 세어 `.on` 을 옮겼습니다 (S.meta.corps[i-1].code).
+     칩을 하나라도 더 붙이면 그 계산이 어긋나므로, 지금은 통째로 다시 그립니다.
+     칩 대여섯 개를 그리는 일이라 비용이 없습니다. */
 function renderFilters(){
-  var h='<button class="chip on" onclick="setCorp(\'ALL\')">전체</button>';
+  var h='<button class="chip'+(S.corp==='ALL'?' on':'')+'" onclick="setCorp(\'ALL\')">전체</button>';
   (S.meta.corps||[]).forEach(function(c){
-    h+='<button class="chip" onclick="setCorp(\''+c.code+'\')">'+esc(c.name)+'</button>';
+    h+='<button class="chip'+(S.corp===c.code?' on':'')+'" onclick="setCorp(\''+c.code+'\')">'+
+       esc(c.name)+'</button>';
   });
+  if(S.owner){
+    h+='<button class="chip on" onclick="setOwner(\'\')" title="담당자 필터 풀기">'+
+       esc(ownerNameOf(S.owner))+' ✕</button>';
+  }
   $('corpFilter').innerHTML=h;
 }
+
+function ownerNameOf(phone){
+  var n='';
+  ((S.data&&S.data.staff)||[]).forEach(function(x){ if(x.phone===phone) n=x.name; });
+  if(!n) ((S.data&&S.data.tasks)||[]).forEach(function(t){ if(t.owner===phone) n=t.ownerName||n; });
+  return n||'담당자';
+}
+
+/** 담당자 이름 — 누르면 판이 그 사람 것만 남는다. 다시 누르면 풀린다 */
+function ownerChip(t){
+  if(!t.ownerName) return '';
+  return '<button class="who" onclick="event.stopPropagation();setOwner(\''+t.owner+'\')">'+
+         esc(t.ownerName)+'</button>';
+}
+
+/* 서버에 가지 않는다. 이미 받아둔 것을 거를 뿐이다 (왕복 0회).
+   ★ 스냅샷에 담지 않습니다 — 내일 앱을 열었는데 판이 비어 있으면 고장난 줄 압니다. */
+function setOwner(phone){
+  S.owner = (S.owner===phone) ? '' : (phone||'');
+  S.anim=true;
+  renderFilters();
+  renderBoard();
+}
+
 function setCorp(c){
   S.corp=c;
   S.anim=true;
-  [].forEach.call($('corpFilter').children,function(b,i){
-    b.classList.toggle('on', (i===0&&c==='ALL') || (i>0 && S.meta.corps[i-1].code===c));
-  });
+  renderFilters();
   renderBoard();          // 서버에 가지 않는다. 이미 받아둔 데이터를 거를 뿐
   if(S.view==='me') renderMe();
 }
@@ -2067,7 +2112,9 @@ function renderBoard(){
   S.anim=false;            // 다음 자동갱신부터는 조용히
   var wait=[], run=[], done=[];
   var list=(d.tasks||[]).filter(function(t){
-    return S.corp==='ALL' || t.corp===S.corp;
+    if(S.corp!=='ALL' && t.corp!==S.corp) return false;
+    if(S.owner && t.owner!==S.owner) return false;    // 담당자 필터 (v55)
+    return true;
   });
   list.forEach(function(t){
     if(t.status==='완료') done.push(t);
@@ -2093,6 +2140,7 @@ function renderBoard(){
   });
 
   // 우측 패널
+  renderTodo();
   var apv=d.approvals||[];
   $('apvTitle').textContent = (S.me.grade>=3?'결재 대기 ':'내 결재 ')+apv.length;
   $('railApv').innerHTML = apv.length ? apv.map(function(a){
@@ -2263,6 +2311,95 @@ function doneBody(rows, months, partial){
   return h;
 }
 
+/**
+ * 챙길 것 — 미수금 · 답 없는 견적 (v55).
+ *
+ * ★ 서버 왕복 0회 · 시트 읽기 0회.
+ *   미수금은 board 가 이미 보낸 settle 을 더한 것이고,
+ *   답 없는 견적은 meta.sites 에 실려 온 발송일시·계약상태로 셉니다.
+ * ★ 둘 다 0이면 블록 자체를 그리지 않습니다 (0건인 구역은 만들지 않는다).
+ */
+var UNPAID_DAYS = 7;          // 견적을 보내고 이만큼 지나면 '답이 없는 것' 으로 본다
+
+function unpaidList(){
+  var d=S.data||{}, out=[];
+  var byId={}; (d.tasks||[]).forEach(function(t){ byId[t.id]=t; });
+  Object.keys(d.settle||{}).forEach(function(id){
+    var s=d.settle[id], t=byId[id];
+    if(!s || !t || !(s.unpaid>0)) return;
+    if(S.corp!=='ALL' && t.corp!==S.corp) return;
+    out.push({ id:id, title:t.title, owner:t.ownerName||'', status:t.status,
+               claim:s.total||0, paid:s.paid||0, unpaid:s.unpaid });
+  });
+  out.sort(function(a,b){ return b.unpaid-a.unpaid; });
+  return out;
+}
+
+function quietList(){
+  var out=[], td=todayStr();
+  ((S.meta&&S.meta.sites)||[]).forEach(function(x){
+    if(String(x.state||'').trim()) return;            // 계약이 잡혔으면 뺀다
+    var sent=String(x.sent||'').substring(0,10);
+    if(sent.length!==10) return;                      // 아직 보내지 않았다
+    var days=daysBetweenStr(sent, td);
+    if(days < UNPAID_DAYS) return;
+    out.push({ code:x.code, name:x.name||x.code, sent:sent, days:days });
+  });
+  out.sort(function(a,b){ return b.days-a.days; });
+  return out;
+}
+
+/** 날짜 글자 두 개 사이의 일수. 서울은 서머타임이 없어 UTC 로 세면 된다 */
+function daysBetweenStr(a,b){
+  var x=new Date(a+'T00:00:00Z'), y=new Date(b+'T00:00:00Z');
+  if(isNaN(x)||isNaN(y)) return 0;
+  return Math.round((y-x)/86400000);
+}
+
+function renderTodo(){
+  var box=$('railTodo'); if(!box) return;
+  var up=unpaidList(), qt=quietList(), h='';
+  if(up.length){
+    var sum=0; up.forEach(function(x){ sum+=x.unpaid; });
+    h+='<button class="todo dgv" onclick="openUnpaid()">'+
+       '<b>'+won(sum)+'원</b>못 받은 돈 '+up.length+'건</button>';
+  }
+  if(qt.length){
+    h+='<button class="todo" onclick="openQuiet()">'+
+       '<b>'+qt.length+'건</b>견적 보내고 '+UNPAID_DAYS+'일 넘게 답 없음</button>';
+  }
+  box.innerHTML = h ? ('<h4>챙길 것</h4>'+h) : '';
+}
+
+function openUnpaid(){
+  var list=unpaidList();
+  var h='<div class="veil"><div class="sheet">'+
+    '<div class="sheethead"><h3 class="tt">못 받은 돈</h3>'+
+    '<button class="btn sm" onclick="closeModal()">닫기</button></div>';
+  if(!list.length){ h+=empty('없습니다'); }
+  list.forEach(function(x){
+    h+='<div class="lrow" onclick="closeOk();openTask(\''+x.id+'\')">'+
+       '<div class="m"><p class="t">'+esc(x.title)+'</p>'+
+       byline([x.owner, x.status, '청구 '+won(x.claim)+'원', '입금 '+won(x.paid)+'원'])+'</div>'+
+       '<div class="r"><span class="v dgv">'+won(x.unpaid)+'원</span></div></div>';
+  });
+  $('modal').innerHTML = h+'</div></div>';
+}
+
+function openQuiet(){
+  var list=quietList();
+  var h='<div class="veil"><div class="sheet">'+
+    '<div class="sheethead"><h3 class="tt">답 없는 견적</h3>'+
+    '<button class="btn sm" onclick="closeModal()">닫기</button></div>';
+  if(!list.length){ h+=empty('없습니다'); }
+  list.forEach(function(x){
+    h+='<div class="lrow plain"><div class="m"><p class="t">'+esc(x.name)+'</p>'+
+       byline([x.code, shortDate(x.sent)+' 발송'])+'</div>'+
+       '<div class="r"><span class="v">'+x.days+'일</span></div></div>';
+  });
+  $('modal').innerHTML = h+'</div></div>';
+}
+
 function sumBox(A){
   var byCorp=S.data.statByCorp||{};
   var s=byCorp[S.corp]||byCorp.ALL||S.data.stat||{month:'',count:0,amount:0};
@@ -2296,7 +2433,7 @@ function cardSlim(t, i){
     (f? '<p style="margin:4px 0 0;font-size:var(--fs-sm);color:var(--'+(f.lv==='danger'?'dg':'wn')+')">'+esc(f.t)+'</p>'
       : (when.length? '<p style="margin:4px 0 0;font-size:var(--fs-sm)" class="sub">'+esc(when.join(' · '))+'</p>' : ''))+
     '<p style="margin:3px 0 0;font-size:var(--fs-sm)" class="muted">'+
-      esc([t.typeName, t.ownerName].filter(function(x){ return x; }).join(' · '))+'</p>'+
+      esc(t.typeName||'')+(t.ownerName? ' · '+ownerChip(t) : '')+'</p>'+
   '</div>';
 }
 
@@ -2321,8 +2458,8 @@ function cardFull(t, i){
     ? kv('오늘 투입', (t.manpower.g||t.manpower.j)? ('기공'+t.manpower.g+' 조공'+t.manpower.j) : '')+
       kv('폐기물', t.waste? t.waste+'t' : '')+
       kv('계약', t.amount? won(t.amount) : '')+
-      kv('담당', t.ownerName)
-    : kv('담당', t.ownerName)+ kv('마감', t.due? shortDate(t.due) : '')+
+      kvRaw('담당', ownerChip(t))
+    : kvRaw('담당', ownerChip(t))+ kv('마감', t.due? shortDate(t.due) : '')+
       kv('상태', t.status||'대기')+ kv('법인', t.corpName);
   if(cells) h+='<div class="stats">'+cells+'</div>';
 
@@ -2345,6 +2482,11 @@ function cardFull(t, i){
 function kv(k,v){
   if(v===null||v===undefined||v===''||v==='-') return '';
   return '<div><p class="k">'+k+'</p><p class="num">'+esc(v)+'</p></div>';
+}
+/* 값이 이미 HTML 인 경우 (담당자 이름처럼 누를 수 있게 만든 것) */
+function kvRaw(k,v){
+  if(!v) return '';
+  return '<div><p class="k">'+k+'</p><p class="num">'+v+'</p></div>';
 }
 function dday(due){
   var d=Math.round((new Date(due+'T00:00:00')-new Date(todayStr()+'T00:00:00'))/86400000);
@@ -2826,7 +2968,15 @@ function taskDetailBody(r){
   var made='';
   if(t.ownerName) made = t.ownerName + (t.at? ('이 '+shortDate(String(t.at).substring(0,10))+' 올림') : '이 올림');
   else if(t.at)   made = shortDate(String(t.at).substring(0,10))+' 올림';
+  /* 같이 보는 사람이 있으면 이름을 보여준다 (없으면 줄을 만들지 않는다) */
+  var coNames=[];
+  String(t.co||'').split(',').forEach(function(ph){
+    ph=ph.trim(); if(!ph) return;
+    var n=''; ((S.data&&S.data.staff)||[]).forEach(function(x){ if(x.phone===ph) n=x.name; });
+    if(n) coNames.push(n);
+  });
   h+='<hr class="tdsep"><p class="tdfoot">'+esc(made)+
+     (coNames.length? ' · 같이 '+esc(coNames.join(', ')) : '')+
      '<span id="tdRead"></span></p>';
   return h;
 }
@@ -3268,7 +3418,8 @@ function drawTaskForm(id, t){
       '<div class="field"><label class="fl req">법인</label><select id="tfCorp">'+
         corps.map(function(c){ return '<option value="'+c.code+'"'+(t&&t.corp===c.code?' selected':'')+'>'+esc(c.name)+'</option>'; }).join('')+
       '</select></div>'+
-      '<div class="field"><label class="fl req">담당자</label><select id="tfOwner">'+staffOptions(t?t.owner:S.me.phone)+'</select></div>'+
+      '<div class="field"><label class="fl req">담당자</label>'+
+        '<select id="tfOwner" onchange="syncCo()">'+staffOptions(t?t.owner:S.me.phone)+'</select></div>'+
     '</div>'+
     '<div class="field"><label class="fl req">업무명</label><input type="text" id="tfTitle" value="'+esc(t?t.title:'')+'"></div>'+
     '<div class="field"><label class="fl">내용</label>'+
@@ -3276,6 +3427,11 @@ function drawTaskForm(id, t){
       '</div>'+
     '<div class="field"><label class="fl">마감일</label>'+
       '<input type="date" id="tfDue" value="'+esc(t?t.due:'')+'"></div>'+
+    /* 같이 보는 사람 (협업자) — v55에서 화면을 만들었습니다.
+       열은 예전부터 있었고 서버도 댓글 알림을 여기로 보내는데, **고를 화면이 없어서**
+       언제나 비어 있었습니다 (수정할 때 값만 그대로 들고 다니는 숨은 칸이었습니다). */
+    '<div class="field"><label class="fl">같이 보는 사람</label>'+
+      '<div class="chks" id="tfCoPick">'+coChips(t?t.co:'', t?t.owner:S.me.phone)+'</div></div>'+
     '<div id="tfDemo">'+
       '<div class="grid2">'+
         '<div class="field"><label class="fl">현장</label>'+
@@ -3312,6 +3468,47 @@ function rankNo(rank){
  * 그래서 명부에 갓 올라온 사람(대표님·전무님)은 업무를 하나 맡기 전까지
  * 담당자로 고를 수가 없었다. 이제는 board 가 실어 보낸 명부(staff)로 만든다.
  */
+/* 같이 보는 사람 — 여럿 고를 수 있다. 값은 숨은 칸(tfCo)에 콤마로 모아 둔다.
+   ★ 담당자 본인은 목록에서 뺀다 (이미 알림을 받는다).
+   ★ 이름 차례는 담당자 드롭다운과 같은 직급 순이다 (RANK_ORDER). */
+function coChips(cur, owner){
+  var have={};
+  String(cur||'').split(',').forEach(function(x){ x=x.trim(); if(x) have[x]=1; });
+  owner = owner || ($('tfOwner')? $('tfOwner').value : '');
+  var list=((S.data && S.data.staff)||[]).slice().sort(function(a,b){
+    var d=rankNo(a.rank)-rankNo(b.rank);
+    return d ? d : ((a.name||'')<(b.name||'') ? -1 : 1);
+  });
+  var h='';
+  list.forEach(function(x){
+    if(!x.phone || x.phone===owner) return;
+    h+='<label data-ph="'+esc(x.phone)+'"'+(have[x.phone]?' class="on"':'')+
+       ' onclick="coToggle(this)">'+esc(x.name||x.phone)+'</label>';
+  });
+  return h;
+}
+
+function coToggle(el){
+  el.classList.toggle('on');
+  coCollect();
+}
+
+/** 눌러둔 이름을 모아 숨은 칸(tfCo)에 콤마로 적어 둔다. saveTask 는 그 칸만 본다 */
+function coCollect(){
+  var out=[];
+  [].forEach.call(document.querySelectorAll('#tfCoPick label.on'), function(l){
+    out.push(l.dataset.ph);
+  });
+  var box=$('tfCo'); if(box) box.value=out.join(',');
+}
+
+/** 담당자를 바꾸면 그 사람은 '같이 보는 사람' 목록에서 빠져야 한다 */
+function syncCo(){
+  var box=$('tfCoPick'); if(!box) return;
+  box.innerHTML=coChips($('tfCo')? $('tfCo').value : '', $('tfOwner').value);
+  coCollect();
+}
+
 function staffOptions(sel){
   /* ★ board 가 준 배열을 고쳐 쓰지 않는다 — slice 로 베낀 뒤에 정렬한다 (v50) */
   var list=((S.data && S.data.staff) || []).slice().sort(function(a,b){
@@ -3677,36 +3874,14 @@ function shrinkReceipt(file){
      달력을 열 때도, 달을 넘길 때도, 날짜를 누를 때도 서버에 가지 않는다 (왕복 0회).
 ============================================================================ */
 
-/* 대한민국 공휴일 2026~2029 — 대체공휴일까지 넣어 두었다.
-   설날·추석·부처님오신날은 음력이라 해마다 다르므로 계산하지 않고 날짜를 적어둔다.
-   ★ 임시공휴일은 미리 알 수 없어 넣지 않는다.
-     생기면 '일정' 시트에 구분을 HOLIDAY(공휴일) 로 한 줄 넣으면 똑같이 그려진다.
-   ★ 2030년이 되기 전에 다음 4년치를 여기에 이어 적어야 한다. */
-var HOLIDAY = {
-  /* 2026 — 19일 */
-  '2026-01-01':'신정', '2026-02-16':'설날 연휴', '2026-02-17':'설날', '2026-02-18':'설날 연휴',
-  '2026-03-01':'삼일절', '2026-03-02':'대체공휴일', '2026-05-05':'어린이날', '2026-05-24':'부처님오신날',
-  '2026-05-25':'대체공휴일', '2026-06-06':'현충일', '2026-08-15':'광복절', '2026-08-17':'대체공휴일',
-  '2026-09-24':'추석 연휴', '2026-09-25':'추석', '2026-09-26':'추석 연휴', '2026-10-03':'개천절',
-  '2026-10-05':'대체공휴일', '2026-10-09':'한글날', '2026-12-25':'성탄절',
-  /* 2027 — 20일 */
-  '2027-01-01':'신정', '2027-02-06':'설날 연휴', '2027-02-07':'설날', '2027-02-08':'설날 연휴',
-  '2027-02-09':'대체공휴일', '2027-03-01':'삼일절', '2027-05-05':'어린이날', '2027-05-13':'부처님오신날',
-  '2027-06-06':'현충일', '2027-08-15':'광복절', '2027-08-16':'대체공휴일', '2027-09-14':'추석 연휴',
-  '2027-09-15':'추석', '2027-09-16':'추석 연휴', '2027-10-03':'개천절', '2027-10-04':'대체공휴일',
-  '2027-10-09':'한글날', '2027-10-11':'대체공휴일', '2027-12-25':'성탄절', '2027-12-27':'대체공휴일',
-  /* 2028 — 15일 */
-  '2028-01-01':'신정', '2028-01-26':'설날 연휴', '2028-01-27':'설날', '2028-01-28':'설날 연휴',
-  '2028-03-01':'삼일절', '2028-05-02':'부처님오신날', '2028-05-05':'어린이날', '2028-06-06':'현충일',
-  '2028-08-15':'광복절', '2028-10-02':'추석 연휴', '2028-10-03':'추석·개천절', '2028-10-04':'추석 연휴',
-  '2028-10-05':'대체공휴일', '2028-10-09':'한글날', '2028-12-25':'성탄절',
-  /* 2029 — 18일 */
-  '2029-01-01':'신정', '2029-02-12':'설날 연휴', '2029-02-13':'설날', '2029-02-14':'설날 연휴',
-  '2029-03-01':'삼일절', '2029-05-05':'어린이날', '2029-05-07':'대체공휴일', '2029-05-20':'부처님오신날',
-  '2029-05-21':'대체공휴일', '2029-06-06':'현충일', '2029-08-15':'광복절', '2029-09-21':'추석 연휴',
-  '2029-09-22':'추석', '2029-09-23':'추석 연휴', '2029-09-24':'대체공휴일', '2029-10-03':'개천절',
-  '2029-10-09':'한글날', '2029-12-25':'성탄절'
-};
+/* 공휴일 표는 **서버에 있습니다** (Code.js 의 HOLIDAYS · v55에서 옮김).
+   연차 일수를 셀 때 서버도 같은 표가 필요해졌기 때문입니다.
+   두 벌을 두면 2030년에 한쪽만 이어 적게 됩니다.
+   여기서는 meta 로 받아 쓰기만 합니다 — 기준정보 캐시에 실려 오므로 왕복이 늘지 않습니다. */
+function holidayOf(ds){
+  var t = (S.meta && S.meta.holidays) || null;
+  return t ? (t[ds] || '') : '';
+}
 
 var CAL = { ym:'', pick:'' };
 
@@ -3760,7 +3935,8 @@ function isHolidayEvent(v){
 
 /** 공휴일이면 이름, 아니면 '' */
 function holidayOn(ds){
-  if(HOLIDAY[ds]) return HOLIDAY[ds];
+  var hol = holidayOf(ds);
+  if(hol) return hol;
   var hit = '';
   eventsOn(ds).forEach(function(v){ if(isHolidayEvent(v)) hit = v.title || '공휴일'; });
   return hit;
@@ -5292,6 +5468,16 @@ function saveDoc(){
 
   // 추가공사는 어느 업무인지 반드시 고른다 (서버도 같은 것을 본다)
   if(code==='ADD' && !p.taskId) return void stop('어느 업무의 추가공사인지 골라주세요.', 'dfTask');
+
+  /* 휴가는 날짜 앞뒤를 본다. 서버(api_saveDoc)도 같은 것을 다시 본다 (v55) */
+  if(code==='LEAVE'){
+    var lFrom=String(fields['시작일']||'').trim(), lTo=String(fields['종료일']||'').trim();
+    if(lFrom && lTo && lTo < lFrom){
+      var bad=null;
+      ((f && f.fields)||[]).forEach(function(fd,i){ if(fd.name==='종료일') bad='fd_'+i; });
+      return void stop('종료일이 시작일보다 앞설 수 없습니다.', bad);
+    }
+  }
 
   if(f && f.useItems){
     if(!items.length) return void stop(f.itemsTitle+'을(를) 한 줄 이상 입력해주세요.');

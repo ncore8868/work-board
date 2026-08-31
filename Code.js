@@ -1675,10 +1675,17 @@ function buildMeta_() {
 
   var sites = readObjects_('연동캐시')
     .filter(function (r) { return r['구분'] === '견적'; })
-    .map(function (r) { return { code: r['키'], name: r['값1'], addr: r['값2'], state: r['값3'] }; });
+    .map(function (r) {
+      return { code: r['키'], name: r['값1'], addr: r['값2'], state: r['값3'],
+               sent: String(r['값4'] || '') };      // 견적 발송일시 (v55)
+    });
 
   return { corps: corps, types: types, typeAll: typeAll, forms: forms, formList: formList,
-           sites: sites, settings: settings_(), ver: metaVer_() };
+           sites: sites, settings: settings_(),
+           /* 공휴일 표 — 달력이 쓴다 (v55에서 화면에서 여기로 옮겼다).
+              회사 밖 정보이므로 로그인 전에도 나가도 되는 값이다. 약 1.8KB. */
+           holidays: HOLIDAYS,
+           ver: metaVer_() };
 }
 
 /** 새 번호 채번: PREFIX-YYMMDD-001 */
@@ -2048,9 +2055,11 @@ function api_lastUpdate() {
 function ensureSyncSheet_() {
   var ss = ss_();
   var sh = ss.getSheetByName('연동캐시');
-  if (sh) return sh;
+  /* 값4 는 나중에 늘린 칸입니다 (v55 · 견적 발송일시).
+     이미 만들어져 있는 시트에는 없으므로 여기서 한 번 붙입니다. */
+  if (sh) { ensureColumn_('연동캐시', '값4'); return sh; }
   sh = ss.insertSheet('연동캐시');
-  sh.getRange(1, 1, 1, 6).setValues([['구분', '키', '값1', '값2', '값3', '갱신일시']])
+  sh.getRange(1, 1, 1, 7).setValues([['구분', '키', '값1', '값2', '값3', '값4', '갱신일시']])
     .setFontWeight('bold').setBackground('#F1F3F4');
   sh.setFrozenRows(1);
   delete _VALS['연동캐시']; delete _OBJ['연동캐시'];
@@ -2071,12 +2080,13 @@ function replaceSync_(kind, rows) {
   // 이 시트는 전부 글자로 다룬다 (시트가 숫자·날짜로 바꿔버리면 매칭이 깨진다)
   var sh2 = sheet_('연동캐시');
   var startRow = values_('연동캐시').length + 1;
-  sh2.getRange(startRow, 1, rows.length, 6).setNumberFormat('@');
+  sh2.getRange(startRow, 1, rows.length, 7).setNumberFormat('@');
 
   appendObjects_('연동캐시', rows.map(function (r) {
     return {
       '구분': kind, '키': String(r.k), '값1': String(r.v1 == null ? '' : r.v1),
       '값2': String(r.v2 == null ? '' : r.v2), '값3': String(r.v3 == null ? '' : r.v3),
+      '값4': String(r.v4 == null ? '' : r.v4),
       '갱신일시': nowS
     };
   }));
@@ -2231,13 +2241,14 @@ function syncEstimates_() {
   var got = outerTail_(sh, 300, '견적앱');
   var head = got.head, body = got.body;
 
-  var iNo = -1, iCust = -1, iAddr = -1, iState = -1;
+  var iNo = -1, iCust = -1, iAddr = -1, iState = -1, iSent = -1;
   for (var c = 0; c < head.length; c++) {
     var h = String(head[c]);
     if (iNo < 0 && (h.indexOf('견적번호') >= 0 || h.indexOf('코드번호') >= 0)) iNo = c;
     if (iCust < 0 && (h.indexOf('고객') >= 0 || h.indexOf('상호') >= 0)) iCust = c;
     if (iAddr < 0 && h.indexOf('주소') >= 0) iAddr = c;
     if (iState < 0 && h.indexOf('계약') >= 0) iState = c;
+    if (iSent < 0 && h.indexOf('발송일시') >= 0) iSent = c;   // 답 없는 견적을 세려고 (v55)
   }
   if (iNo < 0) return { ok: false, msg: '견적번호 열을 찾지 못했습니다.' };
 
@@ -2251,7 +2262,8 @@ function syncEstimates_() {
       k: no,
       v1: iCust >= 0 ? String(body[r][iCust] || '') : '',
       v2: iAddr >= 0 ? String(body[r][iAddr] || '') : '',
-      v3: iState >= 0 ? String(body[r][iState] || '') : ''
+      v3: iState >= 0 ? String(body[r][iState] || '') : '',
+      v4: iSent  >= 0 ? String(body[r][iSent]  || '') : ''
     });
     if (rows.length >= 150) break;
   }
@@ -2274,7 +2286,9 @@ function syncEstimates_() {
 function estSig_(rows) {
   try {
     var s = rows.map(function (r) {
-      return r.k + '|' + r.v1 + '|' + r.v2 + '|' + r.v3;
+      /* 발송일시(v4)도 넣습니다 — 안 넣으면 '발송만 바뀐 것' 을 못 알아채고
+         답 없는 견적 세기가 옛 값으로 남습니다 (v55) */
+      return r.k + '|' + r.v1 + '|' + r.v2 + '|' + r.v3 + '|' + r.v4;
     }).join('\n');
     var d = Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, s, Utilities.Charset.UTF_8);
     return d.map(function (b) { return ('0' + (b & 0xFF).toString(16)).slice(-2); }).join('');
@@ -4729,6 +4743,18 @@ function api_saveDoc(token, p, corp) {
     }
   }
 
+  /* ★ 휴가는 날짜 앞뒤를 여기서 막습니다 (v55).
+     예전에는 검사가 없어서 시작일 9/10 · 종료일 9/5 로도 상신됐고,
+     대표가 승인한 뒤 addLeave_ 가 `to = from` 으로 **조용히 고쳐** 1일로 적립했습니다.
+     달력의 일정(api_saveEvent)에는 같은 검사가 이미 있었습니다. 규칙을 맞춥니다. */
+  if (code === 'LEAVE') {
+    var lFrom = String(fields['시작일'] || '').trim();
+    var lTo   = String(fields['종료일'] || '').trim();
+    if (lFrom && lTo && lTo < lFrom) {
+      return { ok: false, msg: '종료일이 시작일보다 앞설 수 없습니다.' };
+    }
+  }
+
   var items = p.items || [];
   var total = 0;
   items.forEach(function (i2) { total += Number(i2.amount || 0); });
@@ -5213,6 +5239,69 @@ function approveLinkedSeal_(parentNo, seal) {
 }
 
 /** 승인된 휴가 신청서를 '휴가' 시트에 적립 (같은 문서번호가 이미 있으면 건너뛴다) */
+/* 대한민국 공휴일 2026~2029 — 대체공휴일까지.
+   설날·추석·부처님오신날은 음력이라 해마다 다르므로 계산하지 않고 날짜를 적어둔다.
+
+   ★ 이 표는 **여기 한 곳에만** 있습니다 (v55에서 화면에서 옮겨왔습니다).
+     예전에는 app.html 의 달력이 자기 표를 따로 들고 있었는데, 연차 일수를 세려면
+     서버도 같은 표가 필요해졌습니다. 두 벌을 두면 2030년에 한쪽만 이어 적게 됩니다.
+     지금은 meta_() 에 실어 화면이 받아 씁니다 (S.meta.holidays).
+   ★ 임시공휴일은 미리 알 수 없어 넣지 않습니다.
+     생기면 '일정' 시트에 구분을 HOLIDAY(공휴일) 로 한 줄 넣으면 달력이 똑같이 그립니다.
+     (다만 연차 일수 계산에는 들어가지 않습니다 — 아래 leaveDays_ 는 이 표만 봅니다)
+   ★ 2030년이 되기 전에 다음 4년치를 여기에 이어 적어야 합니다. */
+var HOLIDAYS = {
+  /* 2026 — 19일 */
+  '2026-01-01':'신정', '2026-02-16':'설날 연휴', '2026-02-17':'설날', '2026-02-18':'설날 연휴',
+  '2026-03-01':'삼일절', '2026-03-02':'대체공휴일', '2026-05-05':'어린이날', '2026-05-24':'부처님오신날',
+  '2026-05-25':'대체공휴일', '2026-06-06':'현충일', '2026-08-15':'광복절', '2026-08-17':'대체공휴일',
+  '2026-09-24':'추석 연휴', '2026-09-25':'추석', '2026-09-26':'추석 연휴', '2026-10-03':'개천절',
+  '2026-10-05':'대체공휴일', '2026-10-09':'한글날', '2026-12-25':'성탄절',
+  /* 2027 — 20일 */
+  '2027-01-01':'신정', '2027-02-06':'설날 연휴', '2027-02-07':'설날', '2027-02-08':'설날 연휴',
+  '2027-02-09':'대체공휴일', '2027-03-01':'삼일절', '2027-05-05':'어린이날', '2027-05-13':'부처님오신날',
+  '2027-06-06':'현충일', '2027-08-15':'광복절', '2027-08-16':'대체공휴일', '2027-09-14':'추석 연휴',
+  '2027-09-15':'추석', '2027-09-16':'추석 연휴', '2027-10-03':'개천절', '2027-10-04':'대체공휴일',
+  '2027-10-09':'한글날', '2027-10-11':'대체공휴일', '2027-12-25':'성탄절', '2027-12-27':'대체공휴일',
+  /* 2028 — 15일 */
+  '2028-01-01':'신정', '2028-01-26':'설날 연휴', '2028-01-27':'설날', '2028-01-28':'설날 연휴',
+  '2028-03-01':'삼일절', '2028-05-02':'부처님오신날', '2028-05-05':'어린이날', '2028-06-06':'현충일',
+  '2028-08-15':'광복절', '2028-10-02':'추석 연휴', '2028-10-03':'추석·개천절', '2028-10-04':'추석 연휴',
+  '2028-10-05':'대체공휴일', '2028-10-09':'한글날', '2028-12-25':'성탄절',
+  /* 2029 — 18일 */
+  '2029-01-01':'신정', '2029-02-12':'설날 연휴', '2029-02-13':'설날', '2029-02-14':'설날 연휴',
+  '2029-03-01':'삼일절', '2029-05-05':'어린이날', '2029-05-07':'대체공휴일', '2029-05-20':'부처님오신날',
+  '2029-05-21':'대체공휴일', '2029-06-06':'현충일', '2029-08-15':'광복절', '2029-09-21':'추석 연휴',
+  '2029-09-22':'추석', '2029-09-23':'추석 연휴', '2029-09-24':'대체공휴일', '2029-10-03':'개천절',
+  '2029-10-09':'한글날', '2029-12-25':'성탄절'
+};
+
+/**
+ * 휴가 일수 — 주말(토·일)과 공휴일을 뺀 실제 근무일만 셉니다 (v55).
+ *
+ * 예전에는 `종료일 − 시작일 + 1` 로 달력 날짜를 그대로 셌습니다.
+ * 금요일부터 월요일까지 쉬면 4일로 적립됐지만 실제로 쓴 연차는 2일입니다.
+ *
+ * ★ 반차는 여기 오지 않습니다 (0.5 로 따로 셉니다).
+ * ★ 시작일과 종료일이 둘 다 주말·공휴일이면 0 이 나오는데,
+ *   그때는 부르는 쪽에서 최소 1 로 올립니다 (기록이 0일로 남으면 안 됩니다).
+ */
+function leaveDays_(from, to) {
+  if (!from) return 0;
+  var end = to || from;
+  if (end < from) end = from;
+  var n = 0;
+  var cur = from;
+  for (var guard = 0; guard < 400 && cur <= end; guard++) {
+    var d = new Date(cur + 'T00:00:00Z');
+    var dow = d.getUTCDay();                 // 0 일요일 · 6 토요일
+    if (dow !== 0 && dow !== 6 && !HOLIDAYS[cur]) n++;
+    d.setUTCDate(d.getUTCDate() + 1);
+    cur = fmtD_(d);
+  }
+  return n;
+}
+
 function addLeave_(docRow, no) {
   try {
     ensureLeaveSheet_();
@@ -5230,8 +5319,9 @@ function addLeave_(docRow, no) {
     if (!from) return;
     if (to < from) to = from;
 
-    var days = (kind.indexOf('반차') >= 0) ? 0.5 : (daysBetween_(from, to) + 1);
-    if (!(days > 0)) days = 1;
+    /* 주말·공휴일은 빼고 센다 (v55). 반차는 언제나 0.5 */
+    var days = (kind.indexOf('반차') >= 0) ? 0.5 : leaveDays_(from, to);
+    if (!(days > 0)) days = 1;          // 주말에만 걸친 휴가라도 0일로 남기지는 않는다
 
     var phone = normPhone_(docRow['기안자전화']);
     appendObject_('휴가', {
