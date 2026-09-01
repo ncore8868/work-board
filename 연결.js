@@ -56,6 +56,11 @@ var 허용함수 = {
   api_deleteDoc: 1,
   api_notifications: 1,
   api_readNotifications: 1,
+
+  /* 폰 푸시 — 기기 하나를 적어 두거나 지운다 (2026-09-01) */
+  api_savePush: 1,
+  api_dropPush: 1,
+
   api_settings: 1,
   api_setDeputy: 1,
   api_saveSign: 1,

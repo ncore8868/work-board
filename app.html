@@ -530,6 +530,17 @@ label.fl{display:block;font-size:var(--fs-xs);color:var(--t3);margin:0 0 6px;fon
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* 공지 줄 — 상단바 바로 아래. 어느 화면에서나 보인다 */
+/* 자가진단 줄 — 노랑(곧 문제) / 빨강(지금 손댈 것). 색 규칙 그대로 */
+.health{background:var(--wn-bg);border-bottom:1px solid var(--wn-line);cursor:pointer;
+  display:flex;justify-content:center}
+.health.bad{background:var(--dg-bg);border-bottom-color:var(--dg-line)}
+.healthin{width:100%;max-width:1680px;padding:5px 18px;display:flex;align-items:center;
+  gap:var(--sp-2);min-width:0}
+.health .ht{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+  font-size:var(--fs-sm);color:var(--t1)}
+.health .hmore{flex:0 0 auto;font-size:var(--fs-sm);color:var(--t3)}
+.health:hover .hmore{color:var(--t1)}
+
 .notice{background:var(--panel);border-bottom:1px solid var(--line);
   display:flex;justify-content:center}
 .noticein{width:100%;max-width:1680px;padding:5px 18px;
@@ -1162,6 +1173,10 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 
 /* 의미를 가진 색은 둘뿐 — 빨강(지금 손댈 것) · 노랑(곧 문제) */
 .dgv{color:var(--dg)}
+/* ★ `.lrow .t{color:var(--t1)}` 이 더 세서, 줄 제목에 색을 넣으려면 여기까지 적어야 한다.
+   (2026-09-01: 자가진단 빨간 항목이 흰 글자로 나왔다. 색판에서도 같은 실수를 했다) */
+.lrow .t.dgv,.ucard .t.dgv{color:var(--dg)}
+.lrow .t.wnv,.ucard .t.wnv{color:var(--wn)}
 .wnv{color:var(--wn)}
 .secw{margin:0 0 var(--sp-1);font-size:var(--fs-body);font-weight:600;color:var(--wn)}
 
@@ -1192,6 +1207,11 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
   <button class="icobtn" onclick="openNoti()" title="알림">🔔<span class="badge hide" id="notiBadge">0</span></button>
   <button class="icobtn" onclick="go('settings')" title="설정">⚙</button>
 </div></div>
+
+<!-- ================= 자가진단 줄 (관리자에게만) =================
+     서버가 하루 한 번 스스로 살펴본 결과입니다.
+     이상이 없으면 아예 그리지 않습니다 (0건인 구역은 만들지 않는다). -->
+<div class="health hide" id="healthBar" onclick="openHealth()"></div>
 
 <!-- ================= 공지 줄 (탭이 아니라 한 줄 + 모달) ================= -->
 <div class="notice hide" id="noticeBar"><div class="noticein">
@@ -1249,6 +1269,7 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
         <label data-v="dark"><input type="radio" name="th">어둡게</label>
       </div>
     </div>
+    <div id="pushBox"></div>
     <div class="field"><label class="fl">내 정보</label><div class="sumbox" id="meInfo"></div></div>
     <div id="adminBox"></div>
     <div class="actions">
@@ -3216,6 +3237,9 @@ function renderBoard(){
     }
   });
 
+  renderHealth();          // 자가진단 줄 (관리자에게만, 이상 있을 때만)
+  pushOnce();              // 폰 알림 주소표 갱신 (한 번만)
+
   // 우측 패널
   renderTodo();
   var apv=d.approvals||[];
@@ -4027,18 +4051,24 @@ function taskDetailBody(r){
   /* 다섯 줄까지만 보여준다. 창을 열자마자 스무 줄이 쏟아지면 '많다' 는 느낌이 그대로 남는다.
      '더 보기' 를 한 번 누르면 그 뒤로는 전부 보인다 (FOLD 에 표시해 둔다) */
   var showAll = !!FOLD['flow:'+t.id];
-  var shown   = showAll ? flow : flow.slice(0, 5);
-  h+='<div class="flow" id="tdFlow">'+
-     shown.map(function(it){ return flowRow(it, t.id); }).join('')+'</div>';
+  /* ★ 오래된 것부터 놓으므로 '뒤에서 다섯 줄' 을 보여준다.
+     앞에서 다섯 줄을 자르면 가장 오래된 것만 보이고 방금 쓴 글이 숨는다. */
+  var shown   = showAll ? flow : flow.slice(-5);
 
   var more = (flow.length - shown.length)
            + Math.max(0,(r.total||0)   - (r.logs||[]).length)
            + Math.max(0,(r.cmtTotal||0)- (r.comments||[]).length);
+
+  /* ★ '지난 것 더 보기' 는 흐름 **위**에 둔다.
+     오래된 것이 위로 가므로, 더 보기도 그쪽에 있어야 손이 가는 방향이 맞는다. */
   if(more>0){
-    h+='<div class="actions" style="margin-top:var(--sp-3)">'+
+    h+='<div class="actions" style="margin-bottom:var(--sp-2)">'+
        '<button class="btn sm" id="tdMore" onclick="flowMore(\''+t.id+'\',\'tdMore\')">'+
        '지난 것 '+more+'건 더 보기</button></div>';
   }
+
+  h+='<div class="flow" id="tdFlow">'+
+     shown.map(function(it){ return flowRow(it, t.id); }).join('')+'</div>';
 
   // 적는 칸 — 버튼 이름 없이 칸 하나. 무거운 것은 그 아래 한 줄을 눌러서 연다
   h+='<div class="tdwrite">'+
@@ -4069,9 +4099,13 @@ function taskDetailBody(r){
 }
 
 /**
- * 기록과 댓글을 하나로 섞어 최신순으로 세운다.
+ * 기록과 댓글을 하나로 섞어 **오래된 것부터** 세운다 (2026-09-01에 뒤집음).
  * 기록은 `date`(yyyy-MM-dd), 댓글은 `at`(yyyy-MM-dd HH:mm) 이라 글자 비교로 정렬된다
  * — 앞 열 자리가 날짜라 날짜가 다르면 그것으로 갈리고, 같은 날이면 시각이 있는 쪽이 뒤(최신)다.
+ *
+ * ★ 왜 뒤집었나 — 대화가 읽히는 차례대로 놓기 위해서입니다.
+ *   먼저 쓴 것이 위, 나중에 쓴 것이 아래. 새로 쓴 글이 **적는 칸 바로 위**에 붙습니다.
+ *   게시글 댓글은 원래부터 이 차례였습니다 (이제 두 곳이 같습니다).
  */
 function taskFlow_(r){
   var out=[];
@@ -4081,7 +4115,7 @@ function taskFlow_(r){
   (r.comments||[]).forEach(function(c){
     out.push({ kind:'cmt', at:String(c.at||''), o:c });
   });
-  out.sort(function(x,y){ return y.at.localeCompare(x.at); });
+  out.sort(function(x,y){ return x.at.localeCompare(y.at); });   // 오래된 것부터
   return out;
 }
 
@@ -4138,8 +4172,9 @@ function sendFlow(taskId){
   var c={ id:'', who:(S.me&&S.me.name)||'', phone:(S.me&&S.me.phone)||'',
           text:text, at:todayStr()+' '+nowHM() };
   if(list){
-    list.insertAdjacentHTML('afterbegin', flowRow({kind:'cmt', at:c.at, o:c}, taskId));
-    node=list.firstElementChild;
+    /* 오래된 것부터 놓으므로 새 글은 맨 아래에 붙는다 (적는 칸 바로 위) */
+    list.insertAdjacentHTML('beforeend', flowRow({kind:'cmt', at:c.at, o:c}, taskId));
+    node=list.lastElementChild;
   }
 
   call('api_saveComment', S.token, '업무', taskId, text, S.corp).then(function(r){
@@ -5599,6 +5634,40 @@ function dropEventLocal(id){
 function nowHM(){ var d=new Date(); return p2(d.getHours())+':'+p2(d.getMinutes()); }
 
 /** 상단 공지 줄 — board 가 실어 보낸 것으로 왕복 0회 */
+/* 자가진단 줄 — 관리자에게만, 이상이 있을 때만.
+   ★ 서버가 하루 한 번 살펴본 결과를 board 에 실어 보냅니다 (왕복 0회).
+     오늘 하루에만 '터진 것을 사람이 먼저 발견한 일' 이 세 번 있어서 만들었습니다. */
+function renderHealth(){
+  var bar=$('healthBar'); if(!bar) return;
+  var h=(S.data && S.data.health) || null;
+  var list=(h && h.list) || [];
+  if(!list.length){ bar.classList.add('hide'); return; }
+
+  var 빨강=list.filter(function(o){ return o.lv==='red'; }).length;
+  bar.className='health'+(빨강?' bad':'');
+  bar.innerHTML='<div class="healthin"><span class="tag '+(빨강?'dg':'wn')+'">점검</span>'+
+    '<span class="ht">'+esc(list[0].t)+(list.length>1? ' 외 '+(list.length-1)+'건':'')+'</span>'+
+    '<span class="hmore">자세히</span></div>';
+  bar.classList.remove('hide');
+}
+
+function openHealth(){
+  var h=(S.data && S.data.health) || null;
+  var list=(h && h.list) || [];
+  var x='<div class="veil"><div class="sheet">'+
+    '<div class="sheethead"><h3 class="tt">시스템 점검</h3>'+
+    '<button class="btn sm" onclick="closeModal()">닫기</button></div>';
+  if(!list.length) x+=empty('이상 없습니다');
+  list.forEach(function(o){
+    x+='<div class="lrow plain"><div class="m">'+
+       '<p class="t'+(o.lv==='red'?' dgv':'')+'">'+esc(o.t)+'</p>'+
+       (o.how? '<p class="b">'+esc(o.how)+'</p>':'')+'</div></div>';
+  });
+  if(h && h.at) x+='<p class="byline" style="margin-top:10px">'+esc(shortDate(h.at))+' 에 살펴본 결과입니다</p>';
+  x+='</div></div>';
+  $('modal').innerHTML=x;
+}
+
 function renderNotices(){
   var box=$('noticeList'); if(!box) return;
   var bar=$('noticeBar');
@@ -6849,8 +6918,181 @@ function renderMe(){
 }
 
 /* ===================== 설정 ===================== */
+/* ===================== 폰 푸시 알림 (2026-09-01) =====================
+
+   앱을 꺼 두어도 폰 잠금화면에 뜨는 알림입니다.
+
+   ★ 켜는 것은 사람마다 한 번씩입니다. 설정(⚙) 에서 [알림 받기] 를 누르면
+     브라우저가 허락을 묻고, 그 기기의 주소표를 받아 서버에 적어 둡니다.
+
+   ★★ 아이폰은 **홈 화면에 추가한 앱에서만** 알림이 옵니다 (애플 제한).
+     사파리에서 그냥 열어 둔 경우에는 버튼을 눌러도 되지 않습니다.
+     그래서 그때는 무엇을 해야 하는지 화면에 알려 줍니다.
+
+   ★ 설정값(firebase)은 서버가 meta 로 내려줍니다. 화면 파일에 적지 않습니다.
+     서버 속성이 비어 있으면 이 자리는 아예 그리지 않습니다.
+================================================================= */
+
+var PUSH = { ready:false, token:'', busy:false };
+
+/** 아이폰인가 */
+function isIOS(){
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+         (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+}
+/** 홈 화면에 추가해서 연 것인가 */
+function isInstalled(){
+  try{
+    return window.matchMedia('(display-mode: standalone)').matches ||
+           window.navigator.standalone === true;
+  }catch(e){ return false; }
+}
+
+/** 지금 이 기기의 상태를 한 줄로 */
+function pushState(){
+  var conf=(S.meta && S.meta.push) || null;
+  if(!conf || !conf.on) return { can:false, why:'서버에 아직 안 켜져 있습니다' };
+  if(!('Notification' in window) || !('serviceWorker' in navigator)){
+    return { can:false, why:'이 브라우저는 알림을 지원하지 않습니다' };
+  }
+  if(isIOS() && !isInstalled()){
+    return { can:false, why:'아이폰은 홈 화면에 추가한 뒤에만 알림이 옵니다',
+             how:'사파리 아래 공유 버튼 → 홈 화면에 추가' };
+  }
+  if(Notification.permission==='denied'){
+    return { can:false, why:'이 기기에서 알림을 차단해 두었습니다',
+             how:'폰 설정에서 이 사이트의 알림을 허용해 주세요' };
+  }
+  return { can:true, on: Notification.permission==='granted' && !!PUSH.token };
+}
+
+/** 설정 화면의 알림 칸을 그린다 */
+function renderPush(){
+  var box=$('pushBox'); if(!box) return;
+  var conf=(S.meta && S.meta.push) || null;
+
+  /* 서버에 안 켜져 있으면 이 자리를 아예 만들지 않는다 (0건인 구역은 그리지 않는다) */
+  if(!conf || !conf.on){ box.innerHTML=''; return; }
+
+  var st=pushState();
+  var h='<div class="field"><label class="fl">폰 알림</label>';
+
+  if(!st.can){
+    h+='<div class="sumbox"><p class="none" style="margin:0">'+esc(st.why)+'</p>'+
+       (st.how? '<p class="b" style="margin:4px 0 0">'+esc(st.how)+'</p>':'')+'</div>';
+  }else if(st.on){
+    h+='<div class="chks"><label class="on">이 기기에서 받는 중</label></div>'+
+       '<div style="margin-top:6px"><button class="btn sm" onclick="pushOff()">그만 받기</button></div>';
+  }else{
+    h+='<div><button class="btn pri" id="pushBtn" onclick="pushOn()">알림 받기</button></div>';
+  }
+  box.innerHTML=h+'</div>';
+}
+
+/** firebase 를 처음 한 번만 불러온다 */
+function pushLoad(){
+  if(PUSH.ready) return Promise.resolve(true);
+  var conf=(S.meta && S.meta.push) || null;
+  if(!conf || !conf.on) return Promise.resolve(false);
+
+  function 넣기(src){
+    return new Promise(function(res, rej){
+      var s=document.createElement('script');
+      s.src=src; s.onload=function(){ res(); }; s.onerror=function(){ rej(new Error(src)); };
+      document.head.appendChild(s);
+    });
+  }
+
+  var 판='10.12.2';
+  return 넣기('https://www.gstatic.com/firebasejs/'+판+'/firebase-app-compat.js')
+    .then(function(){ return 넣기('https://www.gstatic.com/firebasejs/'+판+'/firebase-messaging-compat.js'); })
+    .then(function(){
+      firebase.initializeApp({
+        apiKey: conf.apiKey, projectId: conf.projectId,
+        appId: conf.appId, messagingSenderId: conf.senderId
+      });
+      PUSH.ready=true;
+      return true;
+    })
+    .catch(function(e){ quiet('푸시 불러오기', e); return false; });
+}
+
+/** [알림 받기] */
+function pushOn(){
+  if(PUSH.busy) return;
+  PUSH.busy=true;
+  var btn=$('pushBtn'); if(btn){ btn.disabled=true; btn.textContent='허락을 기다리는 중...'; }
+
+  Notification.requestPermission().then(function(p){
+    if(p!=='granted'){ throw new Error('허락하지 않았습니다'); }
+    return pushLoad();
+  }).then(function(ok){
+    if(!ok) throw new Error('알림 준비를 못 했습니다');
+    return navigator.serviceWorker.ready;
+  }).then(function(reg){
+    var conf=S.meta.push;
+    return firebase.messaging().getToken({ vapidKey: conf.vapid, serviceWorkerRegistration: reg });
+  }).then(function(t){
+    if(!t) throw new Error('기기 주소를 받지 못했습니다');
+    PUSH.token=t;
+    return call('api_savePush', S.token, t, navigator.userAgent.substring(0,60));
+  }).then(function(r){
+    if(!r || !r.ok) throw new Error((r&&r.msg)||'저장하지 못했습니다');
+    toast('이제 이 기기로 알림이 옵니다');
+  }).catch(function(e){
+    toast(e.message||'알림을 켜지 못했습니다', 'bad');
+    quiet('푸시 켜기', e);
+  }).then(function(){
+    PUSH.busy=false;
+    renderPush();
+  });
+}
+
+/** [그만 받기] — 이 기기만 */
+function pushOff(){
+  if(PUSH.busy) return;
+  PUSH.busy=true;
+  var t=PUSH.token;
+  PUSH.token='';
+  renderPush();
+  call('api_dropPush', S.token, t).then(function(){
+    PUSH.busy=false;
+    toast('이 기기로는 알림이 오지 않습니다');
+  });
+}
+
+/** 판을 그릴 때마다 부르지 않게 한 번만 */
+var PUSH_ONCE=false;
+function pushOnce(){
+  if(PUSH_ONCE || !S.token) return;
+  PUSH_ONCE=true;
+  pushRefresh();
+}
+
+/** 앱을 열 때 — 이미 허락해 둔 기기면 조용히 주소표를 새로 받아 둔다.
+    ★ 주소표는 가끔 바뀝니다. 안 갱신하면 어느 날부터 조용히 안 옵니다. */
+function pushRefresh(){
+  var conf=(S.meta && S.meta.push) || null;
+  if(!conf || !conf.on) return;
+  if(!('Notification' in window) || Notification.permission!=='granted') return;
+  if(isIOS() && !isInstalled()) return;
+
+  pushLoad().then(function(ok){
+    if(!ok) return null;
+    return navigator.serviceWorker.ready;
+  }).then(function(reg){
+    if(!reg) return null;
+    return firebase.messaging().getToken({ vapidKey: conf.vapid, serviceWorkerRegistration: reg });
+  }).then(function(t){
+    if(!t) return;
+    PUSH.token=t;
+    return call('api_savePush', S.token, t, navigator.userAgent.substring(0,60));
+  }).catch(function(e){ quiet('푸시 갱신', e); });
+}
+
 function renderSettings(){
   applyTheme();
+  renderPush();                  // 폰 알림 (서버에 안 켜져 있으면 아예 안 그린다)
   [].forEach.call($('themePick').children,function(l){
     l.onclick=function(){ setTheme(l.dataset.v); };
   });

@@ -29,7 +29,7 @@
  *   달라진 것은 안 바뀐 날에 225KB 를 다시 안 받는다는 것뿐입니다.
  * ────────────────────────────────────────────────────────────
  */
-const CACHE = 'unionone-launcher-v30';
+const CACHE = 'unionone-launcher-v33';
 
 /* 캐시가 있을 때 네트워크를 기다려주는 시간 */
 const NET_WAIT_MS = 2500;
@@ -131,3 +131,51 @@ self.addEventListener('fetch', (e) => {
     return fallback || Response.error();
   })());
 });
+
+
+/* ===================== 폰 알림 (2026-09-01) =====================
+
+   앱을 꺼 두어도 폰 잠금화면에 뜨는 알림을 여기서 그립니다.
+
+   ★ firebase 라이브러리를 여기에 불러오지 않습니다.
+     구글이 보내주는 것을 우리가 직접 읽어 그리면 되고,
+     그러면 서비스워커가 가벼워지고 라이브러리 판이 바뀌어도 안 깨집니다.
+
+   ★ 이미 앱 창이 열려 있으면 그 창을 앞으로 가져옵니다.
+     새 창을 또 열면 로그인부터 다시 하게 됩니다.
+================================================================= */
+
+self.addEventListener('push', (e) => {
+  let d = {};
+  try { d = e.data ? e.data.json() : {}; } catch (err) { d = {}; }
+
+  /* 구글이 보내는 모양이 조금씩 다릅니다. 있는 데서 차례로 꺼냅니다 */
+  const n = d.notification || d.data || d || {};
+  const title = n.title || '워크보드';
+  const body = n.body || n.message || '';
+  const link = (d.fcmOptions && d.fcmOptions.link) || n.click_action || './';
+
+  e.waitUntil(self.registration.showNotification(title, {
+    body: body,
+    icon: './icon-192.png',
+    badge: './icon-96.png',
+    tag: 'unionone',          /* 같은 표를 달아 알림이 쌓이지 않게 */
+    renotify: true,
+    data: { url: link }
+  }));
+});
+
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close();
+  const url = (e.notification.data && e.notification.data.url) || './';
+
+  e.waitUntil((async () => {
+    const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    /* 이미 열려 있는 창이 있으면 그것을 앞으로 */
+    for (const c of list) {
+      if (c.url.indexOf(self.registration.scope) === 0 && 'focus' in c) return c.focus();
+    }
+    if (self.clients.openWindow) return self.clients.openWindow(url);
+  })());
+});
+
