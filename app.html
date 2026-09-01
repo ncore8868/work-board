@@ -3747,7 +3747,7 @@ function openLogForm(taskId){
         '<label onclick="setNextDate(this,7)">다음주</label>'+
       '</div><div style="height:6px"></div>'+
       '<input type="date" id="lgNextDate" value=""></div>'+
-    photoField('lgPhoto', '사진', 'log')+
+    photoField('lgPhoto', '사진')+
     '<div class="actions"><button class="btn" onclick="closeModal()">취소</button>'+
     '<button class="btn pri" id="lgSave" onclick="saveLog()">저장</button></div>'+
     '<p class="muted" id="lgMsg2" style="margin-top:8px"></p></div></div>';
@@ -3852,16 +3852,22 @@ var PHOTO_MAX = 5;
 var PICKED = {};            // { 칸이름: [ {url, name} ] }
 
 /** 사진 칸 하나를 그린다. 창을 만들 때 이 한 줄만 넣으면 된다 */
-function photoField(id, label, mode){
+function photoField(id, label){
   PICKED[id] = [];
   return '<div class="field"><label class="fl">'+esc(label)+'</label>'+
     '<input type="file" id="'+id+'" accept="image/*" multiple '+
-      'onchange="photoAdd(&#39;'+id+'&#39;,&#39;'+mode+'&#39;,this)">'+
+      'onchange="photoAdd(&#39;'+id+'&#39;,this)">'+
     '<div class="thumbs" id="'+id+'Box"></div></div>';
 }
 
-/** 고른 사진을 줄여서 담는다. 담는 동안 저장 버튼을 잠근다 */
-function photoAdd(id, mode, el){
+/** 고른 사진을 담는다. 담는 동안 저장 버튼을 잠근다.
+
+    ★ 2026-09-01 부터 **어디서 올리든 원본에 가장 가까운 화질**입니다.
+      예전에는 영수증만 2400px·0.92 였고 공지·업무일지는 900px·0.55 라
+      사진 속 글씨(안내문·일정표·도면)를 읽을 수 없었습니다.
+      지금은 세 곳이 같은 길을 씁니다 — 2400px·품질 0.92 로 시작해
+      보낼 수 있는 크기를 넘을 때만 한 단계씩 내립니다. */
+function photoAdd(id, el){
   var files = Array.prototype.slice.call(el.files || []);
   el.value = '';                                  // 같은 사진을 다시 고를 수 있게
   if(!files.length) return;
@@ -3877,20 +3883,22 @@ function photoAdd(id, mode, el){
   var box = $(id+'Box');
   if(box) box.innerHTML = '<p class="none">사진을 줄이는 중입니다...</p>';
 
-  /* 영수증은 여러 장이면 한 장당 한도를 나눠 갖는다.
+  /* 여러 장이면 한 장당 한도를 나눠 갖는다.
      그래야 다섯 장을 올려도 보내는 크기가 한 장일 때와 비슷하게 유지된다. */
   var total = have + files.length;
-  var per = (mode === 'receipt') ? Math.floor(RECEIPT_LIMIT / Math.max(1, total)) : 0;
+  var per = Math.floor(PHOTO_LIMIT / Math.max(1, total));
 
-  var jobs = files.map(function(f){
-    return (mode === 'receipt') ? shrinkReceipt(f, per) : shrink(f);
-  });
+  var jobs = files.map(function(f){ return shrinkPhoto(f, per); });
 
   Promise.all(jobs).then(function(urls){
+    var 못담음 = 0;
     urls.forEach(function(u, i){
       if(u) PICKED[id].push({ url:u, name:(files[i] && files[i].name) || '사진' });
+      else 못담음 += 1;
     });
     photoDraw(id);
+    /* ★ 조용히 빠뜨리지 않는다. 예전에는 못 읽은 사진이 아무 말 없이 사라졌다 */
+    if(못담음) toast(못담음+'장은 담지 못했습니다. 다시 촬영해 주세요.');
   });
 }
 
@@ -3917,31 +3925,28 @@ function photoValues(id){
   return (PICKED[id] || []).map(function(o){ return o.url; });
 }
 
-function shrink(file){
-  return new Promise(function(res){
-    if(!file){ res(''); return; }
-    loadImg(file).then(function(img){
-      if(!img){ res(''); return; }
-      res(drawJpeg(img, 900, 0.55).url);
-    });
-  });
-}
+/* ===================== 사진 (v42 · 2026-09-01 전체로 넓힘) =====================
+   ★ 공지 · 업무일지 기록 · 결재 영수증 **세 곳 모두** 이 길을 씁니다.
+     예전에는 영수증만 이랬고 나머지는 900px·품질 0.55 로 줄여서,
+     사진 속 글씨(안내문·일정표·도면·영수증)를 읽을 수 없었습니다.
 
-/* ===================== 영수증 사진 (v42) =====================
-   영수증은 글씨를 읽어야 하므로 사실상 원본 화질로 올린다.
+   사실상 원본 화질로 올린다.
    긴 변 2400px · 품질 0.92 가 기본이고, 원본이 더 작으면 크기를 건드리지 않는다.
    형식은 언제나 JPEG — 아이폰 HEIC 을 그대로 올리면 PC 에서 열리지 않는다.
    흑백 대비를 높이는 처리는 하지 않는다 (얇은 글씨가 지워질 위험만 있다).
 
    ★ 용량이 한도를 넘으면 사용자에게 묻지 않고 앱이 알아서 단계를 내린다.
      보내기 전에 크기를 재서, 넘을 것 같으면 **보내보지도 않고** 다음 단계로 간다.
-     (base64 로 바뀌면 1.33배가 되므로 그 값으로 판단한다) */
-var RECEIPT_STEPS=[
+     (base64 로 바뀌면 1.33배가 되므로 그 값으로 판단한다)
+
+   ★ 한도는 **한 번에 보내는 전체 크기**입니다. 다섯 장을 고르면 한 장당 1/5 을 씁니다.
+     현장에서 기다리는 시간이 장수에 비례해 늘지 않게 하려는 것입니다. */
+var PHOTO_STEPS=[
   {w:2400,q:0.92},{w:2400,q:0.85},{w:2400,q:0.75},
   {w:1800,q:0.85},{w:1800,q:0.75},
   {w:1200,q:0.75}
 ];
-var RECEIPT_LIMIT=7*1024*1024;   // base64 로 보낼 수 있는 한도
+var PHOTO_LIMIT=7*1024*1024;   // base64 로 보낼 수 있는 한도
 
 function loadImg(file){
   return new Promise(function(res){
@@ -3971,31 +3976,31 @@ function drawJpeg(img, max, q){
 }
 
 /**
- * 영수증을 한도 안에 들어오는 가장 좋은 화질로 만든다.
+ * 사진을 한도 안에 들어오는 가장 좋은 화질로 만든다.
  * 사용자는 실패를 겪지 않는다 — 마지막 단계까지 안 되면 그때만 빈 값을 돌려준다.
  */
-function shrinkReceipt(file, limit){
-  var cap = Number(limit) > 0 ? Number(limit) : RECEIPT_LIMIT;
+function shrinkPhoto(file, limit){
+  var cap = Number(limit) > 0 ? Number(limit) : PHOTO_LIMIT;
   return new Promise(function(res){
     if(!file){ res(''); return; }
     loadImg(file).then(function(img){
       if(!img){
-        console.log('[영수증] 이미지를 읽지 못했습니다 (형식 문제일 수 있습니다)');
+        console.log('[사진] 이미지를 읽지 못했습니다 (형식 문제일 수 있습니다)');
         res(''); return;
       }
-      for(var i=0;i<RECEIPT_STEPS.length;i++){
-        var s=RECEIPT_STEPS[i];
+      for(var i=0;i<PHOTO_STEPS.length;i++){
+        var s=PHOTO_STEPS[i];
         var out=drawJpeg(img, s.w, s.q);
         var kb=Math.round(out.url.length/1024);
         if(out.url.length<=cap){
-          console.log('[영수증] '+s.w+'px 품질 '+s.q+' · 실제 '+out.w+'×'+out.h+
+          console.log('[사진] '+s.w+'px 품질 '+s.q+' · 실제 '+out.w+'×'+out.h+
                       ' · '+kb+'KB · '+(i? (i+1)+'번째 시도에서 성공':'첫 시도에서 성공'));
           res(out.url); return;
         }
-        console.log('[영수증] '+s.w+'px 품질 '+s.q+' · '+kb+'KB — 한도('+
-                    Math.round(RECEIPT_LIMIT/1024)+'KB)를 넘어 보내지 않고 다음 단계로');
+        console.log('[사진] '+s.w+'px 품질 '+s.q+' · '+kb+'KB — 한도('+
+                    Math.round(PHOTO_LIMIT/1024)+'KB)를 넘어 보내지 않고 다음 단계로');
       }
-      console.log('[영수증] 마지막 단계까지 갔는데도 한도를 넘었습니다');
+      console.log('[사진] 마지막 단계까지 갔는데도 한도를 넘었습니다');
       res('');
     });
   });
@@ -4672,7 +4677,7 @@ function openPostForm(no){
       '<input type="text" id="pfTitle" value="'+esc(p?p.title:'')+'"></div>'+
     '<div class="field"><label class="fl req">내용</label>'+
       mkEditor('pfBody', p?p.body:'', 110)+'</div>'+
-    photoField('pfPhoto', '사진', 'log')+
+    photoField('pfPhoto', '사진')+
     '<div class="actions"><button class="btn" onclick="closeModal()">취소</button>'+
     '<button class="btn pri" id="pfSave" onclick="savePost(\''+(p?p.no:'')+'\')">'+
       (p?'수정':'올리기')+'</button></div>'+
@@ -5485,7 +5490,7 @@ function openDocForm(code, prefill){
     h+='<div class="field" style="margin-top:14px"><label class="fl'+
        (f.needReceipt?' req':'')+'">'+(f.needReceipt?'영수증 사진':'첨부 사진')+'</label>'+
        '<input type="file" id="dfPhoto" accept="image/*" multiple '+
-         'onchange="photoAdd(&#39;dfPhoto&#39;,&#39;receipt&#39;,this)">'+
+         'onchange="photoAdd(&#39;dfPhoto&#39;,this)">'+
        '<div class="thumbs" id="dfPhotoBox"></div></div>';
     PICKED['dfPhoto']=[];
   }
