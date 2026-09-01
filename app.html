@@ -341,6 +341,19 @@ select{padding-right:30px}
 .chip{border:1px solid var(--line2);background:transparent;border-radius:99px;
   padding:4px 11px;cursor:pointer;font-size:var(--fs-sm);color:var(--t2)}
 .chip.on{background:var(--t1);color:var(--bg);border-color:var(--t1)}
+/* 필터 — 법인 칩 / (사이 띄우기) / 담당자·종류 드롭다운 */
+.fgap{flex:0 0 auto;width:1px;height:18px;align-self:center;background:var(--line2);margin:0 var(--sp-2)}
+.fsel{display:inline-flex;align-items:center;gap:6px;min-width:0}
+.fsel > span{color:var(--t3);font-size:var(--fs-sm);white-space:nowrap}
+.fsel select{border:1px solid var(--line2);background:var(--field);color:var(--t1);
+  border-radius:99px;height:26px;padding:0 24px 0 10px;font-size:var(--fs-sm);
+  max-width:130px;cursor:pointer;
+  -webkit-appearance:none;appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--t3) 50%),
+                   linear-gradient(135deg,var(--t3) 50%,transparent 50%);
+  background-position:calc(100% - 13px) 11px,calc(100% - 9px) 11px;
+  background-size:4px 4px,4px 4px;background-repeat:no-repeat}
+.fsel select:hover{border-color:var(--t3)}
 /* 챙길 것 — 미수금 · 답 없는 견적. 0건이면 줄 자체를 만들지 않는다 */
 .todo{display:block;width:100%;text-align:left;border:1px solid var(--line);background:transparent;
   border-radius:var(--r);padding:8px 10px;margin:0 0 6px;cursor:pointer;color:var(--t2);font:inherit;
@@ -688,6 +701,13 @@ table.mk-tb .al-c{text-align:center} table.mk-tb .al-r{text-align:right}
 .sw .swc{font-size:14px;font-weight:700;line-height:1.1}
 .sw .swn{font-size:var(--fs-xs);line-height:1.1;color:var(--t3)}
 .mkswrow button.sw:hover .swn{color:var(--t2)}
+/* 표 크기 고르기 — [－] 숫자 [＋] */
+.mkstep{align-items:center}
+.mkstep button{width:30px;padding:0;font-size:14px;font-weight:700}
+.mknum{min-width:26px;text-align:center;font-family:var(--font-title);
+  font-size:var(--fs-h2);color:var(--t1)}
+.mkgo{background:var(--panel2)!important;color:var(--t1)!important;
+  border-color:var(--t3)!important;font-weight:700}
 /* 형광펜 칸은 바탕이 색이라, 이름도 그 위에서 또렷한 색을 따라간다 */
 .mkswrow button[class*="sw-h-"] .swn{color:inherit;opacity:.78}
 .sw-c-red{color:var(--w-red)} .sw-c-orange{color:var(--w-orange)}
@@ -1180,7 +1200,8 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
   <div id="view-board">
     <div class="filterbar" id="corpFilter"></div>
     <div class="board">
-      <div class="col"><div class="colhead">대기 <span class="n" id="cWait">0</span></div>
+      <div class="col"><div class="colhead">대기 <span class="n" id="cWait">0</span>
+        <button class="btn sm" style="margin-left:auto;padding:3px 9px" onclick="openTaskForm()">＋ 업무</button></div>
         <div class="cards slim" id="listWait"></div></div>
       <div class="col"><div class="colhead"><span class="live"></span>진행중 <span class="n" id="cRun">0</span></div>
         <div class="cards" id="listRun"></div></div>
@@ -1256,7 +1277,7 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 
 <script>
 /* ===================== 상태 ===================== */
-var S = { owner:'', token:'', me:null, meta:null, corp:'ALL', data:null, view:'board',
+var S = { owner:'', type:'', token:'', me:null, meta:null, corp:'ALL', data:null, view:'board',
           lastUpdate:'', timer:null, anim:true, seen:{},
           taskCache:{}, docCache:{}, docCacheAt:{}, postCache:null, postCacheAt:null,
           readers:{}, readSent:{}, setCache:null, lastSync:0, lastT:null };
@@ -1781,7 +1802,7 @@ function mkPick(id, kind, name){
   el.focus();
 
   var sel=window.getSelection();
-  if(!sel || !sel.rangeCount || sel.isCollapsed){ toast('바꿀 글자를 먼저 고르세요'); return; }
+  if(!sel || !sel.rangeCount) return;
 
   var prefix = kind==='c' ? 'mk-c-' : (kind==='h' ? 'mk-h-' : 'mk-s-');
   var list   = kind==='c' ? MK_COLORS : (kind==='h' ? MK_MARKS : MK_SIZES);
@@ -1789,6 +1810,30 @@ function mkPick(id, kind, name){
   if(name && !key) return;
 
   var r=sel.getRangeAt(0);
+
+  /* ★★ 고른 글자가 없으면 '이제부터 이 색으로' 입니다 (2026-09-01).
+
+     예전에는 '바꿀 글자를 먼저 고르세요' 라고만 했습니다.
+     그런데 사람은 보통 **색을 먼저 누르고 그 다음에 씁니다** (워드·한글이 그렇습니다).
+     빈 상자를 하나 만들어 커서를 그 안에 넣어 두면, 이어서 치는 글자가 그 안에 들어가
+     저절로 그 색이 됩니다. 굵게·밑줄은 브라우저가 원래 이렇게 해 줍니다.
+
+     ★ 상자 안의 보이지 않는 글자(폭 0)는 저장할 때 mkValue 가 걷어냅니다. */
+  if(r.collapsed){
+    if(!key){ toast('색을 뺄 글자를 먼저 고르세요'); return; }
+    var box=document.createElement('span');
+    box.className=prefix+key;
+    box.appendChild(document.createTextNode('\u200B'));
+    r.insertNode(box);
+    try{
+      var cr=document.createRange();
+      cr.setStart(box.firstChild, 1);
+      cr.collapse(true);
+      sel.removeAllRanges(); sel.addRange(cr);
+    }catch(e){ quiet('색 이어쓰기', e); }
+    mkState(id);
+    return;
+  }
   var frag=r.extractContents();
 
   /* ① 고른 것 **안에** 이미 걸려 있던 같은 갈래를 벗긴다 */
@@ -1907,23 +1952,41 @@ function mkClick(e, id){
 
 /* ---------- 표 ---------- */
 
+/* 새로 넣을 표의 크기. 창을 닫아도 그대로 두어 다음에 또 쓰기 쉽게 한다 */
+var MK_TB = { row: 3, col: 3 };
+var MK_TB_MAX = { row: 30, col: 8 };
+
 /** 표 판을 연다.
-    ★ 예전에는 '몇 칸?' '몇 줄?' 을 두 번 물어봤습니다.
+
+    ★ 예전에는 '몇 칸?' '몇 줄?' 을 물어보는 창이 두 번 떴습니다.
       현장에서 장갑 낀 손으로 숫자를 두 번 치는 것은 어렵습니다.
-      이제 **칸 수를 눌러 고르면** 바로 들어갑니다 (줄은 머리줄+2줄로 시작, 뒤에 늘리면 됩니다). */
+      이제 － ＋ 로 크기를 맞추고 [넣기] 를 눌러야 들어갑니다. */
 function mkTablePanel(id){
-  var box=$(id+'Pal'); if(!box) return;
+  var box=$(id+'Pal');
+  if(!box) return;
   if(!box.hidden && box.dataset.kind==='tb'){ mkShut(id); return; }
+  box.dataset.kind='tb';
+  box.hidden=false;
+  mkTbDraw(id);
+}
+
+/** 표 판을 다시 그린다 (숫자만 바뀌므로 통째로 다시 그려도 값이 없다) */
+function mkTbDraw(id){
+  var box=$(id+'Pal');
+  if(!box || box.dataset.kind!=='tb') return;
 
   box.innerHTML=
-    '<div class="mkpanel"><div class="mkptitle">표'+
-      '</div>'+
-    mkGrp('넣기', [
-      ['2칸', "mkTableIns('"+id+"',2)"],
-      ['3칸', "mkTableIns('"+id+"',3)"],
-      ['4칸', "mkTableIns('"+id+"',4)"],
-      ['5칸', "mkTableIns('"+id+"',5)"]
-    ])+
+    '<div class="mkpanel"><div class="mkptitle">표 넣기</div>'+
+    mkStep(id,'row','가로줄')+
+    mkStep(id,'col','세로칸')+
+    '<div class="mkgrp"><span class="mkgl"></span><div class="mkgb">'+
+      '<button type="button" class="mkgo" onmousedown="event.preventDefault()" '+
+        'onclick="mkTableIns(&#39;'+id+'&#39;)">'+
+        MK_TB.row+'줄 × '+MK_TB.col+'칸 으로 넣기</button>'+
+    '</div></div>'+
+    '</div>'+
+
+    '<div class="mkpanel"><div class="mkptitle">이미 넣은 표 고치기</div>'+
     mkGrp('가로줄', [
       ['＋ 늘리기', "mkRow('"+id+"',1)"],
       ['－ 줄이기', "mkRow('"+id+"',-1)"]
@@ -1933,20 +1996,36 @@ function mkTablePanel(id){
       ['－ 줄이기', "mkCol('"+id+"',-1)"]
     ])+
     '</div>';
-
-  box.dataset.kind='tb';
-  box.hidden=false;
 }
 
-/** 새 표를 넣는다. 머리줄 한 줄 + 내용 두 줄로 시작한다 */
-function mkTableIns(id, cols){
+/** － 숫자 ＋ 한 줄 */
+function mkStep(id, what, label){
+  return '<div class="mkgrp"><span class="mkgl">'+esc(label)+'</span><div class="mkgb mkstep">'+
+    '<button type="button" onmousedown="event.preventDefault()" '+
+      'onclick="mkTbSet(&#39;'+id+'&#39;,&#39;'+what+'&#39;,-1)">－</button>'+
+    '<b class="mknum">'+MK_TB[what]+'</b>'+
+    '<button type="button" onmousedown="event.preventDefault()" '+
+      'onclick="mkTbSet(&#39;'+id+'&#39;,&#39;'+what+'&#39;,1)">＋</button>'+
+    '</div></div>';
+}
+
+function mkTbSet(id, what, d){
+  var n = MK_TB[what] + d;
+  if(n < 1) n = 1;
+  if(n > MK_TB_MAX[what]) n = MK_TB_MAX[what];
+  MK_TB[what] = n;
+  mkTbDraw(id);
+}
+
+/** 정한 크기로 표를 넣는다. 첫 줄은 머리줄이다 */
+function mkTableIns(id){
   var el=$(id); if(!el) return;
-  var c=Math.max(1, Math.min(8, Number(cols)||3));
+  var r=MK_TB.row, c=MK_TB.col;
 
   var h='<table class="mk-tb"><tr>';
   for(var i=0;i<c;i++) h+='<th>&#8203;</th>';
   h+='</tr>';
-  for(var y=0;y<2;y++){
+  for(var y=1;y<r;y++){
     h+='<tr>';
     for(var x=0;x<c;x++) h+='<td>&#8203;</td>';
     h+='</tr>';
@@ -2111,7 +2190,9 @@ function mkValue(id){
       if(t==='BR'){ s+='\n'; return; }
       if(t==='HR'){ return; }
       var inner=inline(n);
-      if(!inner.trim()){ s+=inner; return; }
+      /* 폭 0짜리 글자만 들어 있으면 빈 것으로 본다
+         (색을 눌러 두고 아무것도 안 쓴 자리 — {c:빨강|} 같은 껍데기를 남기지 않는다) */
+      if(!inner.replace(/\u200B/g,'').trim()){ s+=inner; return; }
 
       if(t==='B'||t==='STRONG') s+='*'+inner+'*';
       else if(t==='U') s+='_'+inner+'_';
@@ -2177,7 +2258,7 @@ function mkValue(id){
 
   (function block(node){
     [].slice.call(node.childNodes).forEach(function(n){
-      if(n.nodeType===3){ if(n.nodeValue.replace(/​/g,'').trim()) out.push(n.nodeValue); return; }
+      if(n.nodeType===3){ if(n.nodeValue.replace(/\u200B/g,'').trim()) out.push(n.nodeValue); return; }
       if(n.nodeType!==1) return;
       var t=n.tagName;
 
@@ -2999,16 +3080,66 @@ function refresh(showMsg){
      칩을 하나라도 더 붙이면 그 계산이 어긋나므로, 지금은 통째로 다시 그립니다.
      칩 대여섯 개를 그리는 일이라 비용이 없습니다. */
 function renderFilters(){
-  var h='<button class="chip'+(S.corp==='ALL'?' on':'')+'" onclick="setCorp(\'ALL\')">전체</button>';
+  var h='<button class="chip'+(S.corp==='ALL'?' on':'')+'" onclick="setCorp(&#39;ALL&#39;)">전체</button>';
   (S.meta.corps||[]).forEach(function(c){
-    h+='<button class="chip'+(S.corp===c.code?' on':'')+'" onclick="setCorp(\''+c.code+'\')">'+
+    h+='<button class="chip'+(S.corp===c.code?' on':'')+'" onclick="setCorp(&#39;'+c.code+'&#39;)">'+
        esc(c.name)+'</button>';
   });
-  if(S.owner){
-    h+='<button class="chip on" onclick="setOwner(\'\')" title="담당자 필터 풀기">'+
-       esc(ownerNameOf(S.owner))+' ✕</button>';
+
+  /* ★ 누가 · 무엇 두 가지로 거른다 (2026-09-01).
+     칩으로 늘어놓으면 직원 여섯 + 종류 일곱 = 열세 개가 되어 오히려 못 찾습니다.
+     '선택지는 드롭다운 고정' 원칙 그대로 두 칸으로 둡니다. */
+  h+='<span class="fgap"></span>';
+
+  h+='<label class="fsel"><span>담당자</span><select onchange="setOwner(this.value)">'+
+       '<option value=""'+(S.owner?'':' selected')+'>전체</option>';
+  staffSorted().forEach(function(x){
+    h+='<option value="'+esc(x.phone)+'"'+(S.owner===x.phone?' selected':'')+'>'+esc(x.name)+'</option>';
+  });
+  h+='</select></label>';
+
+  h+='<label class="fsel"><span>종류</span><select onchange="setType(this.value)">'+
+       '<option value=""'+(S.type?'':' selected')+'>전체</option>';
+  (S.meta.types||[]).forEach(function(t){
+    h+='<option value="'+esc(t.code)+'"'+(S.type===t.code?' selected':'')+'>'+esc(t.name)+'</option>';
+  });
+  h+='</select></label>';
+
+  /* 무엇으로 걸러 두었는지 한눈에 — 걸었을 때만 나온다. 누르면 한 번에 풀린다 */
+  if(S.owner || S.type){
+    h+='<button class="chip on" onclick="clearFilter()">'+
+       esc([S.owner? ownerNameOf(S.owner):'', S.type? typeNameOf(S.type):''].filter(Boolean).join(' · '))+
+       ' ✕</button>';
   }
+
   $('corpFilter').innerHTML=h;
+}
+
+/** 담당자 목록 — 직급 순. ★ board 가 준 배열은 고치지 않는다 (베껴서 정렬) */
+function staffSorted(){
+  var list=((S.data&&S.data.staff)||[]).slice();
+  list.sort(function(a,b){ return rankNo(a.rank)-rankNo(b.rank) || (a.name<b.name?-1:1); });
+  return list;
+}
+
+/** 종류 코드 → 이름. ★ typeAll 을 본다 (그만 쓰는 유형의 이름도 들어 있다) */
+function typeNameOf(code){
+  var n='';
+  ((S.meta&&S.meta.typeAll)||[]).forEach(function(t){ if(t.code===code) n=t.name; });
+  return n||code;
+}
+
+function clearFilter(){
+  S.owner=''; S.type='';
+  S.anim=true;
+  renderFilters(); renderBoard();
+}
+
+/* 서버에 가지 않는다. 이미 받아둔 것을 거를 뿐이다 (왕복 0회) */
+function setType(code){
+  S.type=code||'';
+  S.anim=true;
+  renderFilters(); renderBoard();
 }
 
 function ownerNameOf(phone){
@@ -3050,6 +3181,7 @@ function renderBoard(){
   var list=(d.tasks||[]).filter(function(t){
     if(S.corp!=='ALL' && t.corp!==S.corp) return false;
     if(S.owner && t.owner!==S.owner) return false;    // 담당자 필터 (v55)
+    if(S.type && t.type!==S.type) return false;       // 업무 종류 필터 (2026-09-01)
     return true;
   });
   list.forEach(function(t){
