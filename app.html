@@ -6528,7 +6528,9 @@ function openDocForm(code, prefill){
     } else if(fd.kind==='여러줄'){
       h+='<textarea id="'+id+'" data-name="'+esc(fd.name)+'" class="dfField"></textarea>';
     } else if(fd.kind==='날짜'){
-      h+='<input type="date" id="'+id+'" data-name="'+esc(fd.name)+'" class="dfField">';
+      /* 휴가 시작일을 고르면 종료일이 같이 따라온다 (하루짜리가 대부분) */
+      var 따라감 = (f.code==='LEAVE' && fd.name==='시작일') ? ' onchange="leaveSyncEnd()"' : '';
+      h+='<input type="date" id="'+id+'" data-name="'+esc(fd.name)+'" class="dfField"'+따라감+'>';
     } else if(fd.kind==='숫자'){
       h+='<input type="number" id="'+id+'" data-name="'+esc(fd.name)+'" class="dfField">';
     } else {
@@ -6571,6 +6573,7 @@ function openDocForm(code, prefill){
 
   $('modal').innerHTML=h;
   DF_TITLE_TOUCHED=0;
+  LEAVE_FILLED='';        // 창을 새로 열 때마다 초기화 (앞 창의 값이 남으면 안 된다)
 
   /* 무엇을 고치든 자동 제목을 다시 만든다.
      칸마다 oninput 을 붙이지 않고 창 전체에서 한 번만 듣는다
@@ -6668,6 +6671,24 @@ function addItem(){
   sumItems();
 }
 
+/* 휴가는 하루짜리가 대부분입니다.
+   시작일을 고르면 종료일을 같이 채워 둡니다 — 여러 날이면 종료일만 고치면 됩니다.
+
+   ★ 사람이 종료일을 직접 고쳐 두었으면 건드리지 않습니다.
+     (직접 고쳤는지는 '방금 우리가 채워 넣은 값 그대로인가' 로 봅니다) */
+var LEAVE_FILLED='';
+
+function leaveSyncEnd(){
+  var from=null, to=null;
+  [].forEach.call(document.querySelectorAll('.dfField'), function(el){
+    if(el.dataset.name==='시작일') from=el;
+    if(el.dataset.name==='종료일') to=el;
+  });
+  if(!from || !to) return;
+  if(!to.value || to.value===LEAVE_FILLED) to.value=from.value;
+  LEAVE_FILLED=from.value;
+}
+
 function saveDoc(){
   var code=$('dfCode').value;
   var f=null; (S.meta.forms||[]).forEach(function(x){ if(x.code===code) f=x; });
@@ -6690,6 +6711,10 @@ function saveDoc(){
   [].forEach.call(document.querySelectorAll('.dfField'),function(el){
     fields[el.dataset.name]=el.value;
   });
+
+  /* ★ 하루짜리 휴가는 시작일만 고르면 됩니다.
+     종료일을 비워 두면 그날 하루로 봅니다 (서버도 같은 규칙입니다). */
+  if(code==='LEAVE' && fields['시작일'] && !fields['종료일']) fields['종료일']=fields['시작일'];
 
   var titleEl=$('dfTitle');
   var title=titleEl? titleEl.value.trim() : '';
