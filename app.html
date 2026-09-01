@@ -341,6 +341,12 @@ select{padding-right:30px}
 .chip{border:1px solid var(--line2);background:transparent;border-radius:99px;
   padding:4px 11px;cursor:pointer;font-size:var(--fs-sm);color:var(--t2)}
 .chip.on{background:var(--t1);color:var(--bg);border-color:var(--t1)}
+/* 대기 목록 아래 가운데 — 새 업무 하나 더하기 */
+.addwait{display:block;margin:var(--sp-3) auto var(--sp-1);width:44px;height:44px;
+  border-radius:50%;border:1px solid var(--line2);background:var(--field);
+  color:var(--t2);font-size:24px;line-height:1;cursor:pointer;
+  display:flex;align-items:center;justify-content:center}
+.addwait:hover{background:var(--panel2);color:var(--t1);border-color:var(--t3)}
 /* 필터 — 법인 칩 / (사이 띄우기) / 담당자·종류 드롭다운 */
 .fgap{flex:0 0 auto;width:1px;height:18px;align-self:center;background:var(--line2);margin:0 var(--sp-2)}
 .fsel{display:inline-flex;align-items:center;gap:6px;min-width:0}
@@ -694,13 +700,10 @@ table.mk-tb .al-c{text-align:center} table.mk-tb .al-r{text-align:right}
 .mkpal{margin:0}
 /* 색 하나 = 색으로 쓴 '가' + 그 아래 이름. 색만 있으면 무슨 색인지 애매하다 */
 .mkswrow{display:flex;gap:4px;flex-wrap:wrap;padding:2px 0 4px}
-.mkswrow button.sw{display:flex;flex-direction:column;align-items:center;
-  justify-content:center;gap:1px;width:38px;height:38px;padding:0;
-  border-radius:var(--r-sm)}
+.mkswrow button.sw{display:flex;align-items:center;justify-content:center;
+  width:36px;height:32px;padding:0;border-radius:var(--r-sm);
+  font-size:15px;font-weight:700;line-height:1}
 .mkswrow button.sw:hover{border-color:var(--t3)}
-.sw .swc{font-size:14px;font-weight:700;line-height:1.1}
-.sw .swn{font-size:var(--fs-xs);line-height:1.1;color:var(--t3)}
-.mkswrow button.sw:hover .swn{color:var(--t2)}
 /* 표 크기 고르기 — [－] 숫자 [＋] */
 .mkstep{align-items:center}
 .mkstep button{width:30px;padding:0;font-size:14px;font-weight:700}
@@ -708,19 +711,20 @@ table.mk-tb .al-c{text-align:center} table.mk-tb .al-r{text-align:right}
   font-size:var(--fs-h2);color:var(--t1)}
 .mkgo{background:var(--panel2)!important;color:var(--t1)!important;
   border-color:var(--t3)!important;font-weight:700}
-/* 형광펜 칸은 바탕이 색이라, 이름도 그 위에서 또렷한 색을 따라간다 */
-.mkswrow button[class*="sw-h-"] .swn{color:inherit;opacity:.78}
-.sw-c-red{color:var(--w-red)} .sw-c-orange{color:var(--w-orange)}
-.sw-c-yellow{color:var(--w-yellow)} .sw-c-green{color:var(--w-green)}
-.sw-c-blue{color:var(--w-blue)} .sw-c-purple{color:var(--w-purple)}
-.sw-c-pink{color:var(--w-pink)} .sw-c-gray{color:var(--w-gray)}
-.sw-h-yellow{background:var(--w-m-yellow);color:var(--w-on-mark)}
-.sw-h-green{background:var(--w-m-green);color:var(--w-on-mark)}
-.sw-h-blue{background:var(--w-m-blue);color:var(--w-on-mark)}
-.sw-h-pink{background:var(--w-m-pink);color:var(--w-on-mark)}
-.sw-h-orange{background:var(--w-m-orange);color:var(--w-on-mark)}
-.sw-h-gray{background:var(--w-m-gray);color:var(--w-on-mark)}
-.sw-off{color:var(--t3)}
+/* ★ 반드시 .mkswrow 를 앞에 붙입니다.
+   위의 `.mkpanel button{color:var(--t2)}` 이 더 세서, 그냥 `.sw-c-red` 로 적으면
+   **색이 통째로 덮여 전부 회색으로 보입니다.** (2026-09-01 실제로 그랬습니다) */
+.mkswrow .sw-c-red{color:var(--w-red)}       .mkswrow .sw-c-orange{color:var(--w-orange)}
+.mkswrow .sw-c-yellow{color:var(--w-yellow)} .mkswrow .sw-c-green{color:var(--w-green)}
+.mkswrow .sw-c-blue{color:var(--w-blue)}     .mkswrow .sw-c-purple{color:var(--w-purple)}
+.mkswrow .sw-c-pink{color:var(--w-pink)}     .mkswrow .sw-c-gray{color:var(--w-gray)}
+.mkswrow .sw-h-yellow{background:var(--w-m-yellow);color:var(--w-on-mark)}
+.mkswrow .sw-h-green{background:var(--w-m-green);color:var(--w-on-mark)}
+.mkswrow .sw-h-blue{background:var(--w-m-blue);color:var(--w-on-mark)}
+.mkswrow .sw-h-pink{background:var(--w-m-pink);color:var(--w-on-mark)}
+.mkswrow .sw-h-orange{background:var(--w-m-orange);color:var(--w-on-mark)}
+.mkswrow .sw-h-gray{background:var(--w-m-gray);color:var(--w-on-mark)}
+.mkswrow .sw-off{color:var(--t3)}
 
 /* 편집칸 안에서도 보여줄 때와 똑같이 보이게 (쓰는 동안 바로 보인다) */
 .mkin h3,.mkin h4{color:inherit}
@@ -1200,8 +1204,7 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
   <div id="view-board">
     <div class="filterbar" id="corpFilter"></div>
     <div class="board">
-      <div class="col"><div class="colhead">대기 <span class="n" id="cWait">0</span>
-        <button class="btn sm" style="margin-left:auto;padding:3px 9px" onclick="openTaskForm()">＋ 업무</button></div>
+      <div class="col"><div class="colhead">대기 <span class="n" id="cWait">0</span></div>
         <div class="cards slim" id="listWait"></div></div>
       <div class="col"><div class="colhead"><span class="live"></span>진행중 <span class="n" id="cRun">0</span></div>
         <div class="cards" id="listRun"></div></div>
@@ -1761,8 +1764,9 @@ function mkLink(id){
 /* ---------- 색 · 형광펜 · 크기 (execCommand 에 없는 것) ---------- */
 
 /** 색판을 연다.
-    ★ 색만 늘어놓으면 무슨 색인지 애매합니다 — **이름을 같이 보여줍니다.**
-      맨 뒤에는 '색 없애기' 를 글자로 둡니다 (✕ 하나만 있으면 뜻이 안 통합니다). */
+    ★ 색 이름(빨강·주황…)을 글자로 적지 않습니다 — **'가' 를 그 색으로 보여줄 뿐**입니다.
+      색은 눈으로 고르는 것이라 이름을 읽게 하면 오히려 느립니다.
+      대신 title 을 달아 두어 PC 에서 올려두면 이름이 뜹니다. */
 function mkPal(id, kind){
   var box=$(id+'Pal'); if(!box) return;
   if(!box.hidden && box.dataset.kind===kind){ mkShut(id); return; }
@@ -1775,14 +1779,13 @@ function mkPal(id, kind){
 
   list.forEach(function(o){
     h+='<button type="button" class="sw '+(kind==='c'?'sw-c-':'sw-h-')+o[1]+'" '+
-       'onmousedown="event.preventDefault()" '+
-       'onclick="mkPick(&#39;'+id+'&#39;,&#39;'+kind+'&#39;,&#39;'+o[0]+'&#39;)">'+
-       '<span class="swc">가</span><span class="swn">'+o[0]+'</span></button>';
+       'title="'+o[0]+'" onmousedown="event.preventDefault()" '+
+       'onclick="mkPick(&#39;'+id+'&#39;,&#39;'+kind+'&#39;,&#39;'+o[0]+'&#39;)">가</button>';
   });
 
-  h+='<button type="button" class="sw sw-off" onmousedown="event.preventDefault()" '+
-     'onclick="mkPick(&#39;'+id+'&#39;,&#39;'+kind+'&#39;,&#39;&#39;)">'+
-     '<span class="swc">✕</span><span class="swn">없애기</span></button>';
+  h+='<button type="button" class="sw sw-off" title="색 없애기" '+
+     'onmousedown="event.preventDefault()" '+
+     'onclick="mkPick(&#39;'+id+'&#39;,&#39;'+kind+'&#39;,&#39;&#39;)">✕</button>';
 
   box.innerHTML=h+'</div></div>';
   box.dataset.kind=kind;
@@ -3193,7 +3196,13 @@ function renderBoard(){
 
   countUp($('cWait'), wait.length);
   countUp($('cRun'), run.length);
-  $('listWait').innerHTML = wait.length? wait.map(function(t,i){ return cardSlim(t, A?i:-1); }).join('') : empty('대기 중인 업무 없음');
+  /* ★ 새 업무 더하기는 **대기 목록 바로 아래 가운데**에 둔다 (2026-09-01).
+     머리글 오른쪽에 두었더니 '완료 · 전체 보기' 와 헷갈렸습니다.
+     글자 없이 ＋ 하나. 손가락으로 누르는 자리라 44px 로 둡니다. */
+  var addBtn = '<button class="addwait" onclick="openTaskForm()" '+
+               'title="새 업무" aria-label="새 업무">＋</button>';
+  $('listWait').innerHTML = (wait.length? wait.map(function(t,i){ return cardSlim(t, A?i:-1); }).join('')
+                                        : empty('대기 중인 업무 없음')) + addBtn;
   $('listRun').innerHTML  = run.length ? run.map(function(t,i){ return cardFull(t, A?(i+2):-1); }).join('')  : empty('진행중인 업무 없음');
   $('listDone').innerHTML = (done.length? done.map(function(t,i){ return cardSlim(t, A?(i+4):-1); }).join('') : '') + sumBox(A);
 
@@ -4496,7 +4505,7 @@ function drawTaskForm(id, t){
     '<input type="hidden" id="tfCo" value="'+esc(t&&t.co?t.co:'')+'">'+
     '<div class="field"><label class="fl req">업무 유형</label><div class="chks" id="tfType">'+
       types.map(function(x){ return '<label data-v="'+x.code+'" class="'+
-        ((t&&t.type===x.code)||(!t&&x.code==='DEMO')?'on':'')+'" onclick="pickType(this)">'+esc(x.name)+'</label>'; }).join('')+
+        ((t&&t.type===x.code)?'on':'')+'" onclick="pickType(this)">'+esc(x.name)+'</label>'; }).join('')+
     '</div></div>'+
     '<div class="grid2">'+
       '<div class="field"><label class="fl req">법인</label><select id="tfCorp">'+
@@ -4674,6 +4683,9 @@ function saveTask(){
     p.site=$('tfSite').value;
     p.amount=$('tfAmount').value;
   }
+  /* ★ 유형을 미리 골라 두지 않으므로, 안 고르면 여기서 막는다 (2026-09-01).
+     예전에는 '철거' 가 미리 켜져 있어서, 다른 유형인데 그대로 저장되는 일이 있었습니다. */
+  if(!type){ $('tfMsg').textContent='업무 유형을 골라주세요.'; return; }
   if(!p.title){ $('tfMsg').textContent='업무명을 입력해주세요.'; $('tfTitle').classList.add('err'); return; }
   var btn=$('tfSave');
   if(btn.disabled) return;
