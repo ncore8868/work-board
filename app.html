@@ -4677,6 +4677,7 @@ function setNextDate(el,d){
   pickOne(el); $('lgNextDate').value=addDays(d);
 }
 function saveLog(){
+  if(PHOTO_BUSY > 0){ toast('사진을 정리하는 중입니다. 잠시만 기다려 주세요.'); return; }
   var p={
     taskId:$('lgTask').value, date:$('lgDate').value,
     text:mkValue('lgText'), next:$('lgNext').value.trim(), nextDate:$('lgNextDate').value,
@@ -4756,6 +4757,30 @@ function photoField(id, label){
       사진 속 글씨(안내문·일정표·도면)를 읽을 수 없었습니다.
       지금은 세 곳이 같은 길을 씁니다 — 2400px·품질 0.92 로 시작해
       보낼 수 있는 크기를 넘을 때만 한 단계씩 내립니다. */
+/* 사진을 줄이는 동안 저장·상신 버튼을 잠근다 (2026-09-01).
+
+   ★★ 주석에는 '담는 동안 저장 버튼을 잠근다' 고 **적혀만 있고 코드에는 없었습니다.**
+     폰에서 영수증 한 장을 2400px 로 줄이는 데 몇 초가 걸리는데,
+     그 사이에 상신을 누르면 사진이 아직 안 담겨 있어서
+     **'영수증 사진을 첨부해주세요' 가 떴습니다.** 붙였는데 안 붙었다고 하는 셈입니다.
+     (2026-09-01 실제로 이 일이 났습니다) */
+var PHOTO_BUSY = 0;
+
+function photoBusy(n){
+  PHOTO_BUSY = Math.max(0, PHOTO_BUSY + n);
+  var on = PHOTO_BUSY > 0;
+  [].forEach.call(document.querySelectorAll('#modal .btn.pri'), function(b){
+    b.disabled = on;
+    if(on){
+      if(b.dataset.was === undefined) b.dataset.was = b.textContent;
+      b.textContent = '사진 정리 중...';
+    }else if(b.dataset.was !== undefined){
+      b.textContent = b.dataset.was;
+      delete b.dataset.was;
+    }
+  });
+}
+
 function photoAdd(id, el){
   var files = Array.prototype.slice.call(el.files || []);
   el.value = '';                                  // 같은 사진을 다시 고를 수 있게
@@ -4779,6 +4804,7 @@ function photoAdd(id, el){
 
   var jobs = files.map(function(f){ return shrinkPhoto(f, per); });
 
+  photoBusy(1);
   Promise.all(jobs).then(function(urls){
     var 못담음 = 0;
     urls.forEach(function(u, i){
@@ -4788,6 +4814,10 @@ function photoAdd(id, el){
     photoDraw(id);
     /* ★ 조용히 빠뜨리지 않는다. 예전에는 못 읽은 사진이 아무 말 없이 사라졌다 */
     if(못담음) toast(못담음+'장은 담지 못했습니다. 다시 촬영해 주세요.');
+  }).catch(function(err){
+    quiet('사진 담기', err);
+  }).then(function(){
+    photoBusy(-1);          /* 실패해도 반드시 풀어 준다 (버튼이 굳으면 아무것도 못 한다) */
   });
 }
 
@@ -5577,6 +5607,7 @@ function savePost(no){
   var title=$('pfTitle').value.trim();
   var body=mkValue('pfBody');
   var msg=$('pfMsg');
+  if(PHOTO_BUSY > 0){ msg.textContent='사진을 정리하는 중입니다. 잠시만 기다려 주세요.'; return; }
   var shots=photoValues('pfPhoto');
   if(!title){ msg.textContent='제목을 입력해주세요.'; return; }
   if(!body){ msg.textContent='내용을 입력해주세요.'; return; }
@@ -6497,6 +6528,9 @@ function saveDoc(){
   var code=$('dfCode').value;
   var f=null; (S.meta.forms||[]).forEach(function(x){ if(x.code===code) f=x; });
   var msg=$('dfMsg');
+
+  /* 사진이 아직 안 담겼으면 막는다. 버튼도 잠그고 있지만 이중으로 본다 */
+  if(PHOTO_BUSY > 0){ msg.textContent='사진을 정리하는 중입니다. 잠시만 기다려 주세요.'; return; }
 
   var items=[];
   var box=$('dfItems');
