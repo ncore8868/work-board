@@ -50,6 +50,17 @@
      글자는 읽히는 쪽이 맞습니다. */
   --t-off:#5E5851;
 
+  /* ── 글 안에서 쓰는 색 (v56) ─────────────────────────────
+     ★ 판·카드의 --accent(빨강=지금 손댈 것)·--wn(노랑=곧 문제)과 겹치지 않는 값입니다.
+       글 안의 색은 '글쓴이가 강조한 것' 이라는 뜻만 갖습니다.
+     ★ 밝은 테마: 흰 카드(#FFFFFF) 위에서 전부 4.5:1 이상. */
+  --w-red:#C22B2B; --w-orange:#A8560A; --w-yellow:#8A6300; --w-green:#1D7A45;
+  --w-blue:#1B5FBF; --w-purple:#6B3FBF; --w-pink:#B32B77; --w-gray:#6B655E;
+  /* 형광펜 바탕 — 글자는 아래 --w-on-mark 로 못 박는다 */
+  --w-m-yellow:#FFF2A8; --w-m-green:#C9EBD6; --w-m-blue:#D2E3FA;
+  --w-m-pink:#FBD3E7; --w-m-orange:#FFDFC0; --w-m-gray:#E4E1DC;
+  --w-on-mark:#14110D;
+
   /* ★ 정해진 단계 밖의 값은 쓰지 않는다 (v45).
      화면마다 px 를 직접 적으면 한 곳을 고칠 때 다른 곳이 어긋난다.
      새 화면을 만들 때도 아래 변수만 쓴다. PC 크기는 아래 미디어쿼리에서 변수만 올린다. */
@@ -103,6 +114,16 @@ html[data-theme="dark"]{
   --ok2:#3FC97C; --ok-bg:#12301F;
   --on-accent:#0D0D10;   /* 밝은 빨강 위에는 어두운 글자가 5.6:1 로 또렷하다 */
   --t-off:#95959F;
+
+  /* ── 글 안에서 쓰는 색 (v56) ─────────────────────────────
+     어두운 테마: 카드(#1B1B21) 위에서 전부 4.5:1 이상.
+     노랑은 --wn(#FFD98A)과 값이 같지만, 그쪽은 뱃지·테두리에만 쓰고
+     여기는 글자 안이라 뜻이 헷갈리지 않습니다. */
+  --w-red:#FF8C8C; --w-orange:#FFB067; --w-yellow:#FFD98A; --w-green:#7EE0A5;
+  --w-blue:#7FBBFF; --w-purple:#C3A6FF; --w-pink:#FF9ECF; --w-gray:#A6A6B0;
+  --w-m-yellow:#4A3B12; --w-m-green:#143A26; --w-m-blue:#16304E;
+  --w-m-pink:#45203A; --w-m-orange:#4A2E12; --w-m-gray:#2C2C34;
+  --w-on-mark:#F4F4F7;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
 html{scrollbar-gutter:stable}        /* 스크롤바 유무로 화면이 밀리지 않게 */
@@ -563,6 +584,113 @@ ul.mk li,ol.mk li{margin:2px 0}
 .mkin ul,.mkin ol{padding-left:20px;margin:0 0 8px}
 .mkin li{margin:2px 0}
 .mkin:empty::before{content:"";display:block}
+
+/* ===================== 글 서식 (v56) =====================
+   공지·업무 내용·업무일지에 쓰는 서식입니다.
+
+   ★ 색은 **테마마다 값이 다릅니다.** 저장되는 것은 이름(빨강)뿐이고
+     실제 색은 여기서 정합니다. 밝은 바탕에서 고른 연한 색이
+     어두운 테마에서 안 보이는 일이 없게 하려는 것입니다.
+   ★ 판·카드의 빨강(지금 손댈 것)·노랑(곧 문제)과 겹치지 않습니다.
+     글 안의 색은 '글쓴이가 강조한 것' 이라는 뜻만 갖습니다.
+   ========================================================= */
+
+.mk-c-red{color:var(--w-red)} .mk-c-orange{color:var(--w-orange)}
+.mk-c-yellow{color:var(--w-yellow)} .mk-c-green{color:var(--w-green)}
+.mk-c-blue{color:var(--w-blue)} .mk-c-purple{color:var(--w-purple)}
+.mk-c-pink{color:var(--w-pink)} .mk-c-gray{color:var(--w-gray)}
+
+/* 형광펜 — 바탕색만 정하고 글자는 그 위에서 또렷한 값으로 못 박는다 */
+.mk-h-yellow,.mk-h-green,.mk-h-blue,.mk-h-pink,.mk-h-orange,.mk-h-gray{
+  color:var(--w-on-mark);border-radius:3px;padding:0 2px;
+  box-decoration-break:clone;-webkit-box-decoration-break:clone}
+.mk-h-yellow{background:var(--w-m-yellow)} .mk-h-green{background:var(--w-m-green)}
+.mk-h-blue{background:var(--w-m-blue)} .mk-h-pink{background:var(--w-m-pink)}
+.mk-h-orange{background:var(--w-m-orange)} .mk-h-gray{background:var(--w-m-gray)}
+
+/* 글자 크기 — 본문(--fs-body) 기준으로 한 단계씩만 */
+.mk-s-sm{font-size:.86em} .mk-s-lg{font-size:1.28em;font-weight:600}
+
+.mk-a{color:var(--w-blue);text-decoration:underline;text-underline-offset:2px}
+
+/* 제목 — 본문보다 크되 화면 제목(--fs-h1)을 넘지 않는다 */
+h3.mk-h1{font-family:var(--font-title);font-size:var(--fs-h1);font-weight:700;
+  color:var(--t1);margin:14px 0 6px;line-height:1.4}
+h4.mk-h2{font-family:var(--font-title);font-size:var(--fs-h2);font-weight:700;
+  color:var(--t1);margin:12px 0 4px;line-height:1.45}
+h3.mk-h1:first-child,h4.mk-h2:first-child{margin-top:0}
+
+blockquote.mk-q{margin:6px 0;padding:2px 0 2px 10px;border-left:3px solid var(--line2);
+  color:var(--t2)}
+
+hr.mk-hr{border:0;border-top:1px solid var(--line);margin:12px 0}
+
+.mk-al-c{text-align:center} .mk-al-r{text-align:right}
+
+/* 할 일 목록 — ☐ / ☑ 는 글자가 아니라 CSS 로 그린다 (사람이 지울 수 없게) */
+ul.mk-ck{list-style:none;padding-left:2px;margin:0 0 10px}
+ul.mk-ck li{position:relative;padding-left:22px;margin:3px 0}
+ul.mk-ck li::before{content:"☐";position:absolute;left:0;top:0;
+  color:var(--t3);font-size:13px;line-height:1.5}
+ul.mk-ck li.on::before{content:"☑";color:var(--ok)}
+ul.mk-ck li.on{color:var(--t3);text-decoration:line-through}
+
+/* 표 — 좁은 폰에서는 표만 옆으로 밀린다 (판 전체가 밀리면 안 된다) */
+.mk-tbwrap{overflow-x:auto;margin:0 0 10px;-webkit-overflow-scrolling:touch}
+table.mk-tb{border-collapse:collapse;width:100%;min-width:min(100%,320px);
+  font-size:var(--fs-body)}
+table.mk-tb th,table.mk-tb td{border:1px solid var(--line2);padding:5px 8px;
+  text-align:left;vertical-align:top;min-width:52px}
+table.mk-tb th{background:var(--panel);color:var(--t1);font-weight:700}
+table.mk-tb td{color:var(--t2)}
+table.mk-tb .al-c{text-align:center} table.mk-tb .al-r{text-align:right}
+
+/* ── 서식 버튼 ────────────────────────────────────────────
+   평소 한 줄. [＋] 를 누르면 아래 줄이 펼쳐진다.
+   ★ 폰에서 세로 공간을 잡아먹지 않게 하려는 것이다. */
+.mkbar{display:flex;gap:4px;margin:0 0 6px;flex-wrap:wrap}
+.mkbar .mkmore{margin-left:auto;font-weight:700}
+.mkpalbtn{position:relative}
+.mkga{font-size:12px;font-weight:700;line-height:1}
+.mkga-h{background:var(--w-m-yellow);color:var(--w-on-mark);border-radius:2px;padding:0 2px}
+.mkbar-c{position:absolute;left:5px;right:5px;bottom:3px;height:3px;border-radius:2px;
+  background:linear-gradient(90deg,var(--w-red),var(--w-yellow),var(--w-green),var(--w-blue));}
+
+.mkbar2{display:flex;gap:4px;flex-wrap:wrap;margin:0 0 6px}
+.mkbar2 button{border:1px solid var(--line2);background:var(--field);border-radius:var(--r);
+  color:var(--t2);padding:0 8px;height:26px;font-size:var(--fs-sm);cursor:pointer}
+.mkbar2 button:hover{background:var(--panel2);color:var(--t1)}
+
+.mkpal{margin:0 0 6px}
+.mkpalrow{display:flex;gap:4px;flex-wrap:wrap;padding:6px;border:1px solid var(--line2);
+  border-radius:var(--r);background:var(--panel)}
+.mkpalrow button.sw{width:28px;height:26px;border-radius:var(--r-sm);cursor:pointer;
+  border:1px solid var(--line2);background:var(--field);font-size:12px;font-weight:700;
+  display:flex;align-items:center;justify-content:center}
+.mkpalrow button.sw:hover{border-color:var(--t3)}
+.mkpalrow button{cursor:pointer}
+.sw-c-red{color:var(--w-red)} .sw-c-orange{color:var(--w-orange)}
+.sw-c-yellow{color:var(--w-yellow)} .sw-c-green{color:var(--w-green)}
+.sw-c-blue{color:var(--w-blue)} .sw-c-purple{color:var(--w-purple)}
+.sw-c-pink{color:var(--w-pink)} .sw-c-gray{color:var(--w-gray)}
+.sw-h-yellow{background:var(--w-m-yellow);color:var(--w-on-mark)}
+.sw-h-green{background:var(--w-m-green);color:var(--w-on-mark)}
+.sw-h-blue{background:var(--w-m-blue);color:var(--w-on-mark)}
+.sw-h-pink{background:var(--w-m-pink);color:var(--w-on-mark)}
+.sw-h-orange{background:var(--w-m-orange);color:var(--w-on-mark)}
+.sw-h-gray{background:var(--w-m-gray);color:var(--w-on-mark)}
+.sw-off{color:var(--t3)}
+
+/* 편집칸 안에서도 보여줄 때와 똑같이 보이게 (쓰는 동안 바로 보인다) */
+.mkin h3,.mkin h4{color:inherit}
+.mkin blockquote{margin:6px 0;padding:2px 0 2px 10px;border-left:3px solid var(--line2)}
+.mkin hr{border:0;border-top:1px solid var(--line);margin:10px 0}
+.mkin table{border-collapse:collapse;width:100%;margin:6px 0;font-size:inherit}
+.mkin table th,.mkin table td{border:1px solid var(--line2);padding:4px 6px;min-width:44px}
+.mkin table th{background:var(--panel);font-weight:700}
+.mkin ul.mk-ck{list-style:none;padding-left:2px}
+.mkin ul.mk-ck li{position:relative;padding-left:22px}
+.mkin a{color:var(--w-blue);text-decoration:underline}
 .mkin.one{min-height:0;max-height:26vh;padding:8px 11px}
 
 /* 댓글 */
@@ -1138,99 +1266,367 @@ function quiet(where, e){
  * 먼저 전부 무해한 글자로 바꾸므로 <b> 같은 걸 쳐도 태그로 살아나지 않는다.
  *   *굵게*  _밑줄_  "- " 글머리 목록  "1. " 번호 목록  빈 줄 문단  줄바꿈 그대로
  */
+/* ===================== 글 서식 (v56 · 2026-09-01 크게 넓힘) =====================
+
+   ★★ 시트에는 여전히 **글자만** 들어갑니다. HTML 을 저장하지 않습니다.
+     보여줄 때만 fmt() 가 아래 표시를 서식으로 바꿉니다.
+     그래야 시트를 직접 열어 봐도 사람이 읽을 수 있고, 남의 코드가 섞여 들어올 수 없습니다.
+
+   저장되는 표시
+   ─────────────────────────────────────────────────────────────
+     글자 안에서
+       *굵게*        _밑줄_        //기울임//      ~~취소선~~
+       {c:빨강|글자}   글자색      {h:노랑|글자}   형광펜
+       {s:크게|글자}   글자크기     {a:주소|글자}   링크
+
+     줄 단위
+       # 큰제목            ## 중제목
+       - 목록              1. 목록
+       [ ] 할일            [x] 한일
+       > 인용
+       ---                 구분선
+       :c: 가운데          :r: 오른쪽
+       | 항목 | 수량 |      표 (다음 줄에 |---|---| 를 둔다)
+   ─────────────────────────────────────────────────────────────
+
+   ★ 색은 **이름으로** 저장합니다 (`{c:빨강|...}`). 색값(#FF8C8C)을 저장하지 않습니다.
+     어두운 테마와 밝은 테마의 실제 색이 다르기 때문입니다.
+     밝은 바탕에서 고른 연한 색이 어두운 테마에서 안 보이는 일이 없습니다.
+
+   ★ 판·카드의 빨강(지금 손댈 것)·노랑(곧 문제)과 **겹치지 않는 팔레트**입니다.
+     글 안의 색은 '글쓴이가 강조한 것' 이라는 뜻만 갖습니다.
+============================================================================= */
+
+var MK_COLORS = [['빨강','red'],['주황','orange'],['노랑','yellow'],['초록','green'],
+                 ['파랑','blue'],['보라','purple'],['분홍','pink'],['회색','gray']];
+var MK_MARKS  = [['노랑','yellow'],['초록','green'],['파랑','blue'],
+                 ['분홍','pink'],['주황','orange'],['회색','gray']];
+var MK_SIZES  = [['작게','sm'],['크게','lg']];
+
+function mkKeyOf(list, name){
+  for(var i=0;i<list.length;i++) if(list[i][0]===name) return list[i][1];
+  return '';
+}
+function mkNameOf(list, key){
+  for(var i=0;i<list.length;i++) if(list[i][1]===key) return list[i][0];
+  return '';
+}
+
+/** 링크 주소로 받아들일 것만 통과시킨다 (javascript: 같은 것을 막는다) */
+function mkSafeUrl(u){
+  var s=String(u||'').trim();
+  if(!/^(https?:\/\/|mailto:|tel:)/i.test(s)) return '';
+  if(/[\s"'<>]/.test(s)) return '';
+  return s;
+}
+
+/* ---------------------------------------------------------------------------
+   보여주기 — 표시글을 서식으로
+--------------------------------------------------------------------------- */
+
+/** `{` 에 맞는 `}` 를 찾는다 (안에 또 `{}` 가 있어도 센다) */
+function mkMatch(s, from){
+  var depth=0;
+  for(var i=from;i<s.length;i++){
+    var c=s.charAt(i);
+    if(c==='{') depth++;
+    else if(c==='}'){ if(!depth) return i; depth--; }
+  }
+  return -1;
+}
+
+/** 여는 표시와 짝이 되는 닫는 표시를 찾는다. `http://` 의 `//` 는 건너뛴다 */
+function mkFindMark(s, mark, from){
+  var i=from;
+  while(i>=0 && i<s.length){
+    var at=s.indexOf(mark, i);
+    if(at<0) return -1;
+    if(mark==='//' && at>0 && s.charAt(at-1)===':'){ i=at+2; continue; }
+    return at;
+  }
+  return -1;
+}
+
+var MK_PAIRS=[['~~','s'],['//','i'],['*','b'],['_','u']];
+
+/**
+ * 글자 안 서식을 훑어 HTML 로 바꾼다.
+ * ★ 서식을 겹쳐 쓸 수 있으므로 정규식이 아니라 한 글자씩 훑습니다.
+ *   ({c:빨강|*굵은 빨강*} 처럼 겹칩니다)
+ */
+function mkInline(s){
+  var out='', i=0;
+
+  while(i<s.length){
+    var ch=s.charAt(i);
+
+    /* {c:빨강|글자} · {h:노랑|글자} · {s:크게|글자} · {a:주소|글자} */
+    if(ch==='{'){
+      var m=/^\{([chsa]):([^|{}]{1,200})\|/.exec(s.slice(i));
+      if(m){
+        var st=i+m[0].length;
+        var end=mkMatch(s, st);
+        if(end>=0){
+          var inner=mkInline(s.slice(st,end));
+          var made=mkWrapHtml(m[1], m[2], inner);
+          if(made!==null){ out+=made; i=end+1; continue; }
+        }
+      }
+    }
+
+    /* ~~취소선~~  //기울임//  *굵게*  _밑줄_ */
+    var hit=null;
+    for(var k=0;k<MK_PAIRS.length;k++){
+      var mark=MK_PAIRS[k][0];
+      if(s.substr(i,mark.length)!==mark) continue;
+      if(mark==='//' && i>0 && s.charAt(i-1)===':') continue;   // http:// 는 기울임이 아니다
+      var e=mkFindMark(s, mark, i+mark.length);
+      if(e>i+mark.length){ hit=[MK_PAIRS[k][1], i+mark.length, e, mark.length]; break; }
+    }
+    if(hit){
+      out+='<'+hit[0]+'>'+mkInline(s.slice(hit[1],hit[2]))+'</'+hit[0]+'>';
+      i=hit[2]+hit[3];
+      continue;
+    }
+
+    out+=ch; i++;
+  }
+  return out;
+}
+
+/** {종류:이름|글자} 를 실제 태그로. 모르는 이름이면 null (그냥 글자로 남긴다) */
+function mkWrapHtml(kind, name, inner){
+  if(kind==='c'){
+    var ck=mkKeyOf(MK_COLORS,name);
+    return ck ? '<span class="mk-c-'+ck+'">'+inner+'</span>' : null;
+  }
+  if(kind==='h'){
+    var hk=mkKeyOf(MK_MARKS,name);
+    return hk ? '<span class="mk-h-'+hk+'">'+inner+'</span>' : null;
+  }
+  if(kind==='s'){
+    var sk=mkKeyOf(MK_SIZES,name);
+    return sk ? '<span class="mk-s-'+sk+'">'+inner+'</span>' : null;
+  }
+  if(kind==='a'){
+    /* esc() 를 이미 지났으므로 &amp; 를 주소로 되돌린다 */
+    var url=mkSafeUrl(String(name).replace(/&amp;/g,'&'));
+    if(!url) return null;
+    return '<a class="mk-a" href="'+url.replace(/&/g,'&amp;')+'" target="_blank" rel="noopener">'+inner+'</a>';
+  }
+  return null;
+}
+
+/** 표 한 덩어리를 그린다. rows 는 줄 글자 배열 */
+function mkTable(rows, align){
+  var h='<div class="mk-tbwrap"><table class="mk-tb">';
+  rows.forEach(function(cells, r){
+    h+='<tr>';
+    cells.forEach(function(c, i){
+      var a=align[i] ? ' class="al-'+align[i]+'"' : '';
+      h+= r===0 ? ('<th'+a+'>'+mkInline(c)+'</th>') : ('<td'+a+'>'+mkInline(c)+'</td>');
+    });
+    h+='</tr>';
+  });
+  return h+'</table></div>';
+}
+
+/** `| a | b |` 한 줄을 칸 배열로 */
+function mkCells(line){
+  var t=line.trim().replace(/^\|/,'').replace(/\|$/,'');
+  return t.split('|').map(function(x){ return x.trim(); });
+}
+
+/** `|---|:-:|--:|` 인가 — 맞으면 칸별 정렬 배열, 아니면 null */
+function mkAlignRow(line){
+  if(!/^\s*\|/.test(line)) return null;
+  var cells=mkCells(line);
+  if(!cells.length) return null;
+  var out=[];
+  for(var i=0;i<cells.length;i++){
+    var c=cells[i];
+    if(!/^:?-{1,}:?$/.test(c)) return null;
+    out.push(c.charAt(0)===':' && c.charAt(c.length-1)===':' ? 'c'
+           : (c.charAt(c.length-1)===':' ? 'r' : ''));
+  }
+  return out;
+}
+
 function fmt(s){
   var lines=esc(s).split(/\r?\n/);
   var html='', para=[], list=[], listTag='';
 
-  function inline(x){
-    return x.replace(/\*([^*]+)\*/g,'<b>$1</b>').replace(/_([^_]+)_/g,'<u>$1</u>');
-  }
   function flushList(){
     if(!list.length) return;
-    html+='<'+listTag+' class="mk">'+
-      list.map(function(x){ return '<li>'+inline(x)+'</li>'; }).join('')+'</'+listTag+'>';
+    if(listTag==='ck'){
+      /* ☐ / ☑ 는 CSS 의 ::before 로 그린다.
+         글자로 넣으면 사람이 지우거나 복사해 갈 수 있다. */
+      html+='<ul class="mk mk-ck">'+list.map(function(x){
+        return '<li'+(x.on?' class="on"':'')+'>'+mkInline(x.t)+'</li>';
+      }).join('')+'</ul>';
+    }else{
+      html+='<'+listTag+' class="mk">'+
+        list.map(function(x){ return '<li>'+mkInline(x)+'</li>'; }).join('')+'</'+listTag+'>';
+    }
     list=[]; listTag='';
   }
   function flushPara(){
     if(!para.length) return;
-    html+='<p class="mk">'+para.map(inline).join('<br>')+'</p>';
+    html+='<p class="mk">'+para.map(mkInline).join('<br>')+'</p>';
     para=[];
   }
-  function push(tag, text){
+  function push(tag, item){
     if(listTag && listTag!==tag) flushList();
     flushPara();
-    listTag=tag; list.push(text);
+    listTag=tag; list.push(item);
   }
+  function block(h){ flushList(); flushPara(); html+=h; }
 
-  lines.forEach(function(ln){
-    var t=ln.replace(/\s+$/,'');
-    if(/^\s*-\s+/.test(t)){ push('ul', t.replace(/^\s*-\s+/,'')); return; }
-    if(/^\s*\d{1,3}\.\s+/.test(t)){ push('ol', t.replace(/^\s*\d{1,3}\.\s+/,'')); return; }
+  for(var i=0;i<lines.length;i++){
+    var t=lines[i].replace(/\s+$/,'');
+
+    /* 표 — 지금 줄이 | 로 시작하고 다음 줄이 |---| 이면 표로 본다 */
+    if(/^\s*\|/.test(t)){
+      var align=(i+1<lines.length) ? mkAlignRow(lines[i+1]) : null;
+      if(align){
+        var rows=[mkCells(t)];
+        var j=i+2;
+        while(j<lines.length && /^\s*\|/.test(lines[j]) && !mkAlignRow(lines[j])){
+          rows.push(mkCells(lines[j])); j++;
+        }
+        block(mkTable(rows, align));
+        i=j-1;
+        continue;
+      }
+    }
+
+    if(/^\s*---+\s*$/.test(t)){ block('<hr class="mk-hr">'); continue; }
+    if(/^##\s+/.test(t)){ block('<h4 class="mk-h2">'+mkInline(t.replace(/^##\s+/,''))+'</h4>'); continue; }
+    if(/^#\s+/.test(t)){  block('<h3 class="mk-h1">'+mkInline(t.replace(/^#\s+/,''))+'</h3>'); continue; }
+    if(/^&gt;\s?/.test(t)){ block('<blockquote class="mk-q">'+mkInline(t.replace(/^&gt;\s?/,''))+'</blockquote>'); continue; }
+    if(/^:c:\s?/.test(t)){ block('<p class="mk mk-al-c">'+mkInline(t.replace(/^:c:\s?/,''))+'</p>'); continue; }
+    if(/^:r:\s?/.test(t)){ block('<p class="mk mk-al-r">'+mkInline(t.replace(/^:r:\s?/,''))+'</p>'); continue; }
+
+    var ck=/^\s*\[([ xX])\]\s+/.exec(t);
+    if(ck){ push('ck', { on: ck[1]!==' ', t: t.replace(/^\s*\[[ xX]\]\s+/,'') }); continue; }
+
+    if(/^\s*-\s+/.test(t)){ push('ul', t.replace(/^\s*-\s+/,'')); continue; }
+    if(/^\s*\d{1,3}\.\s+/.test(t)){ push('ol', t.replace(/^\s*\d{1,3}\.\s+/,'')); continue; }
+
     flushList();
-    if(!t.trim()){ flushPara(); return; }
+    if(!t.trim()){ flushPara(); continue; }
     para.push(t);
-  });
+  }
   flushList(); flushPara();
   return html;
 }
 
-/** 글 쓰는 칸 위의 서식 버튼 3개 */
-/* ===================== 글 서식 편집기 (v44) =====================
-   예전에는 *굵게* 라고 글자가 남고 저장해야 굵어졌다. 그게 구식으로 느껴진 진짜 이유다.
-   이제 버튼을 누르면 **그 자리에서 바로** 굵어진다.
+/* ---------------------------------------------------------------------------
+   쓰기 — 편집기
 
-   · 입력칸은 contenteditable, 서식은 브라우저가 주는 execCommand 로 (편집기를 직접 만들지 않는다)
-   · ★ 저장은 여전히 안전한 표시(*굵게* _밑줄_ - 목록 1. 목록)로 바꿔서 한다.
-     HTML 을 시트에 저장하지 않는다. 보여줄 때는 fmt() 가 그 표시만 서식으로 바꾼다.
-   · 붙여넣기는 색·글꼴·크기를 버리고 굵게·밑줄·목록만 남긴다 (통째로 붙으면 화면이 깨진다)
-   ---------------------------------------------------------------- */
+   · 입력칸은 contenteditable, 기본 서식은 브라우저가 주는 execCommand 로.
+     ★ 편집기를 직접 만들지 않습니다. 커서·되돌리기·한글 조합을 우리가 다시 만들 수 없습니다.
+   · 색·형광펜·크기처럼 execCommand 에 없는 것만 우리가 직접 감쌉니다.
+   · 표는 진짜 <table> 을 넣습니다. 칸 안 글쓰기는 브라우저가 알아서 합니다.
 
+   ★ 툴바는 **평소 한 줄**입니다. [＋] 를 누르면 나머지가 아래로 펼쳐집니다.
+     폰에서 세로 공간을 잡아먹지 않게 하려는 것입니다.
+     펼친 상태는 그 창을 닫을 때까지 유지됩니다.
+--------------------------------------------------------------------------- */
+
+/* 아이콘은 16x16 기준. [명령, 설명, 그림] */
 var MK_BTNS=[
   ['bold','굵게 (Ctrl+B)',
    '<path d="M4 2h5a3.2 3.2 0 010 6.4H4z"/><path d="M4 8h5.6a3.4 3.4 0 010 6.8H4z"/>'],
+  ['italic','기울임 (Ctrl+I)',
+   '<path d="M6.4 2h6.2v1.9h-2.1l-2.6 8.2h2.1V14H3.8v-1.9h2.1l2.6-8.2H6.4z"/>'],
   ['underline','밑줄 (Ctrl+U)',
    '<path d="M4.4 2v6.2a3.6 3.6 0 007.2 0V2" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/>'+
    '<path d="M3.4 14.4h9.2" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/>'],
+  ['strikeThrough','취소선',
+   '<path d="M4.4 2.4v4.2a3.6 3.6 0 007.2 0V2.4" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/>'+
+   '<path d="M2.6 8h10.8" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/>'+
+   '<path d="M5 9.6a3 3 0 006 0" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round"/>'],
   ['insertUnorderedList','글머리 목록',
    '<circle cx="3" cy="4" r="1.5"/><circle cx="3" cy="8" r="1.5"/><circle cx="3" cy="12" r="1.5"/>'+
    '<rect x="6.2" y="3.1" width="8.4" height="1.8" rx=".9"/>'+
    '<rect x="6.2" y="7.1" width="8.4" height="1.8" rx=".9"/>'+
    '<rect x="6.2" y="11.1" width="8.4" height="1.8" rx=".9"/>'],
   ['insertOrderedList','번호 목록',
-   '<text x="0" y="5.6" font-size="5.4" font-family="inherit" fill="currentColor">1</text>'+
-   '<text x="0" y="10" font-size="5.4" font-family="inherit" fill="currentColor">2</text>'+
-   '<text x="0" y="14.4" font-size="5.4" font-family="inherit" fill="currentColor">3</text>'+
+   '<text x="0" y="5.6" font-size="5.4" fill="currentColor">1</text>'+
+   '<text x="0" y="10" font-size="5.4" fill="currentColor">2</text>'+
+   '<text x="0" y="14.4" font-size="5.4" fill="currentColor">3</text>'+
    '<rect x="6.2" y="3.1" width="8.4" height="1.8" rx=".9"/>'+
    '<rect x="6.2" y="7.1" width="8.4" height="1.8" rx=".9"/>'+
-   '<rect x="6.2" y="11.1" width="8.4" height="1.8" rx=".9"/>'],
-  ['removeFormat','서식 지우기',
-   '<path d="M6.2 2.2h8.2v1.9H10l-2.4 8.6H9.6v1.9H2.6v-1.9h2.7L7.7 4.1H4.3V2.2z"/>'+
-   '<path d="M1.4 12.9l3.2-3.2 1.2 1.2-3.2 3.2z" opacity=".65"/>']
+   '<rect x="6.2" y="11.1" width="8.4" height="1.8" rx=".9"/>']
 ];
 
 /** 서식 버튼 줄 */
 function mkBar(id){
-  return '<div class="mkbar" data-for="'+id+'">'+
-    MK_BTNS.map(function(b){
-      return '<button type="button" data-cmd="'+b[0]+'" title="'+b[1]+'" '+
-        'onmousedown="event.preventDefault()" onclick="mkCmd(\''+id+'\',\''+b[0]+'\')">'+
-        '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">'+b[2]+'</svg></button>';
-    }).join('')+'</div>';
+  var h='<div class="mkbar" data-for="'+id+'">';
+
+  h+=MK_BTNS.map(function(b){
+    return '<button type="button" data-cmd="'+b[0]+'" title="'+b[1]+'" '+
+      'onmousedown="event.preventDefault()" onclick="mkCmd(\''+id+'\',\''+b[0]+'\')">'+
+      '<svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">'+b[2]+'</svg></button>';
+  }).join('');
+
+  /* 글자색 · 형광펜 — 누르면 색판이 열린다 */
+  h+='<button type="button" class="mkpalbtn" title="글자색" '+
+       'onmousedown="event.preventDefault()" onclick="mkPal(\''+id+'\',\'c\')">'+
+       '<span class="mkga">가</span><i class="mkbar-c"></i></button>';
+  h+='<button type="button" class="mkpalbtn" title="형광펜" '+
+       'onmousedown="event.preventDefault()" onclick="mkPal(\''+id+'\',\'h\')">'+
+       '<span class="mkga mkga-h">가</span></button>';
+
+  h+='<button type="button" class="mkmore" title="서식 더 보기" '+
+       'onmousedown="event.preventDefault()" onclick="mkMore(\''+id+'\')">＋</button>';
+  h+='</div>';
+
+  /* 펼치면 나오는 줄 */
+  h+='<div class="mkbar2" id="'+id+'Bar2" hidden>'+
+    mkTx(id,'큰제목',  'mkBlock(\''+id+'\',\'h3\')')+
+    mkTx(id,'중제목',  'mkBlock(\''+id+'\',\'h4\')')+
+    mkTx(id,'인용',    'mkBlock(\''+id+'\',\'blockquote\')')+
+    mkTx(id,'보통',    'mkBlock(\''+id+'\',\'p\')')+
+    mkTx(id,'☑ 할일',  'mkCheck(\''+id+'\')')+
+    mkTx(id,'구분선',  'mkHr(\''+id+'\')')+
+    mkTx(id,'왼쪽',    'mkAlign(\''+id+'\',\'Left\')')+
+    mkTx(id,'가운데',  'mkAlign(\''+id+'\',\'Center\')')+
+    mkTx(id,'오른쪽',  'mkAlign(\''+id+'\',\'Right\')')+
+    mkTx(id,'작게',    'mkSize(\''+id+'\',\'작게\')')+
+    mkTx(id,'크게',    'mkSize(\''+id+'\',\'크게\')')+
+    mkTx(id,'링크',    'mkLink(\''+id+'\')')+
+    mkTx(id,'표',      'mkTablePanel(\''+id+'\')')+
+    mkTx(id,'서식 지우기','mkClearAll(\''+id+'\')')+
+  '</div>';
+
+  /* 색판 · 표판 — 평소에는 숨어 있다 */
+  h+='<div class="mkpal" id="'+id+'Pal" hidden></div>';
+  return h;
 }
 
-/**
- * 서식 입력칸.
- * value 는 저장된 표시글(*굵게* 등). fmt() 로 서식을 살려 넣는다.
- */
-function mkEditor(id, value, minPx){
-  var min=minPx||86;
-  return '<div class="mked">'+mkBar(id)+
-    '<div id="'+id+'" class="mkin" contenteditable="true" spellcheck="false" '+
-      'style="min-height:'+min+'px" '+
-      'onkeydown="mkKey(event,\''+id+'\')" onkeyup="mkState(\''+id+'\')" '+
-      'onmouseup="mkState(\''+id+'\')" onfocus="mkState(\''+id+'\')" '+
-      'onpaste="mkPaste(event)">'+ fmt(value||'') +'</div></div>';
+/** 글자 버튼 하나 */
+function mkTx(id, label, fn){
+  return '<button type="button" onmousedown="event.preventDefault()" onclick="'+
+    esc(fn).replace(/"/g,'&quot;')+'">'+esc(label)+'</button>';
 }
+
+/** [＋] — 나머지 서식을 펼치거나 접는다 */
+function mkMore(id){
+  var box=$(id+'Bar2'); if(!box) return;
+  box.hidden=!box.hidden;
+  var bar=document.querySelector('.mkbar[data-for="'+id+'"] .mkmore');
+  if(bar){ bar.textContent = box.hidden ? '＋' : '✕'; bar.title = box.hidden ? '서식 더 보기' : '접기'; }
+  mkShut(id);
+}
+
+/** 열려 있는 색판·표판을 닫는다 */
+function mkShut(id){
+  var p=$(id+'Pal'); if(p){ p.hidden=true; p.innerHTML=''; }
+}
+
+/* ---------- 기본 서식 ---------- */
 
 function mkCmd(id, cmd){
   var el=$(id); if(!el) return;
@@ -1242,11 +1638,300 @@ function mkCmd(id, cmd){
   mkState(id);
 }
 
+/** 큰제목 · 중제목 · 인용 · 보통 */
+function mkBlock(id, tag){
+  var el=$(id); if(!el) return;
+  el.focus();
+  try{ document.execCommand('formatBlock', false, '<'+tag+'>'); }catch(e){ quiet('문단 서식', e); }
+  mkState(id);
+}
+
+function mkAlign(id, how){
+  var el=$(id); if(!el) return;
+  el.focus();
+  try{ document.execCommand('styleWithCSS', false, true); }catch(e){}
+  try{ document.execCommand('justify'+how, false, null); }catch(e){ quiet('정렬', e); }
+  try{ document.execCommand('styleWithCSS', false, false); }catch(e){}
+  mkState(id);
+}
+
+function mkHr(id){
+  var el=$(id); if(!el) return;
+  el.focus();
+  try{ document.execCommand('insertHTML', false, '<hr class="mk-hr"><p><br></p>'); }
+  catch(e){ quiet('구분선', e); }
+}
+
+/** 링크 — 주소를 물어보고 고른 글자에 건다 */
+function mkLink(id){
+  var el=$(id); if(!el) return;
+  el.focus();
+  var sel=window.getSelection();
+  if(!sel || !sel.rangeCount || sel.isCollapsed){ toast('링크를 걸 글자를 먼저 고르세요'); return; }
+  var u=prompt('링크 주소를 넣으세요 (http:// 로 시작)', 'https://');
+  if(u===null) return;
+  var url=mkSafeUrl(u);
+  if(!url){ toast('http:// 또는 https:// 로 시작하는 주소만 됩니다'); return; }
+  try{ document.execCommand('createLink', false, url); }catch(e){ quiet('링크', e); }
+  /* 새 창에서 열리게 표시를 남긴다 */
+  [].forEach.call(el.querySelectorAll('a'), function(a){
+    a.className='mk-a'; a.target='_blank'; a.rel='noopener';
+  });
+}
+
+/* ---------- 색 · 형광펜 · 크기 (execCommand 에 없는 것) ---------- */
+
+/** 색판을 연다 */
+function mkPal(id, kind){
+  var box=$(id+'Pal'); if(!box) return;
+  if(!box.hidden && box.dataset.kind===kind){ mkShut(id); return; }
+
+  var list = (kind==='c') ? MK_COLORS : MK_MARKS;
+  var h='<div class="mkpalrow">';
+  list.forEach(function(o){
+    h+='<button type="button" class="sw '+(kind==='c'?'sw-c-':'sw-h-')+o[1]+'" '+
+       'title="'+o[0]+'" onmousedown="event.preventDefault()" '+
+       'onclick="mkPick(\''+id+'\',\''+kind+'\',\''+o[0]+'\')">가</button>';
+  });
+  h+='<button type="button" class="sw sw-off" title="색 빼기" onmousedown="event.preventDefault()" '+
+     'onclick="mkPick(\''+id+'\',\''+kind+'\',\'\')">✕</button></div>';
+
+  box.innerHTML=h;
+  box.dataset.kind=kind;
+  box.hidden=false;
+}
+
+function mkSize(id, name){ mkPick(id, 's', name); }
+
+/**
+ * 고른 글자를 감싼다. 이름이 비어 있으면 그 갈래의 서식만 벗긴다.
+ * ★ 같은 갈래를 겹쳐 쓰지 않습니다 — 빨강을 파랑으로 바꾸면 빨강이 사라집니다.
+ *   (색·형광·크기는 서로 다른 갈래라 셋은 같이 걸립니다)
+ */
+function mkPick(id, kind, name){
+  var el=$(id); if(!el) return;
+  mkShut(id);
+  el.focus();
+
+  var sel=window.getSelection();
+  if(!sel || !sel.rangeCount || sel.isCollapsed){ toast('바꿀 글자를 먼저 고르세요'); return; }
+
+  var prefix = kind==='c' ? 'mk-c-' : (kind==='h' ? 'mk-h-' : 'mk-s-');
+  var list   = kind==='c' ? MK_COLORS : (kind==='h' ? MK_MARKS : MK_SIZES);
+  var key    = name ? mkKeyOf(list, name) : '';
+  if(name && !key) return;
+
+  var r=sel.getRangeAt(0);
+  var frag=r.extractContents();
+
+  /* ① 고른 것 **안에** 이미 걸려 있던 같은 갈래를 벗긴다 */
+  (function strip(node){
+    [].slice.call(node.childNodes).forEach(function(n){
+      if(n.nodeType!==1) return;
+      strip(n);
+      if(n.tagName==='SPAN' && String(n.className).indexOf(prefix)===0){
+        while(n.firstChild) n.parentNode.insertBefore(n.firstChild, n);
+        n.parentNode.removeChild(n);
+      }
+    });
+  })(frag);
+
+  /* ② 잠깐 감쌀 상자에 넣어 자리를 잡는다 */
+  var hold=document.createElement('span');
+  hold.appendChild(frag);
+  r.insertNode(hold);
+
+  /* ③ 고른 것을 **통째로 감싸고 있던** 같은 갈래도 벗긴다.
+     ★ 이것이 없으면 낱말 하나를 빨강 → 파랑으로 다시 칠할 때
+       {c:빨강|{c:파랑|오늘}} 처럼 색이 겹쳐 쌓입니다.
+       (일부만 골랐을 때는 바깥 색이 남은 글자에도 걸려 있으므로 건드리지 않습니다) */
+  while(hold.parentNode && hold.parentNode!==el &&
+        hold.parentNode.tagName==='SPAN' &&
+        String(hold.parentNode.className).indexOf(prefix)===0 &&
+        mkAloneIn(hold.parentNode, hold)){
+    var outer=hold.parentNode, up=outer.parentNode;
+    up.insertBefore(hold, outer);
+    up.removeChild(outer);
+  }
+
+  /* ④ 상자를 색으로 바꾸거나, 색을 빼는 것이면 상자만 걷어낸다 */
+  if(key){
+    hold.className=prefix+key;
+  }else{
+    while(hold.firstChild) hold.parentNode.insertBefore(hold.firstChild, hold);
+    hold.parentNode.removeChild(hold);
+    hold=null;
+  }
+
+  /* 방금 바꾼 곳을 다시 고른 상태로 둔다 (이어서 굵게 등을 걸 수 있게) */
+  if(hold){
+    try{
+      var nr=document.createRange();
+      nr.selectNodeContents(hold);
+      sel.removeAllRanges(); sel.addRange(nr);
+    }catch(e){ quiet('선택 되돌리기', e); }
+  }
+
+  mkState(id);
+}
+
+/** 이 상자 안에 저것 말고 다른 것이 있는가.
+    ★ 글자를 뽑아내면 그 자리에 **길이 0짜리 빈 글자마디**가 남습니다.
+      그것까지 '다른 것' 으로 세면 색이 겹쳐 쌓입니다. */
+function mkAloneIn(parent, node){
+  var others=0;
+  [].slice.call(parent.childNodes).forEach(function(n){
+    if(n===node) return;
+    if(n.nodeType===3 && n.nodeValue==='') return;
+    others++;
+  });
+  return others===0;
+}
+
+/** 서식 지우기 — 브라우저 것 + 우리 것(색·형광·크기)까지 */
+function mkClearAll(id){
+  var el=$(id); if(!el) return;
+  el.focus();
+  ['c','h','s'].forEach(function(k){ mkPick(id, k, ''); });
+  try{ document.execCommand('removeFormat', false, null); }catch(e){}
+  mkState(id);
+}
+
+/* ---------- 할 일 목록 ---------- */
+
+/** 지금 줄을 할 일 목록으로 (다시 누르면 보통 목록으로) */
+function mkCheck(id){
+  var el=$(id); if(!el) return;
+  el.focus();
+
+  var ul=mkClosest(el, 'UL');
+  if(!ul){
+    try{ document.execCommand('insertUnorderedList', false, null); }catch(e){ quiet('할일 목록', e); }
+    ul=mkClosest(el, 'UL');
+  }
+  if(ul) ul.classList.toggle('mk-ck');
+  mkState(id);
+}
+
+/** 커서가 들어 있는 가장 가까운 태그를 찾는다 (편집칸 밖으로는 안 나간다) */
+function mkClosest(el, tag){
+  var sel=window.getSelection();
+  if(!sel || !sel.rangeCount) return null;
+  var n=sel.getRangeAt(0).startContainer;
+  while(n && n!==el){
+    if(n.nodeType===1 && n.tagName===tag) return n;
+    n=n.parentNode;
+  }
+  return null;
+}
+
+/** 할 일 앞의 ☐ 를 눌러 ☑ 로 바꾼다 */
+function mkClick(e, id){
+  var li=e.target;
+  if(!li || li.tagName!=='LI') return;
+  var ul=li.parentNode;
+  if(!ul || !ul.classList || !ul.classList.contains('mk-ck')) return;
+  /* 네모는 CSS 로 그린 것이라 왼쪽 끝을 눌렀는지로 판단한다 */
+  var box=li.getBoundingClientRect();
+  if(e.clientX - box.left > 24) return;
+  li.classList.toggle('on');
+  e.preventDefault();
+}
+
+/* ---------- 표 ---------- */
+
+/** 표 판을 연다 */
+function mkTablePanel(id){
+  var box=$(id+'Pal'); if(!box) return;
+  if(!box.hidden && box.dataset.kind==='tb'){ mkShut(id); return; }
+
+  box.innerHTML=
+    '<div class="mkpalrow">'+
+      mkTx(id,'표 넣기','mkTableIns(\''+id+'\')')+
+      mkTx(id,'행 추가','mkRow(\''+id+'\',1)')+
+      mkTx(id,'행 지우기','mkRow(\''+id+'\',-1)')+
+      mkTx(id,'열 추가','mkCol(\''+id+'\',1)')+
+      mkTx(id,'열 지우기','mkCol(\''+id+'\',-1)')+
+    '</div>';
+  box.dataset.kind='tb';
+  box.hidden=false;
+}
+
+/** 새 표를 넣는다 (칸 수를 물어본다) */
+function mkTableIns(id){
+  var el=$(id); if(!el) return;
+  var c=parseInt(prompt('열(세로 칸) 개수를 넣으세요', '3'), 10);
+  if(!c || c<1) return;
+  if(c>8) c=8;
+  var r=parseInt(prompt('행(가로 줄) 개수를 넣으세요 (머리줄 포함)', '3'), 10);
+  if(!r || r<1) return;
+  if(r>30) r=30;
+
+  var h='<table class="mk-tb"><tr>';
+  for(var i=0;i<c;i++) h+='<th>&#8203;</th>';
+  h+='</tr>';
+  for(var y=1;y<r;y++){
+    h+='<tr>';
+    for(var x=0;x<c;x++) h+='<td>&#8203;</td>';
+    h+='</tr>';
+  }
+  h+='</table><p><br></p>';
+
+  mkShut(id);
+  el.focus();
+  try{ document.execCommand('insertHTML', false, h); }catch(e){ quiet('표 넣기', e); }
+}
+
+/** 행 추가(1) · 지우기(-1) */
+function mkRow(id, dir){
+  var el=$(id); if(!el) return;
+  var tr=mkClosest(el,'TR');
+  if(!tr){ toast('표 안에 커서를 두고 눌러 주세요'); return; }
+  var tb=tr.parentNode;
+
+  if(dir<0){
+    if(tb.rows ? tb.rows.length<=1 : tb.children.length<=1){ toast('마지막 줄은 지울 수 없습니다'); return; }
+    tr.parentNode.removeChild(tr);
+    return;
+  }
+  var nw=document.createElement('tr');
+  for(var i=0;i<tr.children.length;i++){
+    var td=document.createElement('td');
+    td.innerHTML='&#8203;';
+    nw.appendChild(td);
+  }
+  tr.parentNode.insertBefore(nw, tr.nextSibling);
+}
+
+/** 열 추가(1) · 지우기(-1) */
+function mkCol(id, dir){
+  var el=$(id); if(!el) return;
+  var cell=mkClosest(el,'TD') || mkClosest(el,'TH');
+  if(!cell){ toast('표 안에 커서를 두고 눌러 주세요'); return; }
+  var tr=cell.parentNode, table=mkClosest(el,'TABLE');
+  if(!table) return;
+  var at=[].indexOf.call(tr.children, cell);
+
+  [].forEach.call(table.rows, function(row){
+    if(dir<0){
+      if(row.children.length<=1) return;
+      if(row.children[at]) row.removeChild(row.children[at]);
+    }else{
+      var isHead = row.children[0] && row.children[0].tagName==='TH';
+      var c=document.createElement(isHead ? 'th' : 'td');
+      c.innerHTML='&#8203;';
+      row.insertBefore(c, row.children[at] ? row.children[at].nextSibling : null);
+    }
+  });
+}
+
+/* ---------- 상태 · 키 · 붙여넣기 ---------- */
+
 /** 지금 켜져 있는 서식을 버튼에 눌린 상태로 보여준다 */
 function mkState(id){
   var bar=document.querySelector('.mkbar[data-for="'+id+'"]');
   if(!bar) return;
-  [].forEach.call(bar.querySelectorAll('button'),function(b){
+  [].forEach.call(bar.querySelectorAll('button[data-cmd]'),function(b){
     var on=false;
     /* 버튼을 눌린 모양으로 보일지만 정하는 곳. 실패해도 서식은 그대로 걸린다 */
     try{ on=document.queryCommandState(b.dataset.cmd); }catch(e){}
@@ -1259,9 +1944,10 @@ function mkKey(e, id){
   var k=String(e.key||'').toLowerCase();
   if(k==='b'){ e.preventDefault(); mkCmd(id,'bold'); }
   else if(k==='u'){ e.preventDefault(); mkCmd(id,'underline'); }
+  else if(k==='i'){ e.preventDefault(); mkCmd(id,'italic'); }
 }
 
-/** 붙여넣기 — 굵게·밑줄·목록만 남기고 색·글꼴·크기는 전부 버린다 */
+/** 붙여넣기 — 우리가 다루는 서식만 남기고 나머지는 버린다 */
 function mkPaste(e){
   e.preventDefault();
   var dt=e.clipboardData||window.clipboardData;
@@ -1272,7 +1958,9 @@ function mkPaste(e){
   try{ document.execCommand('insertHTML', false, clean); }catch(err){ quiet('붙여넣기', err); }
 }
 
-var MK_KEEP={B:1,STRONG:1,U:1,UL:1,OL:1,LI:1,BR:1,P:1,DIV:1};
+var MK_KEEP={B:1,STRONG:1,U:1,I:1,EM:1,S:1,STRIKE:1,DEL:1,SPAN:1,A:1,
+             UL:1,OL:1,LI:1,BR:1,P:1,DIV:1,H3:1,H4:1,BLOCKQUOTE:1,HR:1,
+             TABLE:1,THEAD:1,TBODY:1,TR:1,TH:1,TD:1};
 
 function mkClean(html){
   var body;
@@ -1291,22 +1979,53 @@ function mkClean(html){
         n.parentNode.removeChild(n);
         return;
       }
+      /* 우리가 쓰는 표시만 남기고 나머지 속성은 전부 버린다
+         (남의 색·글꼴·크기가 그대로 들어오면 화면이 깨진다) */
+      var keepCls='';
+      var cls=String(n.className||'');
+      if(n.tagName==='SPAN' && /^mk-(c|h|s)-[a-z]+$/.test(cls)) keepCls=cls;
+      if(n.tagName==='UL' && cls.indexOf('mk-ck')>=0) keepCls='mk-ck';
+      if(n.tagName==='LI' && cls.indexOf('on')>=0) keepCls='on';
+      var href = (n.tagName==='A') ? mkSafeUrl(n.getAttribute('href')) : '';
+      var al = n.style ? String(n.style.textAlign||'') : '';
+
       [].slice.call(n.attributes).forEach(function(a){ n.removeAttribute(a.name); });
+
+      if(keepCls) n.className=keepCls;
+      if(href){ n.className='mk-a'; n.setAttribute('href',href); n.setAttribute('target','_blank'); n.setAttribute('rel','noopener'); }
+      else if(n.tagName==='A'){
+        while(n.firstChild) n.parentNode.insertBefore(n.firstChild, n);
+        n.parentNode.removeChild(n);
+        return;
+      }
+      if(al==='center'||al==='right') n.style.textAlign=al;
+      if(n.tagName==='SPAN' && !keepCls){
+        while(n.firstChild) n.parentNode.insertBefore(n.firstChild, n);
+        n.parentNode.removeChild(n);
+      }
     });
   })(body);
   return body.innerHTML;
 }
 
-/**
- * 편집칸의 내용을 저장할 표시글로 바꾼다 (HTML 을 시트에 넣지 않는다).
- *   <b>  → *글*      <u>  → _글_
- *   <ul> → '- 글'    <ol> → '1. 글'
- */
+/* ---------------------------------------------------------------------------
+   되돌리기 — 편집칸의 내용을 저장할 표시글로
+
+   ★ HTML 을 시트에 넣지 않습니다. 위의 '저장되는 표시' 로만 바꿉니다.
+   ★ fmt() 와 짝입니다. 여기서 만든 글자를 fmt() 가 다시 같은 모양으로 그려야 합니다.
+     (공지를 고칠 때 서식이 사라지면 안 됩니다)
+--------------------------------------------------------------------------- */
 function mkValue(id){
   var el=$(id);
   if(!el) return '';
   if(el.tagName==='TEXTAREA'||el.tagName==='INPUT') return el.value;   // 옛 칸도 그대로 받는다
 
+  function clsKey(n, prefix){
+    var c=String(n.className||'');
+    return c.indexOf(prefix)===0 ? c.slice(prefix.length).split(/\s+/)[0] : '';
+  }
+
+  /* 글자 안 서식 */
   function inline(node){
     var s='';
     [].slice.call(node.childNodes).forEach(function(n){
@@ -1314,37 +2033,131 @@ function mkValue(id){
       if(n.nodeType!==1) return;
       var t=n.tagName;
       if(t==='BR'){ s+='\n'; return; }
+      if(t==='HR'){ return; }
       var inner=inline(n);
       if(!inner.trim()){ s+=inner; return; }
+
       if(t==='B'||t==='STRONG') s+='*'+inner+'*';
       else if(t==='U') s+='_'+inner+'_';
+      else if(t==='I'||t==='EM') s+='//'+inner+'//';
+      else if(t==='S'||t==='STRIKE'||t==='DEL') s+='~~'+inner+'~~';
+      else if(t==='A'){
+        var u=mkSafeUrl(n.getAttribute('href'));
+        s+= u ? ('{a:'+u+'|'+inner+'}') : inner;
+      }
+      else if(t==='SPAN'){
+        var ck=clsKey(n,'mk-c-'), hk=clsKey(n,'mk-h-'), sk=clsKey(n,'mk-s-');
+        if(ck) s+='{c:'+mkNameOf(MK_COLORS,ck)+'|'+inner+'}';
+        else if(hk) s+='{h:'+mkNameOf(MK_MARKS,hk)+'|'+inner+'}';
+        else if(sk) s+='{s:'+mkNameOf(MK_SIZES,sk)+'|'+inner+'}';
+        else s+=inner;
+      }
       else s+=inner;
     });
     return s;
   }
 
+  function oneLine(node){ return inline(node).replace(/\n/g,' ').trim(); }
+
+  /* 정렬 표시 (:c: · :r:)
+     ★ 세 군데를 다 봅니다 —
+       fmt() 가 그린 것은 class(mk-al-c), 편집기가 만든 것은 style(text-align),
+       옛 브라우저가 만든 것은 align 속성입니다. 하나만 보면 정렬이 사라집니다. */
+  function alignOf(n){
+    var c=String(n.className||'');
+    if(c.indexOf('mk-al-c')>=0) return ':c: ';
+    if(c.indexOf('mk-al-r')>=0) return ':r: ';
+    var a = n.style ? String(n.style.textAlign||'') : '';
+    if(!a) a = String(n.getAttribute && n.getAttribute('align') || '');
+    if(a==='center') return ':c: ';
+    if(a==='right')  return ':r: ';
+    return '';
+  }
+
   var out=[];
+
+  function table(n){
+    var rows=[].slice.call(n.rows||[]);
+    if(!rows.length) return;
+    var wide=0;
+    rows.forEach(function(r){ wide=Math.max(wide, r.children.length); });
+    if(!wide) return;
+
+    rows.forEach(function(r, i){
+      var cells=[];
+      for(var c=0;c<wide;c++){
+        var cell=r.children[c];
+        cells.push(cell ? oneLine(cell).replace(/\|/g,'/') : '');
+      }
+      out.push('| '+cells.join(' | ')+' |');
+      if(i===0){
+        var bar=[];
+        for(var k=0;k<wide;k++) bar.push('---');
+        out.push('|'+bar.join('|')+'|');
+      }
+    });
+    out.push('');
+  }
+
   (function block(node){
     [].slice.call(node.childNodes).forEach(function(n){
-      if(n.nodeType===3){ if(n.nodeValue.replace(/\u200B/g,'').trim()) out.push(n.nodeValue); return; }
+      if(n.nodeType===3){ if(n.nodeValue.replace(/​/g,'').trim()) out.push(n.nodeValue); return; }
       if(n.nodeType!==1) return;
       var t=n.tagName;
+
+      /* ★ 덩어리 뒤에는 빈 줄을 하나 둔다.
+         화면(DOM)에는 문단 사이 빈 줄이 남지 않으므로, 여기서 넣어 주지 않으면
+         공지를 한 번 고칠 때마다 문단이 모두 붙어 버린다. */
+      if(t==='TABLE'){ table(n); return; }
+      if(t==='HR'){ out.push('---'); out.push(''); return; }
+      if(t==='H3'){ out.push('# '+oneLine(n)); out.push(''); return; }
+      if(t==='H4'){ out.push('## '+oneLine(n)); out.push(''); return; }
+      if(t==='BLOCKQUOTE'){
+        inline(n).split('\n').forEach(function(x){ out.push('> '+x.trim()); });
+        out.push('');
+        return;
+      }
       if(t==='UL'||t==='OL'){
+        var check = t==='UL' && String(n.className||'').indexOf('mk-ck')>=0;
         var i=1;
         [].slice.call(n.children).forEach(function(li){
           if(li.tagName!=='LI') return;
-          out.push((t==='OL'? (i++)+'. ' : '- ')+inline(li).replace(/\n/g,' ').trim());
+          var head = check ? (String(li.className||'').indexOf('on')>=0 ? '[x] ' : '[ ] ')
+                           : (t==='OL' ? (i++)+'. ' : '- ');
+          out.push(head+oneLine(li));
         });
+        out.push('');
         return;
       }
       if(t==='BR'){ out.push(''); return; }
-      if((t==='DIV'||t==='P') && n.querySelector('ul,ol')){ block(n); return; }
-      out.push(inline(n));
+      if((t==='DIV'||t==='P') && n.querySelector('ul,ol,table,hr,h3,h4,blockquote')){ block(n); return; }
+
+      var body=inline(n);
+      var pre=alignOf(n);
+      if(pre) body.split('\n').forEach(function(x){ out.push(pre+x); });
+      else out.push(body);
+      out.push('');
     });
   })(el);
 
   return out.join('\n').replace(/\u200B/g,'').replace(/\n{3,}/g,'\n\n').trim();
 }
+
+/**
+ * 서식 입력칸.
+ * value 는 저장된 표시글(*굵게* 등). fmt() 로 서식을 살려 넣는다.
+ */
+function mkEditor(id, value, minPx){
+  var min=minPx||86;
+  return '<div class="mked">'+mkBar(id)+
+    '<div id="'+id+'" class="mkin" contenteditable="true" spellcheck="false" '+
+      'style="min-height:'+min+'px" '+
+      'onkeydown="mkKey(event,\''+id+'\')" onkeyup="mkState(\''+id+'\')" '+
+      'onmouseup="mkState(\''+id+'\')" onfocus="mkState(\''+id+'\')" '+
+      'onclick="mkClick(event,\''+id+'\')" '+
+      'onpaste="mkPaste(event)">'+ fmt(value||'') +'</div></div>';
+}
+
 /* ===================== 짧은 날짜 · 누가 언제 한 줄 (v42) ===================== */
 
 /**
