@@ -757,6 +757,23 @@ table.mk-tb .al-c{text-align:center} table.mk-tb .al-r{text-align:right}
   cursor:pointer;font-size:var(--fs-num-sm);line-height:1;padding:0 2px}
 .cmt .body{line-height:1.7;font-size:var(--fs-body)}
 
+/* ── 답글 (2026-09-02) ──────────────────────────────────
+   한 겹만 접습니다. 두 겹이 넘어가면 좁은 폰에서 글자가 몇 자 안 남습니다. */
+.cmt.re{padding-left:20px;border-left:2px solid var(--line);border-bottom:none;
+  margin-left:2px;padding-top:5px;padding-bottom:5px}
+.cmt.re + .cmt:not(.re){border-top:1px solid var(--line);padding-top:9px}
+.cmt .rearrow{color:var(--t3);font-size:var(--fs-sm);margin-right:-2px}
+
+/* [답글] — 평소엔 눈에 안 띄게, 그 줄에 손을 올리면 또렷하게 */
+.cmt .d .reply{margin-left:auto;border:none;background:transparent;color:var(--t3);
+  cursor:pointer;font-size:var(--fs-sm);padding:0 2px;opacity:.55;transition:opacity .12s}
+.cmt .d .reply:hover,.cmt:hover .d .reply,.cmt:focus-within .d .reply{opacity:1;color:var(--t1)}
+.cmt .d .reply + .del{margin-left:4px}
+@media (hover:none){ .cmt .d .reply{opacity:.85} }   /* 폰에는 hover 가 없다 */
+
+/* 답글 적는 칸 — 그 댓글 바로 아래에 */
+.cmreply{margin:4px 0 8px 22px}
+
 /* 법인 필터 — 본문 위로 내려옴 */
 .filterbar{display:flex;align-items:center;gap:5px;overflow-x:auto;scrollbar-width:none;
   height:34px;padding:0;margin:0 0 14px;border-bottom:1px solid var(--line)}
@@ -5907,7 +5924,12 @@ function noticeStub(){
       return { no:n.no, kind:'공지', title:n.title, body:n.body||'', who:n.who,
                phone:n.phone||'', at:n.at, edited:n.edited||'' };
     }),
-    comments:{}
+    /* ★★ 댓글도 board 가 같이 실어 보냅니다 (2026-09-02).
+       예전에는 여기가 빈 칸이라, 공지를 열면 글은 바로 뜨고
+       **댓글만 1초쯤 뒤에** 나타났습니다 (그때 api_posts 를 받아왔으니까).
+       미리받기로 가려 봤지만 앱을 열자마자 누르면 여전히 늦었습니다.
+       타이밍으로 풀 문제가 아니라 **애초에 같이 보내면 되는** 문제였습니다. */
+    comments:(S.data && S.data.noticeCmt) || {}
   };
 }
 
@@ -6180,9 +6202,9 @@ function commentsHtml(kind, targetId, list, total, withHead){
     h+='<h4 class="sech">댓글 '+
        '<span id="cmCount" data-n="'+all+'">'+all+'</span></h4>';
   }
-  h+='<div id="cmList">';
+  h+='<div id="cmList" data-kind="'+esc(kind)+'" data-target="'+esc(targetId)+'">';
   if(!list.length) h+='<p class="muted cmempty" style="font-size:var(--fs-sm);margin:4px 0">아직 댓글이 없습니다</p>';
-  list.forEach(function(c){ h+=commentRow(c); });
+  cmTree(list).forEach(function(c){ h+=commentRow(c); });
   h+='</div>';
 
   if(more){
@@ -6212,13 +6234,80 @@ function syncCommentCount(delta){
   el.textContent=n;
 }
 
+/**
+ * 댓글을 '맨 댓글 → 그 아래 답글' 차례로 늘어놓는다 (2026-09-02).
+ *
+ * ★ 한 겹만 접습니다. 답글의 답글은 만들지 않습니다 —
+ *   두 겹이 넘어가면 좁은 폰에서 글자가 몇 자 안 남습니다.
+ *   답글에 답글을 달면 서버가 같은 줄기에 붙여 줍니다.
+ * ★ 서버가 준 차례(오래된 순)를 그대로 씁니다. 받은 배열은 고치지 않습니다.
+ */
+function cmTree(list){
+  var 있는것={}, 맨댓글=[], 답글={};
+  (list||[]).forEach(function(c){ if(c && c.id) 있는것[c.id]=true; });
+
+  (list||[]).forEach(function(c){
+    if(!c) return;
+    var p=c.parent||'';
+    /* 원 댓글이 지워졌으면 맨 댓글로 올린다 — 답글이 사라져 버리면 안 됩니다 */
+    if(p && 있는것[p]){
+      if(!답글[p]) 답글[p]=[];
+      답글[p].push(c);
+    }else{
+      맨댓글.push(c);
+    }
+  });
+
+  var out=[];
+  맨댓글.forEach(function(c){
+    out.push(c);
+    (답글[c.id]||[]).forEach(function(r){ r.__답글=true; out.push(r); });
+  });
+  return out;
+}
+
 function commentRow(c){
   var mine = S.me && (S.me.grade>=9 || c.phone===S.me.phone);
-  return '<div class="cmt" data-cid="'+esc(c.id||'')+'">'+
-    '<div class="d"><b>'+esc(c.who)+'</b>'+
+  var 답글인가 = !!c.__답글 || !!c.parent;
+  /* 답글은 붙일 곳이 원 댓글이다 (답글에 답글을 달아도 같은 줄기로) */
+  var 붙일곳 = 답글인가 ? (c.parent||c.id) : c.id;
+
+  return '<div class="cmt'+(답글인가?' re':'')+'" data-cid="'+esc(c.id||'')+'">'+
+    '<div class="d">'+(답글인가?'<span class="rearrow">↳</span>':'')+
+    '<b>'+esc(c.who)+'</b>'+
     '<span class="muted">'+esc(shortDate(c.at))+'</span>'+
+    (c.id ? '<button class="reply" onclick="openReply(\''+esc(c.id)+'\',\''+esc(붙일곳)+'\')">답글</button>':'')+
     (mine && c.id ? '<button class="del" title="댓글 삭제" onclick="deleteComment(\''+c.id+'\')">×</button>':'')+
     '</div><div class="body">'+fmt(c.text)+'</div></div>';
+}
+
+/** [답글] — 그 댓글 바로 아래에 적는 칸을 연다 (한 번에 하나만) */
+function openReply(cid, parentId){
+  var 이미=document.getElementById('cmReplyBox');
+  var 같은자리 = 이미 && 이미.dataset.cid===cid;
+  if(이미) 이미.parentNode.removeChild(이미);
+  if(같은자리) return;                       // 다시 누르면 접는다
+
+  var row=document.querySelector('[data-cid="'+cid+'"]');
+  var box=document.getElementById('cmList');
+  if(!row || !box) return;
+
+  var kind=box.dataset.kind, target=box.dataset.target;
+  var d=document.createElement('div');
+  d.className='tdwrite cmreply';
+  d.id='cmReplyBox';
+  d.dataset.cid=cid;
+  d.innerHTML='<textarea id="cmReText" rows="1" spellcheck="false"></textarea>'+
+    '<button class="btn sm pri">등록</button>';
+
+  row.parentNode.insertBefore(d, row.nextSibling);
+
+  var ta=d.querySelector('textarea'), btn=d.querySelector('button');
+  ta.addEventListener('keydown', function(e){
+    if(e.key==='Enter' && !e.shiftKey && !e.isComposing){ e.preventDefault(); sendComment(kind, target, parentId); }
+  });
+  btn.addEventListener('click', function(){ sendComment(kind, target, parentId); });
+  ta.focus();
 }
 
 /** 댓글칸 자판 — Enter 등록 / Shift+Enter 줄바꿈 / Ctrl+B·U 서식 */
@@ -6229,10 +6318,13 @@ function cmKey(e, kind, targetId){
   }
 }
 
-/** 낙관 처리 — 화면에 먼저 붙이고 뒤에서 보낸다. 실패하면 되돌린다 */
-function sendComment(kind, targetId){
-  var el=$('cmText'); if(!el) return;
-  var text=String(mkValue('cmText')||'').trim();
+/** 낙관 처리 — 화면에 먼저 붙이고 뒤에서 보낸다. 실패하면 되돌린다.
+    parentId 가 있으면 답글입니다 (그 댓글 바로 아래에 붙습니다). */
+function sendComment(kind, targetId, parentId){
+  var 답글 = !!parentId;
+  var el = 답글 ? $('cmReText') : $('cmText');
+  if(!el) return;
+  var text=String(el.value||'').trim();
   if(!text) return;
   el.value='';
 
@@ -6240,22 +6332,39 @@ function sendComment(kind, targetId){
   var ph=box? box.querySelector('.cmempty') : null;
   if(ph) ph.parentNode.removeChild(ph);
 
+  var 새것={ id:'', who:(S.me&&S.me.name)||'', phone:(S.me&&S.me.phone)||'',
+             text:text, at:todayStr()+' '+nowHM(), parent: parentId||'' };
+
   var node=null;
   if(box){
-    box.insertAdjacentHTML('beforeend', commentRow({
-      id:'', who:(S.me&&S.me.name)||'', phone:(S.me&&S.me.phone)||'',
-      text:text, at:todayStr()+' '+nowHM()
-    }));
-    node=box.lastElementChild;
+    if(답글){
+      /* 원 댓글에 딸린 답글들 **맨 아래**에 붙인다 */
+      var 자리=document.querySelector('[data-cid="'+parentId+'"]');
+      var 다음=자리? 자리.nextSibling : null;
+      while(다음 && 다음.classList && (다음.classList.contains('re') || 다음.id==='cmReplyBox')){
+        자리=다음; 다음=다음.nextSibling;
+      }
+      var tmp=document.createElement('div');
+      tmp.innerHTML=commentRow(새것);
+      node=tmp.firstChild;
+      if(자리) 자리.parentNode.insertBefore(node, 자리.nextSibling);
+      else box.appendChild(node);
+
+      var rb=$('cmReplyBox');            // 적는 칸은 닫는다
+      if(rb && rb.parentNode) rb.parentNode.removeChild(rb);
+    }else{
+      box.insertAdjacentHTML('beforeend', commentRow(새것));
+      node=box.lastElementChild;
+    }
   }
   syncCommentCount(1);
 
-  call('api_saveComment', S.token, kind, targetId, text, S.corp).then(function(r){
+  call('api_saveComment', S.token, kind, targetId, text, S.corp, parentId||'').then(function(r){
     if(!r.ok){
       if(node && node.parentNode) node.parentNode.removeChild(node);
       syncCommentCount(-1);
-      var box=$('cmText');
-      if(box && !box.value) box.value=text;                  // 쓴 글을 잃지 않게
+      var back=$('cmText');
+      if(back && !back.value) back.value=text;                  // 쓴 글을 잃지 않게
       toast('댓글 저장 실패: '+r.msg);
       return;
     }
@@ -6264,11 +6373,19 @@ function sendComment(kind, targetId){
     if(kind==='업무') addCommentLocal(targetId, r.comment);
     softRefresh();
 
-    if(kind==='게시글' && S.postCache){
-      if(!S.postCache.comments) S.postCache.comments={};
-      if(!S.postCache.comments[targetId]) S.postCache.comments[targetId]=[];
-      S.postCache.comments[targetId].push(r.comment);
-      S.postCacheAt=areaVer('post');   // 내가 만든 변화는 이미 반영했다
+    if(kind==='게시글'){
+      if(S.postCache){
+        if(!S.postCache.comments) S.postCache.comments={};
+        if(!S.postCache.comments[targetId]) S.postCache.comments[targetId]=[];
+        S.postCache.comments[targetId].push(r.comment);
+        S.postCacheAt=areaVer('post');   // 내가 만든 변화는 이미 반영했다
+      }
+      /* ★ board 가 실어 보낸 공지 댓글에도 같이 넣는다 (2026-09-02).
+         안 넣으면 공지를 닫았다 다시 열 때 방금 쓴 댓글이 잠깐 사라집니다. */
+      if(S.data){
+        if(!S.data.noticeCmt) S.data.noticeCmt={};
+        if(S.data.noticeCmt[targetId]) S.data.noticeCmt[targetId].push(r.comment);
+      }
     }
   });
 }
