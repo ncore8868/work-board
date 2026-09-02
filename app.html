@@ -593,6 +593,14 @@ label.fl{display:block;font-size:var(--fs-xs);color:var(--t3);margin:0 0 6px;fon
 
 /* ★ '누가 언제' 는 어느 화면에서든 제목 바로 아래 한 줄 (v42)
    업무 상세 · 공지 · 게시글 · 결재 문서 상세 · 댓글 · 기록 전부 이 모양을 쓴다 */
+/* ★ 인라인 `style="font-size:..."` 대신 쓰는 자리 (2026-09-02).
+   같은 모양을 서른 곳에 손으로 적어 두면 크기를 한 단계 올릴 때 반드시 몇 곳을 놓칩니다. */
+.note{margin:4px 0 0;font-size:var(--fs-sm);color:var(--t3)}
+.note.t2{color:var(--t2)}
+.note.right{text-align:right}
+.note.tight{margin-top:2px}
+.note.loose{margin-top:var(--sp-3)}
+
 .byline{font-size:var(--fs-sm);color:var(--t3);margin:-8px 0 14px;line-height:1.7;
   word-break:keep-all}
 .byline .hot{color:var(--dg)}
@@ -883,6 +891,10 @@ table.mk-tb .al-c{text-align:center} table.mk-tb .al-r{text-align:right}
 #listRun .bar{height:7px;border-radius:var(--r-sm)}
 #listRun .bar > i{background:linear-gradient(90deg,var(--ok2),var(--ok))}
 #listRun .pct{font-size:var(--fs-num-sm);font-weight:700;font-family:var(--font-title);color:var(--t1)}
+/* ★ `40%` 옆의 `· 09-04 D-2` 는 **보조**입니다 (2026-09-02).
+   숫자 축(15px)을 그대로 물려받아 본문(14px)보다 커져 있었습니다.
+   부수적인 것이 본문보다 크면 눈이 거기서 먼저 멈춥니다. */
+#listRun .pct .sub{font-size:var(--fs-sm);font-family:var(--font-ui);color:var(--t3)}
 #listRun .stats{margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
 #listRun .stats .k{font-size:var(--fs-sm);color:var(--t3)}
 #listRun .stats .num{font-size:var(--fs-h2);font-weight:600;color:var(--t1)}
@@ -1092,7 +1104,13 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 
 /* ── 시간 흐름 — 기록과 댓글이 한 줄기 ──
    날짜를 왼쪽 기둥에 세우면 눈이 세로로 훑을 수 있습니다 */
+/* ★★ 항목 사이를 선으로 끊습니다 (2026-09-02).
+   목록이 아홉 줄쯤 되면 그다음 항목이 여백만으로는 구분되지 않아
+   '어디까지가 한 건인가' 를 눈으로 세게 됩니다.
+   ★ 구역을 가르는 `.tdsep` 보다 옅게 둡니다 — 흐름은 이어지는 것이지
+     서로 다른 구역이 아니기 때문입니다. */
 .flow{display:flex;flex-direction:column;gap:var(--sp-4)}
+.flow .fitem + .fitem{border-top:1px solid var(--line);padding-top:var(--sp-4)}
 .fitem{display:grid;grid-template-columns:50px 1fr auto;gap:var(--sp-3);align-items:start}
 .fitem .when{font-size:var(--fs-sm);color:var(--t3);padding-top:2px;
   font-variant-numeric:tabular-nums;white-space:nowrap}
@@ -1106,9 +1124,14 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 /* 기록인지 댓글인지는 색이 아니라 이 뱃지로 갈립니다 (달력 말고는 색에 뜻을 주지 않습니다) */
 .fitem .num{font-size:var(--fs-xs);color:var(--t2);background:var(--field);
   border-radius:99px;padding:2px 7px;white-space:nowrap}
+/* ★ 늘 또렷하게 떠 있으면 시선을 뺏고 실수로 눌리기도 합니다.
+   댓글의 [답글] 과 같은 방식으로, 그 줄에 손을 올렸을 때만 또렷해집니다.
+   ★ 폰에는 hover 가 없으므로 거기서는 그대로 보입니다. */
 .fitem .del{border:none;background:transparent;color:var(--t3);cursor:pointer;
-  font-size:var(--fs-num-sm);line-height:1;padding:2px 4px}
-.fitem .del:hover{color:var(--t1)}
+  font-size:var(--fs-num-sm);line-height:1;padding:2px 4px;
+  opacity:.35;transition:opacity .14s ease, color .14s ease}
+.fitem:hover .del,.fitem:focus-within .del,.fitem .del:hover{opacity:1;color:var(--t1)}
+@media (hover:none){ .fitem .del{opacity:.85} }
 .fitem .ex{margin:4px 0 0;font-size:var(--fs-sm);color:var(--t3)}
 
 /* 적는 칸 — 버튼 이름을 없애고 칸 하나만 둡니다.
@@ -4020,7 +4043,11 @@ function renderBoard(){
   if(railBox && A){ railBox.classList.remove('in'); void railBox.offsetWidth;
     railBox.style.animationDelay='260ms'; railBox.classList.add('in'); }
 
+  /* ★ 0건이면 구역째 그리지 않습니다 (2026-09-02).
+     '아직 없습니다' 를 반복해 빈 공간을 만들지 않는다 — 규칙 그대로입니다. */
   var canDel = S.me && S.me.grade>=9;
+  var logBox = $('railLog') ? $('railLog').parentNode : null;
+  if(logBox) logBox.classList.toggle('hide', (d.recent||[]).length===0);
   $('railLog').innerHTML = (d.recent||[]).length ? d.recent.map(function(l){
     /* 한 건을 카드로 (v44).
        예전에는 네 건이 한 덩어리로 붙어 어디까지가 한 건인지 알 수 없었다.
@@ -4334,7 +4361,7 @@ function cardFull(t, i){
        (t.due?'<span class="sub" style="font-weight:400"> · '+shortDate(t.due)+
               ' '+dday(t.due)+'</span>':'')+'</span></div>';
   } else if(t.due){
-    h+='<p style="margin:5px 0 0;font-size:var(--fs-sm)" class="sub">'+dday(t.due)+'</p>';
+    h+='<p class="sub note">'+dday(t.due)+'</p>';
   }
 
   /* ★★ 격자는 **철거에만** 둡니다 (2026-09-02).
@@ -4930,7 +4957,23 @@ function fileBox_(t, files){
       '<input type="file" id="tfFile" multiple '+
         'onchange="addTaskFile(&quot;'+esc(t.id)+'&quot;,this)"></div>';
   }
+
+  /* ★★ 0개면 접힌 줄을 만들지 않습니다 (2026-09-02).
+     `자료 0개 ▾` 는 눌러도 빈 칸만 나오는데 자리는 한 줄을 씁니다.
+     '0건인 구역은 아예 그리지 않는다' 규칙 그대로, 붙일 사람에게만
+     `고객 진행 링크` 와 같은 모양의 한 줄로 보여 줍니다. */
+  if(!files.length){
+    return '<button class="tdlink" onclick="pickTaskFile(&quot;'+esc(t.id)+'&quot;)">'+
+           '<span class="n">자료</span><span class="g">붙이기</span></button>'+
+           '<input type="file" id="tfFile" multiple style="display:none" '+
+             'onchange="addTaskFile(&quot;'+esc(t.id)+'&quot;,this)">';
+  }
   return foldBox('files:'+t.id, '자료 '+files.length+'개', h);
+}
+
+/** 숨겨둔 파일 고르기 칸을 대신 눌러 준다 */
+function pickTaskFile(){
+  var el=$('tfFile'); if(el) el.click();
 }
 
 /** 파일을 붙인다. ★ 한 번에 세 개까지 — 열 개를 한 번에 보내면 응답이 30초를 넘습니다 */
