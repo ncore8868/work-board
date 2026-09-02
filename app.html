@@ -3260,6 +3260,30 @@ function setCorp(c){
   if(S.view==='me') renderMe();
 }
 
+/**
+ * 업무 차례 — 판(대기·진행중)과 '내 업무' 가 같이 씁니다.
+ *
+ * ★★ **새로 움직인 것이 위로** (2026-09-02).
+ *
+ *   `upAt` 은 서버가 넣어 주는 '마지막으로 움직인 시각' 입니다 —
+ *   올린 때 · 고친 때 · 마지막 작업기록 · 마지막 댓글 중 가장 나중 것.
+ *
+ *   예전에는
+ *     · 대기   정렬이 아예 없어 시트에 쌓인 차례 그대로였습니다 (오래된 것이 맨 위)
+ *     · 진행중 급한 표시 → 마감일 순이었습니다
+ *   그래서 방금 기록을 남긴 업무가 화면 아래에 묻혀 있었습니다.
+ *
+ * ★★ 급한 표시(빨강·노랑)로 앞세우지 **않습니다.**
+ *   예전 진행중 목록은 급한 것을 맨 위로 올렸는데, 그러면 표시가 붙은 업무가
+ *   계속 맨 위에 못박혀 **'새로 들어오면 위로' 가 성립하지 않습니다.**
+ *   급한 것은 카드의 빨강·노랑으로 이미 눈에 띕니다 (2026-09-02 대표님 지시).
+ */
+function taskRecent(a, b){
+  var ua=a.upAt||a.at||'', ub=b.upAt||b.at||'';
+  if(ua!==ub) return ua<ub ? 1 : -1;              // 새로 움직인 것이 위
+  return (a.id<b.id) ? 1 : -1;                    // 같으면 늦게 만든 것이 위
+}
+
 function renderBoard(){
   var d=S.data;
   var A=S.anim;            // 이번 그리기에서 애니메이션을 쓸지
@@ -3276,7 +3300,20 @@ function renderBoard(){
     else if(t.status==='진행중') run.push(t);
     else wait.push(t);
   });
-  run.sort(function(a,b){ return (b.flags.length-a.flags.length) || ((a.due||'9')<(b.due||'9')?-1:1); });
+  /* ★★ 대기·진행중 둘 다 **새로 움직인 것이 위로** (2026-09-02).
+   *
+   *   `upAt` 은 서버가 넣어 주는 '마지막으로 움직인 시각' 입니다 —
+   *   올린 때 · 고친 때 · 마지막 작업기록 · 마지막 댓글 중 가장 나중 것.
+   *
+   *   예전에는
+   *     · 대기   정렬이 아예 없어 시트에 쌓인 차례 그대로였습니다 (오래된 것이 위)
+   *     · 진행중 급한 표시(flags) → 마감일 순이었습니다
+   *   그래서 방금 기록을 남긴 업무가 화면 아래에 묻혀 있었습니다.
+   *
+   *   ★ 급한 표시(빨강·노랑)는 **여전히 맨 위**입니다.
+   *     '지금 손대야 할 것' 보다 '방금 움직인 것' 이 위로 오면 안 됩니다. */
+  run.sort(taskRecent);
+  wait.sort(taskRecent);
 
   countUp($('cWait'), wait.length);
   countUp($('cRun'), run.length);
@@ -7003,8 +7040,9 @@ function addDocLocal(r){
 function renderMe(){
   if(!S.data){ $('meBody').innerHTML=empty('불러오는 중'); return; }
   var mine=S.data.tasks.filter(function(t){ return t.owner===S.me.phone; });
-  var run=mine.filter(function(t){ return t.status==='진행중'; });
-  var wait=mine.filter(function(t){ return t.status==='대기'; });
+  /* 판과 같은 차례로 — 새로 움직인 것이 위 (2026-09-02) */
+  var run=mine.filter(function(t){ return t.status==='진행중'; }).sort(taskRecent);
+  var wait=mine.filter(function(t){ return t.status==='대기'; }).sort(taskRecent);
   var att=(S.data.attendance.rows||[]).filter(function(a){ return a.name===S.me.name; })[0];
 
   var h='<div class="sumbox" style="margin-bottom:14px">'+
