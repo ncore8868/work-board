@@ -871,19 +871,29 @@ table.mk-tb .al-c{text-align:center} table.mk-tb .al-r{text-align:right}
 .col > .colhead{display:flex;align-items:center;gap:6px;margin:0 0 10px;font-size:var(--fs-h2);font-weight:600}
 .colhead .n{color:var(--t3);font-weight:400}
 .cards{display:flex;flex-direction:column;gap:7px}
-@media (min-width:1080px){ #listRun .card{max-width:780px} }
-#listRun .card{padding:14px 16px}
+/* 한 줄이 너무 길면 눈이 다음 줄 앞을 못 찾습니다. 820px 에서 끊습니다 */
+@media (min-width:1080px){ #listRun .card{max-width:820px} }
+/* ★★ 2026-09-02 실측으로 다시 잡았습니다.
+     예전에는 한 카드 안에 글자 크기가 **다섯 종류**(12·13·14·15·16.5px)였습니다.
+     규칙은 '한 화면에 세 종류를 넘지 않는다' 인데 카드 **한 장**이 이미 다섯이었습니다.
+     지금은 제목(--fs-h1) · 본문(--fs-h2) · 보조(--fs-sm) 세 종류 +
+     숫자 축(--fs-num-sm) 하나입니다. */
+#listRun .card{padding:13px 15px}
 #listRun .card .cn{font-size:var(--fs-h1)}
-#listRun .bar{height:8px;border-radius:var(--r-sm)}
+#listRun .bar{height:7px;border-radius:var(--r-sm)}
 #listRun .bar > i{background:linear-gradient(90deg,var(--ok2),var(--ok))}
 #listRun .pct{font-size:var(--fs-num-sm);font-weight:700;font-family:var(--font-title);color:var(--t1)}
-#listRun .stats{margin-top:11px;padding-top:10px;border-top:1px solid var(--line)}
+#listRun .stats{margin-top:10px;padding-top:9px;border-top:1px solid var(--line)}
 #listRun .stats .k{font-size:var(--fs-sm);color:var(--t3)}
 #listRun .stats .num{font-size:var(--fs-h2);font-weight:600;color:var(--t1)}
-#listRun .lastline{font-size:var(--fs-h2);color:var(--t1);margin-top:11px;padding-top:9px}
+/* 마지막 기록은 '본문' 입니다 — 제목과 같은 무게로 두면 눈이 두 번 멈춥니다 */
+#listRun .lastline{font-size:var(--fs-h2);color:var(--t2);margin-top:9px}
 #listRun .lastline .dt{color:var(--t3);font-size:var(--fs-sm);margin-right:6px}
 #listRun .tag{font-size:var(--fs-sm);padding:3px 9px}
 #listRun .card .meta{font-size:var(--fs-sm)}
+/* 머리 오른쪽에 담당자가 들어왔으므로 좁은 폭에서는 줄바꿈을 허용합니다 */
+#listRun .card .ct{align-items:baseline}
+#listRun .card .meta .who{color:var(--t2);font-weight:600}
 .colhead .live{width:6px;height:6px;border-radius:99px;background:var(--ok);display:inline-block}
 
 /* ★ 여기에 transition 을 다시 적으면 안 됩니다.
@@ -900,6 +910,10 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 .card.done{opacity:.82}
 .card .ct{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
 .card .cn{font-size:var(--fs-h2);font-weight:600;margin:0}
+/* 카드 보조 줄 — 유형 · 담당 · 날짜를 한 줄에 (2026-09-02) */
+.card .cb{margin:4px 0 0;font-size:var(--fs-sm);color:var(--t3);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.card .cb .who{color:var(--t2)}
 .card .meta{font-size:var(--fs-sm);color:var(--t3);white-space:nowrap}
 .bar{flex:1;height:5px;background:var(--panel2);border-radius:3px;overflow:hidden}
 .bar > i{display:block;height:100%;background:var(--ok)}
@@ -956,8 +970,14 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 .rail .item .del:hover{background:var(--dg-bg);color:var(--dg)}
 .apv{background:var(--dg-bg);color:var(--dg);border:1px solid var(--dg-line);
   border-radius:var(--r-lg);padding:var(--pad-card);margin-bottom:var(--sp-2);cursor:pointer;font-size:var(--fs-sm)}
-.sumbox{background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);padding:var(--pad-card)}
-.sumbox p{margin:0 0 2px;font-size:var(--fs-sm)}
+/* ★★ 누적 상자는 **업무가 아닙니다** (2026-09-02).
+   흰 카드에 테두리까지 같아서 완료 목록의 여섯 번째 업무처럼 보였습니다.
+   바탕을 한 단계 파고 테두리를 없애 '같은 층이 아니다' 를 눈으로 갈라 둡니다. */
+.sumbox{background:var(--panel);border:0;border-radius:var(--r-lg);
+  padding:var(--pad-card);margin-top:var(--sp-2)}
+.sumbox p{margin:0 0 2px;font-size:var(--fs-sm);color:var(--t2)}
+.sumbox p:last-child{margin-bottom:0;color:var(--t1);font-weight:600}
+.sumbox.go:hover{background:var(--panel2)}
 
 /* ★ PC에서는 **변수 자체를 한 단계 올린다** (v45).
    예전에는 선택자마다 px 를 다시 적어서, 한 곳을 고치면 다른 곳이 어긋났다.
@@ -971,7 +991,9 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 
 /* PC */
 @media (min-width:1080px){
-  .board{grid-template-columns:minmax(0,.85fr) minmax(0,2.3fr) minmax(0,.85fr) 250px}
+  /* ★ 2026-09-02 — 진행중 카드가 짧아져 2.3fr 이 남아돌았습니다.
+     대기·완료를 넓혀 긴 업무명이 덜 잘리게 합니다. */
+  .board{grid-template-columns:minmax(0,1fr) minmax(0,2fr) minmax(0,1fr) 250px}
   .rail{border-left:1px solid var(--line);padding-left:12px}
   .wrap{padding-bottom:24px}
 }
@@ -3782,16 +3804,22 @@ function refresh(showMsg){
      칩을 하나라도 더 붙이면 그 계산이 어긋나므로, 지금은 통째로 다시 그립니다.
      칩 대여섯 개를 그리는 일이라 비용이 없습니다. */
 function renderFilters(){
-  var h='<button class="chip'+(S.corp==='ALL'?' on':'')+'" onclick="setCorp(&#39;ALL&#39;)">전체</button>';
-  (S.meta.corps||[]).forEach(function(c){
-    h+='<button class="chip'+(S.corp===c.code?' on':'')+'" onclick="setCorp(&#39;'+c.code+'&#39;)">'+
-       esc(c.name)+'</button>';
-  });
+  /* ★ 법인이 하나뿐이면 `전체 / UNION ONE` 두 칩은 **아무 일도 하지 않습니다** (2026-09-02).
+     누를 이유가 없는 단추를 늘어놓으면 진짜 누를 것(담당자·종류)이 묻힙니다. */
+  var corps = S.meta.corps || [];
+  var h = '';
+  if(corps.length > 1){
+    h += '<button class="chip'+(S.corp==='ALL'?' on':'')+'" onclick="setCorp(&#39;ALL&#39;)">전체</button>';
+    corps.forEach(function(c){
+      h+='<button class="chip'+(S.corp===c.code?' on':'')+'" onclick="setCorp(&#39;'+c.code+'&#39;)">'+
+         esc(c.name)+'</button>';
+    });
+  }
 
   /* ★ 누가 · 무엇 두 가지로 거른다 (2026-09-01).
      칩으로 늘어놓으면 직원 여섯 + 종류 일곱 = 열세 개가 되어 오히려 못 찾습니다.
      '선택지는 드롭다운 고정' 원칙 그대로 두 칸으로 둡니다. */
-  h+='<span class="fgap"></span>';
+  if(corps.length > 1) h+='<span class="fgap"></span>';
 
   h+='<label class="fsel"><span>담당자</span><select onchange="setOwner(this.value)">'+
        '<option value=""'+(S.owner?'':' selected')+'>전체</option>';
@@ -3957,13 +3985,18 @@ function renderBoard(){
 
   // 우측 패널
   renderTodo();
+  /* ★★ 0건이면 구역 자체를 그리지 않습니다 (2026-09-02).
+     `결재 대기 0` 과 `없습니다` 두 줄이 늘 떠 있었습니다.
+     '없습니다' 를 반복해 빈 공간을 만들지 않는다 — 규칙 그대로입니다. */
   var apv=d.approvals||[];
+  var apvBox = $('apvTitle') ? $('apvTitle').parentNode : null;
+  if(apvBox) apvBox.classList.toggle('hide', apv.length===0);
   $('apvTitle').textContent = (S.me.grade>=3?'결재 대기 ':'내 결재 ')+apv.length;
-  $('railApv').innerHTML = apv.length ? apv.map(function(a){
+  $('railApv').innerHTML = apv.map(function(a){
     return '<div class="apv" onclick="openDoc(\''+a.no+'\')"><b>'+esc(a.title)+'</b><br>'+
            esc([a.amount? won(a.amount)+'원':'', a.who].filter(function(x){return x;}).join(' · '))+
            '</div>';
-  }).join('') : '<p class="none">없습니다</p>';
+  }).join('');
 
   var att=d.attendance||{rows:[]};
   $('railAtt').innerHTML = att.rows.length ? att.rows.map(function(a){
@@ -4270,37 +4303,55 @@ function cardSlim(t, i){
   return '<div data-tid="'+t.id+'" class="card '+lv(t)+(t.status==='완료'?' done':'')+anim_(i)+'" onclick="openTask(\''+t.id+'\')">'+
     '<p class="cn tt">'+esc(t.title)+cmtBadge(t.id)+
       (hasNewComment(t.id)?'<span class="cdot"></span>':'')+'</p>'+
-    (f? '<p style="margin:4px 0 0;font-size:var(--fs-sm);color:var(--'+(f.lv==='danger'?'dg':'wn')+')">'+esc(f.t)+'</p>'
-      : (when.length? '<p style="margin:4px 0 0;font-size:var(--fs-sm)" class="sub">'+esc(when.join(' · '))+'</p>' : ''))+
-    '<p style="margin:3px 0 0;font-size:var(--fs-sm)" class="muted">'+
-      esc(t.typeName||'')+(t.ownerName? ' · '+ownerChip(t) : '')+'</p>'+
+    /* ★★ 보조 줄은 하나로 (2026-09-02).
+       예전에는 `08-31` 과 `시스템 · 최원찬` 이 따로 놓여 카드가 세 줄이었습니다.
+       둘 다 '이게 뭔가' 를 말하는 같은 층이라 눈이 두 번 멈췄습니다.
+       ★ 급한 표시(빨강·노랑)만 자기 줄을 갖습니다 — 뜻이 다른 층이기 때문입니다. */
+    (f? '<p style="margin:4px 0 0;font-size:var(--fs-sm);color:var(--'+(f.lv==='danger'?'dg':'wn')+')">'+esc(f.t)+'</p>' : '')+
+    '<p class="cb">'+
+      [esc(t.typeName||''), (t.ownerName? ownerChip(t) : ''),
+       (f? '' : esc(when.join(' · ')))].filter(function(x){ return x; }).join(' · ')+
+    '</p>'+
   '</div>';
 }
 
 function cardFull(t, i){
+  /* ★★ 머리 오른쪽 한 줄에 **담당자까지** 넣습니다 (2026-09-02).
+     예전에는 아래 격자에 `담당 김형석` 칸을 따로 두었는데,
+     그 격자의 나머지 셋(마감·상태·법인)이 전부 중복이라 칸 하나 때문에
+     선 하나와 40px 를 더 쓰고 있었습니다. */
   var h='<div data-tid="'+t.id+'" class="card '+lv(t)+anim_(i)+'" onclick="openTask(\''+t.id+'\')">'+
     '<div class="ct"><p class="cn tt">'+esc(t.title)+cmtBadge(t.id)+
     (hasNewComment(t.id)?'<span class="cdot"></span>':'')+'</p>'+
-    '<span class="meta">'+esc(t.typeName)+' · '+esc(t.corpName)+
+    '<span class="meta">'+(t.ownerName? ownerChip(t)+' · ':'')+
+    esc(t.typeName)+' · '+esc(t.corpName)+
     (t.site?' · '+esc(t.site):'')+'</span></div>';
 
   if(t.type==='DEMO' || t.progress>0){
     h+='<div style="display:flex;align-items:center;gap:7px;margin-top:6px">'+
        '<div class="bar"><i style="width:'+(t.progress||0)+'%"></i></div>'+
        '<span class="pct" style="white-space:nowrap">'+(t.progress||0)+'%'+
-       (t.due?'<span class="sub" style="font-weight:400"> · '+dday(t.due)+'</span>':'')+'</span></div>';
+       (t.due?'<span class="sub" style="font-weight:400"> · '+shortDate(t.due)+
+              ' '+dday(t.due)+'</span>':'')+'</span></div>';
   } else if(t.due){
     h+='<p style="margin:5px 0 0;font-size:var(--fs-sm)" class="sub">'+dday(t.due)+'</p>';
   }
 
-  // 빈 값은 칸을 아예 만들지 않는다 (v42). 예전에는 하이픈만 남았다
+  /* ★★ 격자는 **철거에만** 둡니다 (2026-09-02).
+     철거가 아닌 업무의 네 칸은 전부 카드 안 다른 곳에 이미 적혀 있었습니다.
+       · `상태 진행중`  ← '진행중' 칼럼 안에 있는데 또 씁니다
+       · `법인 UNION ONE` ← 머리 오른쪽에 이미 있습니다
+       · `마감 09-04`   ← 진행률 옆 D-2 가 이미 그 뜻입니다
+       · `담당 김형석`  ← 머리 오른쪽으로 옮겼습니다
+     칸 하나를 남기려고 구분선과 40px 를 쓰고 있었습니다. 카드가 190px 였습니다.
+
+     ★ 철거의 네 칸(오늘 투입·폐기물·계약·담당)은 **다른 데 없는 값**이라 그대로 둡니다. */
   var cells = (t.type==='DEMO')
     ? kv('오늘 투입', (t.manpower.g||t.manpower.j)? ('기공'+t.manpower.g+' 조공'+t.manpower.j) : '')+
       kv('폐기물', t.waste? t.waste+'t' : '')+
       kv('계약', t.amount? won(t.amount) : '')+
-      kvRaw('담당', ownerChip(t))
-    : kvRaw('담당', ownerChip(t))+ kv('마감', t.due? shortDate(t.due) : '')+
-      kv('상태', t.status||'대기')+ kv('법인', t.corpName);
+      kv('남는 것', settleMargin_(t.id))
+    : '';
   if(cells) h+='<div class="stats">'+cells+'</div>';
 
   if(t.lastLog){
@@ -4319,6 +4370,13 @@ function cardFull(t, i){
   return h+'</div>';
 }
 /** 값이 없으면 칸 자체를 만들지 않는다 (하이픈·'없음' 을 남기지 않는다) */
+/** 철거 카드에 '남는 것' — 단가를 안 넣었으면 칸을 만들지 않는다 */
+function settleMargin_(id){
+  var s = (S.data && S.data.settle && S.data.settle[id]) || null;
+  if(!s || !s.cost) return '';
+  return (s.margin<0? '-':'') + won(Math.abs(s.margin));
+}
+
 function kv(k,v){
   if(v===null||v===undefined||v===''||v==='-') return '';
   return '<div><p class="k">'+k+'</p><p class="num">'+esc(v)+'</p></div>';
