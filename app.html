@@ -576,6 +576,12 @@ label.fl{display:block;font-size:var(--fs-xs);color:var(--t3);margin:0 0 6px;fon
 .cdot{display:inline-block;width:7px;height:7px;border-radius:99px;
   background:var(--dg);margin-left:5px;vertical-align:middle;flex-shrink:0}
 
+/* 댓글 수 — 제목 옆 [2] (2026-09-02).
+   ★ 점(.cdot)과 뜻이 다릅니다. [2] 는 '모두 몇 개', 점은 '내가 안 본 것이 있다'.
+   ★ 제목보다 눈에 띄면 안 되므로 한 단계 작고 어둡게 둡니다. */
+.cnum{margin-left:5px;font-size:var(--fs-sm);font-weight:400;color:var(--t3);
+  vertical-align:middle;white-space:nowrap}
+
 /* 글 서식 (저장은 순수 글자, 보여줄 때만 서식) */
 /* 글자 크기는 세 단계로만 쓴다 (v42)
      제목  .tt / .sheet h3      가장 크고 밝고 굵게
@@ -1806,6 +1812,30 @@ function mkBlock(id, tag){
 function mkAlign(id, how){
   var el=$(id); if(!el) return;
   el.focus();
+
+  /* ★★ 표 안에서는 **칸이 아니라 줄(열) 전체**에 겁니다 (2026-09-02).
+     표는 저장할 때 열마다 정렬을 하나씩만 적을 수 있는 모양입니다(`|--:|`).
+     칸 하나만 오른쪽으로 밀어 봐야 저장하는 순간 사라집니다.
+     그래서 그 칸이 속한 **열 전체**를 함께 옮깁니다 — 눈에 보이는 대로 저장됩니다. */
+  var cell = mkClosest(el,'TD') || mkClosest(el,'TH');
+  if(cell){
+    var tb = cell;
+    while(tb && tb.tagName!=='TABLE') tb = tb.parentNode;
+    if(tb){
+      var 열 = [].slice.call(cell.parentNode.children).indexOf(cell);
+      var 반 = (how==='Center') ? 'al-c' : (how==='Right' ? 'al-r' : '');
+      [].slice.call(tb.rows).forEach(function(r){
+        var c = r.children[열];
+        if(!c) return;
+        c.classList.remove('al-c'); c.classList.remove('al-r');
+        if(반) c.classList.add(반);
+        if(c.style) c.style.textAlign='';       // 옛 방식으로 걸린 것도 걷어낸다
+      });
+      mkState(id);
+      return;
+    }
+  }
+
   try{ document.execCommand('styleWithCSS', false, true); }catch(e){}
   try{ document.execCommand('justify'+how, false, null); }catch(e){ quiet('정렬', e); }
   try{ document.execCommand('styleWithCSS', false, false); }catch(e){}
@@ -2286,6 +2316,27 @@ function mkValue(id){
       var t=n.tagName;
       if(t==='BR'){ s+= inCell ? '{br}' : '\n'; return; }
       if(t==='HR'){ return; }
+
+      /* ★★ 표 칸 안의 목록 (2026-09-02).
+         표는 한 줄에 한 행을 적는 모양이라 진짜 목록을 담을 수 없습니다.
+         예전에는 글머리 기호가 **통째로 사라지고 글자만** 남았습니다.
+         이제 기호를 글자로 남깁니다 — 눈에 보이는 것은 거의 같고, 왕복해도 안 사라집니다.
+         ★ 표 칸 안의 할 일은 눌러서 체크할 수 없습니다 (글자입니다).
+           칸 밖에서는 예전 그대로 진짜 목록입니다. */
+      if(inCell && (t==='UL'||t==='OL')){
+        var 체크 = t==='UL' && String(n.className||'').indexOf('mk-ck')>=0;
+        var 번호 = 1;
+        var 줄들 = [];
+        [].slice.call(n.children).forEach(function(li){
+          if(li.tagName!=='LI') return;
+          var 머리 = 체크 ? (String(li.className||'').indexOf('on')>=0 ? '☑ ' : '☐ ')
+                        : (t==='OL' ? (번호++)+'. ' : '• ');
+          줄들.push(머리 + inline(li, true).replace(/\n/g,' ').trim());
+        });
+        if(줄들.length) s += (s && !/\{br\}$/.test(s) ? '{br}' : '') + 줄들.join('{br}');
+        return;
+      }
+
       var inner=inline(n, inCell);
       /* 폭 0짜리 글자만 들어 있으면 빈 것으로 본다
          (색을 눌러 두고 아무것도 안 쓴 자리 — {c:빨강|} 같은 껍데기를 남기지 않는다) */
@@ -2340,6 +2391,26 @@ function mkValue(id){
     rows.forEach(function(r){ wide=Math.max(wide, r.children.length); });
     if(!wide) return;
 
+    /* ★★ 칸 정렬을 살려서 적는다 (2026-09-02).
+       예전에는 가르는 줄을 언제나 `---` 로만 적어서, 가운데·오른쪽 정렬이
+       **저장할 때마다 사라졌습니다.** 화면에는 잘 그려지는데(al-c·al-r)
+       한 번 고쳐 저장하면 왼쪽으로 돌아갔습니다.
+       ★ 표는 칸 하나가 아니라 **줄(열) 단위**로 정렬합니다 — 어느 줄이든
+         그 열에 정렬이 걸려 있으면 그 열 전체를 그렇게 봅니다. */
+    var align=[];
+    for(var c0=0;c0<wide;c0++){
+      var 정렬='';
+      rows.forEach(function(r){
+        var cell=r.children[c0];
+        if(!cell || 정렬) return;
+        var cn=String(cell.className||'');
+        var st=cell.style? String(cell.style.textAlign||'') : '';
+        if(cn.indexOf('al-c')>=0 || st==='center') 정렬='c';
+        else if(cn.indexOf('al-r')>=0 || st==='right') 정렬='r';
+      });
+      align.push(정렬);
+    }
+
     rows.forEach(function(r, i){
       var cells=[];
       for(var c=0;c<wide;c++){
@@ -2349,7 +2420,9 @@ function mkValue(id){
       out.push('| '+cells.join(' | ')+' |');
       if(i===0){
         var bar=[];
-        for(var k=0;k<wide;k++) bar.push('---');
+        for(var k=0;k<wide;k++){
+          bar.push(align[k]==='c' ? ':-:' : (align[k]==='r' ? '--:' : '---'));
+        }
         out.push('|'+bar.join('|')+'|');
       }
     });
@@ -2519,11 +2592,23 @@ function call(fn){
     redirect: 'follow',
     cache: 'no-store'
   })
-  .then(function(res){ return res.text(); })
+  .then(function(res){
+    LAST_STATUS = res.status;
+    return res.text();
+  })
   .then(function(text){
     var r;
     try { r = JSON.parse(text); }
-    catch(e){ throw new Error('서버 응답을 읽지 못했습니다.'); }
+    catch(e){
+      /* ★★ '서버가 JSON 이 아닌 것을 보냈다' 와 '통신이 안 됐다' 는 완전히 다른 일입니다
+         (2026-09-02). 예전에는 둘 다 `통신이 불안정합니다` 로 뭉뚱그려져서,
+         공지 삭제가 안 될 때 무엇이 문제인지 알 길이 없었습니다.
+         받은 것을 그대로 남겨 둡니다 — 로그인 화면이 왔는지, 오류 쪽지가 왔는지 보입니다. */
+      LAST_FAIL = { fn:fn, why:'응답이 JSON 이 아님', status:LAST_STATUS,
+                    앞부분:String(text||'').substring(0,200), at:new Date().toLocaleTimeString() };
+      console.log('[통신] '+fn+' 응답이 JSON 이 아닙니다 ('+LAST_STATUS+')', String(text||'').substring(0,300));
+      throw new Error('서버 응답을 읽지 못했습니다.');
+    }
 
     var ms = Date.now()-t0;
     var server = (r && r.ms) ? r.ms : (r && r.board && r.board.ms ? r.board.ms : null);
@@ -2555,12 +2640,25 @@ function call(fn){
        net: true 는 '서버가 거절한 것이 아니라 연결이 안 됐다' 는 표시입니다. */
     console.log('[속도] '+fn+' 실패 '+((Date.now()-t0)/1000).toFixed(2)+'초', e);
     var offline = (typeof navigator!=='undefined' && navigator.onLine===false);
-    toast(offline ? '인터넷이 끊겼습니다. 연결되면 다시 시도해주세요.'
-                  : '통신이 잠시 불안정합니다. 다시 시도해주세요.');
-    return { ok:false, net:true,
-             msg: offline ? '인터넷이 끊겼습니다.' : '통신이 불안정합니다. 다시 시도해주세요.' };
+    var 읽기실패 = LAST_FAIL && LAST_FAIL.fn===fn && LAST_FAIL.why==='응답이 JSON 이 아님';
+
+    if(!읽기실패){
+      LAST_FAIL = { fn:fn, why:'서버에 닿지 못함', status:LAST_STATUS,
+                    앞부분:String((e&&e.message)||e), at:new Date().toLocaleTimeString() };
+    }
+
+    var 글 = offline ? '인터넷이 끊겼습니다. 연결되면 다시 시도해주세요.'
+           : (읽기실패 ? '서버가 이상한 답을 보냈습니다. 설정(⚙)에서 [마지막 오류] 를 봐주세요.'
+                       : '통신이 잠시 불안정합니다. 다시 시도해주세요.');
+    toast(글);
+    return { ok:false, net:true, msg: 글 };
   });
 }
+
+/* ★ 마지막으로 실패한 통신을 남겨 둔다 (2026-09-02).
+   "안 돼요" 만으로는 원인을 알 수 없습니다. 설정(⚙) 맨 아래에서 볼 수 있습니다. */
+var LAST_FAIL = null;
+var LAST_STATUS = 0;
 
 /**
  * 서버가 보내준 구간별 시간을 콘솔에 표로 찍는다 (v37m).
@@ -2658,11 +2756,25 @@ function paintPerf(){
              srv: x.srvN? (x.srv/x.srvN/1000) : null };
   }).sort(function(a,b){ return b.avg-a.avg; });
 
+  /* ★ 마지막으로 실패한 통신을 맨 위에 (2026-09-02).
+     "안 돼요" 만으로는 원인을 알 수 없어서, 무엇이 어떻게 실패했는지 여기에 남깁니다. */
+  var 실패글='';
+  if(LAST_FAIL){
+    실패글='<div style="border:1px solid var(--dg-line);background:var(--dg-bg);'+
+      'border-radius:var(--r-sm);padding:8px 10px;margin-bottom:10px">'+
+      '<p style="margin:0 0 3px;font-size:var(--fs-sm);font-weight:600" class="dgv">마지막 오류</p>'+
+      '<p style="margin:0;font-size:var(--fs-sm)" class="sub">'+
+        esc(LAST_FAIL.at)+' · '+esc(LAST_FAIL.fn.replace('api_',''))+' · '+esc(LAST_FAIL.why)+
+        (LAST_FAIL.status? ' (HTTP '+esc(LAST_FAIL.status)+')' : '')+'</p>'+
+      '<p style="margin:3px 0 0;font-size:var(--fs-xs);word-break:break-all" class="muted">'+
+        esc(String(LAST_FAIL.앞부분||'').substring(0,200))+'</p></div>';
+  }
+
   if(!rows.length){
-    box.innerHTML='<p class="sub">아직 잰 것이 없습니다. 앱을 좀 쓰고 다시 보세요.</p>';
+    box.innerHTML=실패글+'<p class="sub">아직 잰 것이 없습니다. 앱을 좀 쓰고 다시 보세요.</p>';
     return;
   }
-  var h=serverBreakdown();
+  var h=실패글+serverBreakdown();
   rows.forEach(function(r){
     var slow = r.avg>2 ? 'var(--dg)' : (r.avg>1.2 ? 'var(--wn)' : '');
     h+='<p style="display:flex;justify-content:space-between;gap:10px">'+
@@ -3708,7 +3820,8 @@ function cardSlim(t, i){
     if(t.due) when.push('마감 '+shortDate(t.due));
   }
   return '<div data-tid="'+t.id+'" class="card '+lv(t)+(t.status==='완료'?' done':'')+anim_(i)+'" onclick="openTask(\''+t.id+'\')">'+
-    '<p class="cn tt">'+esc(t.title)+(hasNewComment(t.id)?'<span class="cdot"></span>':'')+'</p>'+
+    '<p class="cn tt">'+esc(t.title)+cmtBadge(t.id)+
+      (hasNewComment(t.id)?'<span class="cdot"></span>':'')+'</p>'+
     (f? '<p style="margin:4px 0 0;font-size:var(--fs-sm);color:var(--'+(f.lv==='danger'?'dg':'wn')+')">'+esc(f.t)+'</p>'
       : (when.length? '<p style="margin:4px 0 0;font-size:var(--fs-sm)" class="sub">'+esc(when.join(' · '))+'</p>' : ''))+
     '<p style="margin:3px 0 0;font-size:var(--fs-sm)" class="muted">'+
@@ -3718,7 +3831,7 @@ function cardSlim(t, i){
 
 function cardFull(t, i){
   var h='<div data-tid="'+t.id+'" class="card '+lv(t)+anim_(i)+'" onclick="openTask(\''+t.id+'\')">'+
-    '<div class="ct"><p class="cn tt">'+esc(t.title)+
+    '<div class="ct"><p class="cn tt">'+esc(t.title)+cmtBadge(t.id)+
     (hasNewComment(t.id)?'<span class="cdot"></span>':'')+'</p>'+
     '<span class="meta">'+esc(t.typeName)+' · '+esc(t.corpName)+
     (t.site?' · '+esc(t.site):'')+'</span></div>';
@@ -3890,6 +4003,21 @@ function paintReaders(id){
  *   점이 되살아나고 다른 기기에서는 결과가 달랐다.
  *   지금은 '읽음' 시트에 사람별·업무별 마지막으로 본 시각이 남는다.
  */
+/**
+ * 업무 카드 제목 옆 댓글 수 — [2] (2026-09-02 대표님 지시).
+ *
+ * ★ 0건이면 아무것도 그리지 않습니다. '[0]' 은 빈 값을 적는 것과 같습니다.
+ * ★ 옆의 빨간 점(.cdot)과 뜻이 다릅니다 —
+ *     [2]   달린 댓글이 모두 몇 개인가
+ *     빨간 점  내가 아직 안 본 것이 있는가
+ *   그래서 둘은 같이 뜰 수 있습니다.
+ */
+function cmtBadge(id){
+  var n=(S.data && S.data.commentCount && S.data.commentCount[id]) || 0;
+  if(!n) return '';
+  return '<span class="cnum">['+n+']</span>';
+}
+
 function hasNewComment(id){
   var d=S.data||{};
   return !!(d.cmtDot && d.cmtDot[id]);
