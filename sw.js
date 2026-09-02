@@ -29,7 +29,7 @@
  *   달라진 것은 안 바뀐 날에 225KB 를 다시 안 받는다는 것뿐입니다.
  * ────────────────────────────────────────────────────────────
  */
-const CACHE = 'unionone-launcher-v38';
+const CACHE = 'unionone-launcher-v39';
 
 /* 캐시가 있을 때 네트워크를 기다려주는 시간 */
 const NET_WAIT_MS = 2500;
@@ -43,7 +43,8 @@ const SHELL = [
   './icon-512.png',
   './icon-maskable-192.png',
   './icon-maskable-512.png',
-  './apple-touch-icon.png'
+  './apple-touch-icon.png',
+  './badge-96.png'          /* 상태표시줄 알림 아이콘 — 앱이 꺼져 있어도 그려야 하므로 담아 둔다 */
 ];
 
 self.addEventListener('install', (e) => {
@@ -155,10 +156,19 @@ self.addEventListener('push', (e) => {
   const body = n.body || n.message || '';
   const link = (d.fcmOptions && d.fcmOptions.link) || n.click_action || './';
 
+  /* ★★ badge 는 icon 과 쓰임이 다릅니다 (2026-09-02).
+       icon   펼친 알림의 큰 그림  — 색깔 그대로 나온다
+       badge  상태표시줄의 작은 그림 — **모양(투명도)만 쓰고 색은 버린다**
+
+     예전에는 badge 에 icon-96.png 를 주고 있었는데 그 그림은
+     **투명한 곳이 하나도 없는 꽉 찬 사각형**이라, 안드로이드가 전체를 하얗게 칠해
+     상태표시줄에 **하얀 네모**만 떴습니다.
+     badge-96.png 는 바탕이 완전히 투명하고 로고 모양만 남긴 그림입니다
+     (_점검/뱃지만들기.js 가 만듭니다). */
   e.waitUntil(self.registration.showNotification(title, {
     body: body,
     icon: './icon-192.png',
-    badge: './icon-96.png',
+    badge: './badge-96.png',
     tag: 'unionone',          /* 같은 표를 달아 알림이 쌓이지 않게 */
     renotify: true,
     data: { url: link }
