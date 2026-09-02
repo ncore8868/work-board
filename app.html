@@ -842,7 +842,14 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 
 .rail{display:flex;flex-direction:column;gap:14px}
 .rail h4{margin:0 0 7px;font-size:var(--fs-body);font-weight:600;color:var(--t1)}
-.rail .row{display:flex;justify-content:space-between;font-size:var(--fs-body);padding:3px 0}
+.rail .row{display:flex;justify-content:space-between;gap:8px;font-size:var(--fs-body);padding:3px 0}
+/* 이름 + (현장) — 현장은 이름 아래 한 단계 작고 어둡게.
+   ★ min-width:0 이 없으면 긴 현장 이름이 오른쪽 시각을 밀어냅니다. */
+.rail .row .m{display:flex;flex-direction:column;min-width:0;line-height:1.35}
+.rail .row .m > b{font-weight:400}
+.rail .row .m > em{font-style:normal;font-size:var(--fs-sm);color:var(--t3);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rail .row > span:last-child{flex:0 0 auto;white-space:nowrap}
 /* ── 최근 기록: 한 건 = 카드 하나 (v44) ── */
 .rail .item{position:relative;background:var(--card);border:1px solid var(--line);
   border-radius:var(--r-lg);padding:var(--pad-card);margin-bottom:var(--sp-2);line-height:1.5;
@@ -3253,10 +3260,17 @@ function renderBoard(){
   var att=d.attendance||{rows:[]};
   $('railAtt').innerHTML = att.rows.length ? att.rows.map(function(a){
     var on=(a.state==='출근'||a.state==='퇴근');
-    // 아직 안 온 사람만 노랑(곧 문제), 나머지는 무채색
-    return '<div class="row"><span'+(on?'':' class="muted"')+'>'+esc(a.name)+'</span>'+
-      '<span '+(on?'class="muted"':'class="wnv"')+'>'+
-      (on? esc(a.time) : (att.linked?'미출근':''))+'</span></div>';
+    /* 아직 안 온 사람만 노랑(곧 문제), 나머지는 무채색.
+       ★ 현장에 나간 사람은 이름 아래 어디로 갔는지 한 줄 (2026-09-02).
+         사무실은 안 적습니다 — 대부분이 사무실이라 다 적으면 오히려 안 보입니다.
+         빈 값일 때는 줄 자체를 만들지 않습니다. */
+    return '<div class="row"><span class="m'+(on?'':' muted')+'">'+
+             '<b>'+esc(a.name)+'</b>'+
+             (a.site? '<em>'+esc(a.site)+'</em>' : '')+
+           '</span>'+
+           '<span '+(on?'class="muted"':'class="wnv"')+'>'+
+             (on? esc(a.time) : (att.linked?'미출근':''))+
+           '</span></div>';
   }).join('') + (att.linked?'':'<p class="none">출퇴근앱 미연결</p>')
    : '<p class="none">아직 없습니다</p>';
 
@@ -4679,14 +4693,28 @@ function siteOptions(sel){
   return h;
 }
 
-/** 현장을 고르면 업무명이 비어 있을 때만 고객명을 채워준다 */
+/** 현장을 고르면 비어 있는 칸만 채워준다 (업무명 · 계약금액).
+ *
+ *  ★ 계약금액은 견적대장에 이미 있는 숫자입니다 (2026-09-02).
+ *    지금까지는 견적서를 열어 보고 워크보드에 손으로 다시 쳤습니다.
+ *
+ *  ★ **이미 적어 둔 값은 절대 덮지 않습니다.** 사람이 고쳐 둔 금액을
+ *    현장을 다시 고르는 순간 되돌려 버리면 그것이 더 나쁩니다.
+ */
 function fillFromSite(){
   var el=$('tfSite'); if(!el) return;
   var v=el.value;
   var hit=null;
   ((S.meta&&S.meta.sites)||[]).forEach(function(x){ if(x.code===v) hit=x; });
   if(!hit) return;
+
   if(hit.name && $('tfTitle') && !$('tfTitle').value) $('tfTitle').value=hit.name;
+
+  var amt=$('tfAmount');
+  if(hit.amt && amt && !String(amt.value||'').trim()){
+    amt.value=hit.amt;
+    toast(hit.name+' 견적 금액을 채웠습니다 · '+Number(hit.amt).toLocaleString()+'원');
+  }
 }
 
 function pickType(el){ pickOne(el); syncDemo(); }
