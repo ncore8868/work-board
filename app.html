@@ -2796,6 +2796,16 @@ function boot(){
   });
 }
 
+/* 지금 돌고 있는 화면의 판 번호.
+   런처(index.html)가 app.html 을 부를 때 `?v=v36` 을 붙여 줍니다.
+   따로 관리할 번호를 늘리지 않으려고 그것을 그대로 읽습니다. */
+function screenVer(){
+  try{
+    var m=/[?&]v=([^&]+)/.exec(location.search||'');
+    return m ? decodeURIComponent(m[1]) : '(모름)';
+  }catch(e){ return '(모름)'; }
+}
+
 /* 게시글·댓글을 조용히 미리 받아 둔다 (2026-09-02).
  *
  * ★ 왜 —
@@ -2807,13 +2817,23 @@ function boot(){
  *   그래서 평소에는 왕복이 하나도 늘지 않습니다.
  * ★ 실패해도 아무 말 하지 않습니다 — 그때 열면 예전처럼 그 자리에서 받아옵니다.
  */
+var POSTS_LOADING = null;
+
 function prefetchPosts(){
-  if(!S.token || !S.me) return;
-  if(S.postCache && S.postCacheAt === areaVer('post')) return;
+  if(!S.token || !S.me) return Promise.resolve();
+  if(S.postCache && S.postCacheAt === areaVer('post')) return Promise.resolve();
+
+  /* ★ 이미 받아오는 중이면 그것을 같이 기다린다.
+     예전에는 미리받기와 '공지 열기' 가 따로 불러서 같은 것을 두 번 받았습니다. */
+  if(POSTS_LOADING) return POSTS_LOADING;
+
   var at=areaVer('post');
-  call('api_posts', S.token).then(function(r){
+  POSTS_LOADING = call('api_posts', S.token).then(function(r){
     if(r && r.ok){ S.postCache=r; S.postCacheAt=at; }
-  });
+    POSTS_LOADING=null;
+  }, function(){ POSTS_LOADING=null; });
+
+  return POSTS_LOADING;
 }
 
 /* 상단바의 로고를 그대로 복제해 로그인 화면 머리를 만든다.
@@ -3110,8 +3130,9 @@ function applyBoard(b){
   /* ★ 공지·댓글이 바뀌었으면 뒤에서 미리 받아 둔다 (2026-09-02).
      prefetchPosts 안에서 '바뀐 게 없으면 서버에 안 간다' 를 이미 봅니다.
      그래서 평소에는 왕복이 하나도 늘지 않고, 누가 댓글을 달았을 때만 한 번 받아옵니다.
-     덕분에 공지를 열면 댓글이 기다림 없이 같이 뜹니다. */
-  setTimeout(prefetchPosts, 300);
+     덕분에 공지를 열면 댓글이 기다림 없이 같이 뜹니다.
+     ★ 미루지 않고 바로 시작합니다 — 사람이 공지를 누르기 전에 끝나 있어야 합니다. */
+  prefetchPosts();
 
   return true;
 }
@@ -5772,21 +5793,51 @@ function renderHealth(){
   bar.classList.remove('hide');
 }
 
+/**
+ * 시스템 점검 창.
+ *
+ * ★★ [다시 확인] 이 꼭 있어야 합니다 (2026-09-02).
+ *   서버는 하루 한 번만 살펴봅니다. 그래서 **문제를 고쳐도 다음 날까지
+ *   같은 경고가 그대로 떠 있었습니다.** 고친 사람은 안 고쳐진 줄 압니다.
+ *   이 단추는 그 자리에서 다시 살펴보고 결과를 갈아끼웁니다.
+ */
 function openHealth(){
   var h=(S.data && S.data.health) || null;
   var list=(h && h.list) || [];
   var x='<div class="veil"><div class="sheet">'+
     '<div class="sheethead"><h3 class="tt">시스템 점검</h3>'+
-    '<button class="btn sm" onclick="closeModal()">닫기</button></div>';
+    '<div style="display:flex;gap:6px">'+
+      '<button class="btn sm" id="hlRe" onclick="recheckHealth()">다시 확인</button>'+
+      '<button class="btn sm" onclick="closeModal()">닫기</button></div></div>'+
+    '<div id="hlBody">'+healthListHtml(h)+'</div></div></div>';
+  $('modal').innerHTML=x;
+}
+
+function healthListHtml(h){
+  var list=(h && h.list) || [];
+  var x='';
   if(!list.length) x+=empty('이상 없습니다');
   list.forEach(function(o){
     x+='<div class="lrow plain"><div class="m">'+
        '<p class="t'+(o.lv==='red'?' dgv':'')+'">'+esc(o.t)+'</p>'+
        (o.how? '<p class="b">'+esc(o.how)+'</p>':'')+'</div></div>';
   });
-  if(h && h.at) x+='<p class="byline" style="margin-top:10px">'+esc(shortDate(h.at))+' 에 살펴본 결과입니다</p>';
-  x+='</div></div>';
-  $('modal').innerHTML=x;
+  if(h && h.at) x+='<p class="byline" style="margin-top:10px">'+esc(h.at)+' 에 살펴본 결과입니다</p>';
+  return x;
+}
+
+function recheckHealth(){
+  var btn=$('hlRe'); if(btn && btn.disabled) return;
+  if(btn){ btn.disabled=true; btn.textContent='살펴보는 중...'; }
+
+  call('api_health', S.token).then(function(r){
+    if(btn){ btn.disabled=false; btn.textContent='다시 확인'; }
+    if(!r || !r.ok){ toast((r&&r.msg)||'다시 확인하지 못했습니다'); return; }
+    if(S.data) S.data.health=r.health;
+    if($('hlBody')) $('hlBody').innerHTML=healthListHtml(r.health);
+    renderHealth();
+    saveSnap();
+  });
 }
 
 function renderNotices(){
@@ -5809,12 +5860,9 @@ function renderNotices(){
 /** 게시판 열기 — 캐시가 있으면 즉시, 바뀐 게 있을 때만 뒤에서 다시 받는다 */
 function openBoard(){
   drawBoardModal();
-  if(S.postCache && S.postCacheAt === areaVer('post')) return;   // 게시글 쪽이 안 바뀌었으면 서버에 안 간다
-  var at=areaVer('post');
-  call('api_posts', S.token).then(function(r){
-    if(!r.ok) return;
-    S.postCache=r; S.postCacheAt=at;
-    if($('pbList')) $('pbList').innerHTML=postListHtml(r);
+  /* 미리받기와 같은 길을 씁니다 — 이미 받아왔거나 받아오는 중이면 서버에 안 갑니다 */
+  prefetchPosts().then(function(){
+    if(S.postCache && $('pbList')) $('pbList').innerHTML=postListHtml(S.postCache);
   });
 }
 
@@ -5872,23 +5920,19 @@ function openPost(no){
   var stub=noticeStub();
   var inStub=(stub.posts||[]).some(function(x){ return x.no===no; });
   if(inStub){
-    drawPost(no, stub);                       // 왕복 0회
-    if(S.postCache && S.postCacheAt===areaVer('post')) return;
-    var at2=areaVer('post');
-    call('api_posts', S.token).then(function(r){   // 댓글은 뒤에서 채운다
-      if(!r.ok) return;
-      S.postCache=r; S.postCacheAt=at2;
-      if($('pcBody')) drawPost(no);
+    /* 글은 즉시 (본문까지 board 에 실려 왔다). 댓글만 뒤에서 채운다.
+       ★ 이미 받아오는 중이면 그것을 같이 기다립니다 — 두 번 부르지 않습니다. */
+    drawPost(no, stub);
+    prefetchPosts().then(function(){
+      if(S.postCache && $('pcBody')) drawPost(no);
     });
     return;
   }
 
   $('modal').innerHTML='<div class="veil"><div class="sheet">'+
     '<p class="muted" style="font-size:var(--fs-sm);margin:0">불러오는 중...</p></div></div>';
-  var at3=areaVer('post');
-  call('api_posts', S.token).then(function(r){
-    if(!r.ok){ toast(r.msg||'글을 열 수 없습니다'); closeOk(); return; }
-    S.postCache=r; S.postCacheAt=at3;
+  prefetchPosts().then(function(){
+    if(!S.postCache){ toast('글을 열 수 없습니다'); closeOk(); return; }
     drawPost(no);
   });
 }
@@ -7049,8 +7093,12 @@ function renderMe(){
     '<p><b>'+esc(S.me.name)+'</b> '+esc(S.me.rank)+(S.me.dept?' · '+esc(S.me.dept):'')+'</p>'+
     '<p class="sub">오늘 '+(att&&att.state==='출근'? ('출근 '+att.time) : '출근 기록 없음')+'</p>'+
     '<p class="sub">진행중 '+run.length+'건 · 대기 '+wait.length+'건</p>'+
-    '<p class="muted" style="font-size:var(--fs-sm);margin:4px 0 0">서버 코드 '+
-      ((S.meta && S.meta.code) ? esc(S.meta.code) : '(옛 버전 — 배포 안 됨)')+'</p></div>'+
+    /* ★ 화면 판 번호도 같이 보여줍니다 (2026-09-02).
+       예전에는 서버 코드만 보여서, **화면이 옛것인지 새것인지 알 방법이 없었습니다.**
+       "고쳤는데 그대로예요" 의 원인이 대개 이것입니다 (폰에 옛 화면이 남아 있는 것).
+       런처가 붙여 준 ?v= 를 그대로 읽으므로 따로 관리할 번호가 늘지 않습니다. */
+    '<p class="muted" style="font-size:var(--fs-sm);margin:4px 0 0">화면 '+esc(screenVer())+
+      ' · 서버 코드 '+((S.meta && S.meta.code) ? esc(S.meta.code) : '(옛 버전 — 배포 안 됨)')+'</p></div>'+
     '<div class="actions" style="margin-bottom:16px">'+
       '<button class="btn" onclick="openLogForm()">기록 남기기</button>'+
       '<button class="btn pri" onclick="openTaskForm()">＋ 새 업무</button></div>';
