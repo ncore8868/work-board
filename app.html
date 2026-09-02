@@ -1767,6 +1767,14 @@ function mkCmd(id, cmd){
   try{ document.execCommand('styleWithCSS', false, false); }catch(e){}
   /* 실패하면 글자가 안 굵어지는 것뿐이라 사람이 바로 눈으로 안다. 알릴 것 없음 */
   try{ document.execCommand(cmd, false, null); }catch(e){}
+
+  /* ★ [글머리 목록] 이 '할 일 목록 끄기' 를 겸합니다 (2026-09-02).
+     mkCheck 가 켜기만 하도록 바뀌었으니, 끄는 길이 여기 하나 있어야 합니다. */
+  if(cmd==='insertUnorderedList'){
+    var ul=mkClosest(el, 'UL');
+    if(ul) ul.classList.remove('mk-ck');
+  }
+
   mkState(id);
 }
 
@@ -1965,6 +1973,21 @@ function mkClearAll(id){
 /* ---------- 할 일 목록 ---------- */
 
 /** 지금 줄을 할 일 목록으로 (다시 누르면 보통 목록으로) */
+/**
+ * ☑ 할 일 목록.
+ *
+ * ★★ **켜기만 합니다. 껐다 켰다 하지 않습니다** (2026-09-02).
+ *
+ *   예전에는 `classList.toggle` 이었습니다. 그래서
+ *     ① 첫 줄에 걸어 할 일 목록을 만들고
+ *     ② 둘째 줄에 커서를 두고 한 번 더 누르면
+ *   **목록 전체가 그냥 글머리 목록으로 풀려 버렸습니다.**
+ *   사람은 '이 줄도 할 일로 만들자' 는 뜻으로 누른 것인데 정반대가 됐습니다.
+ *   (2026-09-02 조소희 님이 '다음 줄에도 쓰면 목록서식으로 자동 변경됨' 으로 알려주셨습니다)
+ *
+ *   ★ 끄는 길은 **[글머리 목록]** 단추입니다 (mkCmd 가 mk-ck 를 걷어냅니다).
+ *     한 단추가 켜고 끄기를 겸하면, 무엇이 켜져 있는지 모르는 채로 누르게 됩니다.
+ */
 function mkCheck(id){
   var el=$(id); if(!el) return;
   el.focus();
@@ -1974,7 +1997,7 @@ function mkCheck(id){
     try{ document.execCommand('insertUnorderedList', false, null); }catch(e){ quiet('할일 목록', e); }
     ul=mkClosest(el, 'UL');
   }
-  if(ul) ul.classList.toggle('mk-ck');
+  if(ul) ul.classList.add('mk-ck');
   mkState(id);
 }
 
