@@ -9614,7 +9614,7 @@ function openSearch(q){
     '<div class="veil"><div class="sheet">'+
       '<div class="sheethead"><h3 class="tt">검색</h3>'+
       '<button class="btn sm" onclick="closeOk()">닫기</button></div>'+
-      '<input class="in srin" id="sqBox" autocomplete="off" '+
+      '<input type="text" class="in srin" id="sqBox" autocomplete="off" '+
         'oninput="searchRun(this.value)" onkeydown="searchKey(event)" '+
         'value="'+esc(SEARCH_Q)+'">'+
       '<div id="srOut"></div>'+
@@ -10078,14 +10078,18 @@ function noteForm(id){
     '<div class="veil"><div class="sheet">'+
       '<div class="sheethead"><h3 class="tt">'+(r ? '글 수정' : '새 글')+'</h3>'+
         '<button class="btn sm" onclick="closeModal()">닫기</button></div>'+
-      '<div class="field"><label class="fl">제목</label>'+
-        '<input class="in" id="ntTitle" value="'+esc(r ? r.title : '')+'"></div>'+
+      /* ★★ `type="text"` 를 빠뜨리면 **칸이 좁게 나옵니다** (2026-09-03).
+       앱의 입력칸 규칙이 `input[type=text]` 로 걸려 있어서, type 을 안 적으면
+       그 규칙이 하나도 안 붙습니다. 오류는 안 나고 모양만 어긋납니다. */
+    '<div class="field"><label class="fl">제목</label>'+
+        '<input type="text" id="ntTitle" value="'+esc(r ? r.title : '')+'"></div>'+
       '<div class="field"><label class="fl">내용</label>'+
         mkEditor('ntBody', r ? r.body : '', 160)+'</div>'+
       '<div class="field"><label class="fl">자료</label>'+
         '<div id="ntFiles">'+noteKeepHtml(붙은것)+'</div>'+
         '<input type="file" id="ntPick" multiple style="margin-top:6px" '+
-          'onchange="notePicked(this)"></div>'+
+          'onchange="notePicked(this)">'+
+        '<div id="ntPickBox"></div></div>'+
       '<div style="display:flex;gap:6px;justify-content:flex-end;margin-top:var(--sp-4)">'+
         '<button class="btn sm" onclick="closeModal()">취소</button>'+
         '<button class="btn pri" id="ntSave" onclick="noteSave(\''+(id||'')+'\')">저장</button></div>'+
@@ -10109,8 +10113,9 @@ function noteDropKeep(fid, el){
 }
 
 function notePicked(input){
+  var box = $('ntPickBox');
   var fs = Array.prototype.slice.call(input.files||[]);
-  if(!fs.length) return;
+  if(!fs.length){ NOTE.pick = []; if(box) box.innerHTML=''; return; }
   if(fs.length > 5){ toast('파일은 한 번에 5개까지입니다'); input.value=''; return; }
   var 너무큰것 = fs.filter(function(f){ return f.size > 8*1024*1024; });
   if(너무큰것.length){
@@ -10119,6 +10124,14 @@ function notePicked(input){
     return;
   }
   NOTE.pick = fs;
+  /* ★ 무엇이 붙는지 눈에 보여야 합니다. 파일 고르는 칸은 브라우저가 그리는 것이라
+     여러 개를 고르면 `3개 파일` 같은 말만 나오고 무엇인지 알 수 없습니다. */
+  if(box){
+    box.innerHTML = fs.map(function(f){
+      return '<span class="tag gy" style="margin:6px 6px 0 0;display:inline-block">'+
+             esc(f.name)+' <span class="muted">'+esc(noteSize(f.size))+'</span></span>';
+    }).join('');
+  }
 }
 
 function noteRead(file){
