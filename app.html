@@ -3886,6 +3886,14 @@ function applyTaskLocal(p){
   // 창에서 넘어온 것만 바꾼다 (안 받는 칸은 예전 값을 그대로 둔다)
   if(p.site!==undefined) obj.site=p.site;
   if(p.amount!==undefined) obj.amount=Number(p.amount||0);
+  /* 진행률·상태도 즉시 반영합니다 (2026-09-03).
+     안 그러면 100% 로 저장하고 창을 닫아도 카드가 30초 동안 `진행중` 으로 남아,
+     저장이 안 된 줄 알고 한 번 더 누르게 됩니다. */
+  if(p.progress!==undefined && p.progress!==null && p.progress!==''){
+    obj.progress=Number(p.progress);
+    if(p.status) obj.status=p.status;
+    obj.done=(obj.status==='완료') ? (obj.done||todayStr()) : '';
+  }
   if(!found) S.data.tasks.push(obj);
   renderBoard();
   if(S.view==='me') renderMe();
@@ -5852,6 +5860,15 @@ function drawTaskForm(id, t){
       '</div>'+
     '<div class="field"><label class="fl">마감일</label>'+
       '<input type="date" id="tfDue" value="'+esc(t?t.due:'')+'"></div>'+
+    /* 진행률 — 등록할 때 바로 정합니다 (2026-09-03).
+       ★★ **상태를 고르는 칸은 따로 두지 않습니다.** 상태는 진행률이 정합니다
+         (0% 대기 · 5~95% 진행중 · 100% 완료). 둘을 따로 고르게 하면
+         `완료인데 40%` 같은 앞뒤가 안 맞는 줄이 생기고, 그것을 나중에
+         누가 옳다고 볼지 정할 수가 없습니다.
+       ★ 평소에는 작업기록이 옮깁니다. 여기서 정하는 것은 **이미 진행 중인 일을
+         뒤늦게 올릴 때**와 상태를 바로잡을 때입니다. */
+    '<div class="field"><label class="fl">진행률</label>'+
+      progBox('tf', (t&&t.progress)?t.progress:0)+'</div>'+
     /* 같이 보는 사람 (협업자) — v55에서 화면을 만들었습니다.
        열은 예전부터 있었고 서버도 댓글 알림을 여기로 보내는데, **고를 화면이 없어서**
        언제나 비어 있었습니다 (수정할 때 값만 그대로 들고 다니는 숨은 칸이었습니다). */
@@ -5870,6 +5887,7 @@ function drawTaskForm(id, t){
     '<p class="muted" id="tfMsg" style="margin-top:8px"></p></div></div>';
   $('modal').innerHTML=h;
   syncDemo();
+  syncProg('tf');          /* 눈금과 상태 딱지를 지금 값에 맞춰 그린다 */
 }
 /**
  * 직급 순서 — 위에서 아래로 높은 사람부터 (v50).
@@ -6029,6 +6047,14 @@ function saveTask(){
     p.site=$('tfSite').value;
     p.amount=$('tfAmount').value;
   }
+  /* ★★ 진행률과 상태를 같이 보냅니다 (2026-09-03).
+     상태는 **진행률이 정합니다** — 서버의 작업기록 저장(api_saveLog)과 같은 규칙입니다.
+     완료일은 서버가 붙입니다 (taskFields_). 화면에서 날짜를 만들어 보내지 않습니다. */
+  var pg=$('tfProg') ? Number($('tfProg').value) : null;
+  if(pg!==null && !isNaN(pg)){
+    p.progress=pg;
+    p.status = (pg>=100) ? '완료' : (pg>0 ? '진행중' : '대기');
+  }
   /* ★ 유형을 미리 골라 두지 않으므로, 안 고르면 여기서 막는다 (2026-09-01).
      예전에는 '철거' 가 미리 켜져 있어서, 다른 유형인데 그대로 저장되는 일이 있었습니다. */
   if(!type){ $('tfMsg').textContent='업무 유형을 골라주세요.'; return; }
@@ -6098,23 +6124,7 @@ function openLogForm(taskId){
         '<div class="field"><label class="fl">장비 사용일수</label><input type="number" id="lgEqd" step="0.5"></div>'+
       '</div>'+
     '</div>'+
-    '<div class="field"><label class="fl">진행률</label>'+
-      '<div class="prog">'+
-        '<div class="top"><span class="val num" id="lgPv">0%</span>'+
-        '<span class="st" id="lgPs">대기 유지</span></div>'+
-        '<input type="range" id="lgProg" min="0" max="100" step="5" value="0" '+
-          'oninput="syncProg()" onchange="syncProg()">'+
-        '<div class="ticks"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>'+
-        '<div class="quick">'+
-          '<button type="button" onclick="setProg(0)">착수 전</button>'+
-          '<button type="button" onclick="setProg(30)">30%</button>'+
-          '<button type="button" onclick="setProg(50)">절반</button>'+
-          '<button type="button" onclick="setProg(80)">마무리 중</button>'+
-          '<button type="button" onclick="setProg(100)">완료</button>'+
-        '</div>'+
-      '</div>'+
-      
-    '</div>'+
+    '<div class="field"><label class="fl">진행률</label>'+progBox('lg', 0)+'</div>'+
     '<div class="field"><label class="fl req">작업내용</label>'+
       mkEditor('lgText', '', 92)+'</div>'+
     '<div class="field"><div class="chks"><label id="lgExtra" onclick="this.classList.toggle(\'on\')">추가견적 필요</label></div></div>'+
@@ -6140,7 +6150,7 @@ function syncLogForm(){
   $('lgDemo').classList.toggle('hide', opt.dataset.type!=='DEMO');
   var cur=Number(opt.dataset.prog||0);
   var sl=$('lgProg');
-  if(sl){ sl.value=cur; syncProg(); }
+  if(sl){ sl.value=cur; syncProg('lg'); }
   fillFromAttendance(sel.value);
 }
 
@@ -6193,16 +6203,50 @@ function attCountFor(taskId){
   return n;
 }
 
-function setProg(v){ var sl=$('lgProg'); if(!sl) return; sl.value=v; syncProg(); }
+/* ★★ 진행률 상자 — **업무 등록 창과 작업기록 창이 같은 것**을 씁니다 (2026-09-03).
+ *
+ *  `pre` 는 칸 이름 앞에 붙는 글자입니다 —  'lg' 작업기록 · 'tf' 업무 등록.
+ *  예전에는 작업기록 창에만 있었고 화면 글자가 그 자리에 통째로 박혀 있었습니다.
+ *  두 벌로 베껴 두면 눈금 하나를 고칠 때 반드시 한쪽을 잊습니다.
+ *
+ *  ★ 0% 일 때의 말은 자리에 따라 다릅니다.
+ *    작업기록에서는 `대기 유지`(이 기록으로도 상태는 그대로),
+ *    업무 등록에서는 `대기`(지금 정하는 상태 그 자체)입니다. */
+var PROG_ST = { lg:['대기 유지','진행중','완료 처리'], tf:['대기','진행중','완료'] };
 
-function syncProg(){
-  var sl=$('lgProg'); if(!sl) return;
+function progBox(pre, val){
+  var v=Number(val||0);
+  return '<div class="prog">'+
+    '<div class="top"><span class="val num" id="'+pre+'Pv">'+v+'%</span>'+
+    '<span class="st" id="'+pre+'Ps"></span></div>'+
+    '<input type="range" id="'+pre+'Prog" min="0" max="100" step="5" value="'+v+'" '+
+      'oninput="syncProg(&#39;'+pre+'&#39;)" onchange="syncProg(&#39;'+pre+'&#39;)">'+
+    '<div class="ticks"><span>0</span><span>25</span><span>50</span><span>75</span><span>100</span></div>'+
+    '<div class="quick">'+
+      '<button type="button" onclick="setProg(0,&#39;'+pre+'&#39;)">착수 전</button>'+
+      '<button type="button" onclick="setProg(30,&#39;'+pre+'&#39;)">30%</button>'+
+      '<button type="button" onclick="setProg(50,&#39;'+pre+'&#39;)">절반</button>'+
+      '<button type="button" onclick="setProg(80,&#39;'+pre+'&#39;)">마무리 중</button>'+
+      '<button type="button" onclick="setProg(100,&#39;'+pre+'&#39;)">완료</button>'+
+    '</div></div>';
+}
+
+function setProg(v, pre){
+  pre=pre||'lg';
+  var sl=$(pre+'Prog'); if(!sl) return;
+  sl.value=v; syncProg(pre);
+}
+
+function syncProg(pre){
+  pre=pre||'lg';
+  var sl=$(pre+'Prog'); if(!sl) return;
   var v=Number(sl.value);
-  $('lgPv').textContent=v+'%';
-  var st=$('lgPs');
-  if(v<=0){ st.textContent='대기 유지'; st.className='st'; }
-  else if(v>=100){ st.textContent='완료 처리'; st.className='st done'; }
-  else { st.textContent='진행중'; st.className='st run'; }
+  $(pre+'Pv').textContent=v+'%';
+  var 말=PROG_ST[pre]||PROG_ST.lg;
+  var st=$(pre+'Ps');
+  if(v<=0){ st.textContent=말[0]; st.className='st'; }
+  else if(v>=100){ st.textContent=말[2]; st.className='st done'; }
+  else { st.textContent=말[1]; st.className='st run'; }
   // 채워진 만큼 색이 차게
   var pct=v+'%';
   sl.style.background='linear-gradient(to right, #1D9E75 0%, #1D9E75 '+pct+
@@ -7319,7 +7363,7 @@ function drawBoardModal(){
 function noticeStub(){
   return {
     posts:((S.data && S.data.notices)||[]).map(function(n){
-      return { no:n.no, kind:'공지', title:n.title, body:n.body||'', who:n.who,
+      return { no:n.no, title:n.title, body:n.body||'', who:n.who,
                phone:n.phone||'', at:n.at, edited:n.edited||'' };
     }),
     /* ★★ 댓글도 board 가 같이 실어 보냅니다 (2026-09-02).
@@ -7331,9 +7375,12 @@ function noticeStub(){
   };
 }
 
-/** 공지만 보여준다 (일반 이야기는 업무로 올린다) */
+/* 게시판은 공지뿐입니다 (그 밖의 이야기는 업무로 올립니다).
+   ★ 2026-09-03에 '일반' 종류를 없앴습니다 — 서버가 공지만 보냅니다.
+     그래서 여기서 한 번 더 거를 것이 없고, 줄마다 붙던 `공지` 뱃지도 없앴습니다.
+     머리글에 이미 `공지 N` 이라고 적혀 있어서 같은 말이 두 번이었습니다. */
 function postListHtml(r){
-  var posts=(r.posts||[]).filter(function(p){ return p.kind==='공지'; });
+  var posts=(r.posts||[]);
   var h='<h4 class="sech hot">공지 '+posts.length+'</h4>';
   if(!posts.length) h+=empty('올라온 공지가 없습니다');
   posts.forEach(function(p){ h+=postRow(p,r); });
@@ -7344,8 +7391,7 @@ function postRow(p, r){
   var cn=((r.comments&&r.comments[p.no])||[]).length;
   return '<div class="lrow" onclick="openPost(\''+p.no+'\')">'+
     '<div class="m">'+
-      '<p class="t">'+
-        (p.kind==='공지'? '<span class="tag dg">공지</span> ':'')+esc(p.title)+
+      '<p class="t">'+esc(p.title)+
         (cn? ' <span class="muted">['+cn+']</span>':'')+'</p>'+
       '<p class="b">'+esc(p.who)+' · '+
         esc(shortDate(String(p.at).substring(0,10)))+'</p></div></div>';
@@ -7387,8 +7433,7 @@ function drawPost(no, src){
   var mine = S.me && (S.me.grade>=9 || p.phone===S.me.phone);
 
   var h='<div class="veil"><div class="sheet">'+
-    '<div class="sheethead"><h3 class="tt">'+
-      (p.kind==='공지'? '<span class="tag dg">공지</span> ':'')+esc(p.title)+'</h3>'+
+    '<div class="sheethead"><h3 class="tt">'+esc(p.title)+'</h3>'+
       '<button class="btn sm" onclick="closeModal()">닫기</button></div>'+
     byline([p.who, shortDate(p.at), p.edited? '수정 '+shortDate(p.edited) : ''])+
     '<div style="margin-bottom:20px">'+fmt(p.body)+shotsHtml(p.photos)+'</div>'+
@@ -7461,14 +7506,14 @@ function savePost(no){
   /* 낙관 처리 — 즉시 상단에 반영하고 창을 닫는다. 저장은 뒤에서 */
   var nowS=todayStr()+' '+nowHM();
   var tmpNo=no||('_tmp'+Date.now());
-  var np={ no:tmpNo, kind:'공지', corp:'', title:title, body:body,
+  var np={ no:tmpNo, corp:'', title:title, body:body,
            who:(S.me&&S.me.name)||'', phone:(S.me&&S.me.phone)||'',
            at:nowS, edited:no? nowS : '' };
 
   var backNotice = S.data ? (S.data.notices||[]).slice() : null;
   var backPosts  = S.postCache ? (S.postCache.posts||[]).slice() : null;
 
-  var send = { no:no||'', kind:'공지', corp:'', title:title, body:body, photos:shots };
+  var send = { no:no||'', corp:'', title:title, body:body, photos:shots };
 
   /* ★ 사진이 있으면 즉시 닫지 않습니다 (2026-08-31).
      사진은 올리는 데 시간이 걸리고, 실패하면 되돌릴 것이 사진까지라
