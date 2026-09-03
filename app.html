@@ -3127,6 +3127,10 @@ var PERF=[];
 function call(fn){
   var args = Array.prototype.slice.call(arguments,1);
   var t0 = Date.now();
+  /* ★★ 이번 요청의 답 번호를 비워 둡니다 (2026-09-03).
+     안 비우면 **직전에 성공한 요청의 번호가 그대로 남아**, 서버에 아예 닿지도
+     못한 실패가 `HTTP 200` 으로 기록됩니다. 원인을 정반대로 짚게 됩니다. */
+  LAST_STATUS = 0;
 
   return fetch(API_URL, {
     method: 'POST',
@@ -3147,7 +3151,7 @@ function call(fn){
          (2026-09-02). 예전에는 둘 다 `통신이 불안정합니다` 로 뭉뚱그려져서,
          공지 삭제가 안 될 때 무엇이 문제인지 알 길이 없었습니다.
          받은 것을 그대로 남겨 둡니다 — 로그인 화면이 왔는지, 오류 쪽지가 왔는지 보입니다. */
-      keepFail({ fn:fn, why:'응답이 JSON 이 아님', status:LAST_STATUS,
+      keepFail({ fn:fn, why:'응답이 JSON 이 아님', status:LAST_STATUS, quiet:!!QUIET_CALLS[fn],
                  앞부분:String(text||'').substring(0,200), at:new Date().toLocaleString() });
       console.log('[통신] '+fn+' 응답이 JSON 이 아닙니다 ('+LAST_STATUS+')', String(text||'').substring(0,300));
       throw new Error('서버 응답을 읽지 못했습니다.');
@@ -3189,7 +3193,7 @@ function call(fn){
     if(offline) setOffline(true);
 
     if(!읽기실패){
-      keepFail({ fn:fn, why:'서버에 닿지 못함', status:LAST_STATUS,
+      keepFail({ fn:fn, why:'서버에 닿지 못함', status:LAST_STATUS, quiet:!!QUIET_CALLS[fn],
                  앞부분:String((e&&e.message)||e), at:new Date().toLocaleString() });
     }
 
@@ -3355,7 +3359,11 @@ function paintPerf(){
         'onclick="clearFail()">지우기</button></p>'+
       '<p style="margin:0;font-size:var(--fs-sm)" class="sub">'+
         esc(LAST_FAIL.at)+' · '+esc(LAST_FAIL.fn.replace('api_',''))+' · '+esc(LAST_FAIL.why)+
-        (LAST_FAIL.status? ' (HTTP '+esc(LAST_FAIL.status)+')' : '')+'</p>'+
+        (LAST_FAIL.status? ' (HTTP '+esc(LAST_FAIL.status)+')' : '')+
+        /* 사람이 누른 것이 아니라 앱이 30초마다 뒤에서 확인하던 것이면 그렇게 적습니다.
+           그래야 '내가 뭘 잘못했나' 를 생각하지 않게 됩니다. */
+        (LAST_FAIL.quiet? '<br>앱이 뒤에서 확인하던 것입니다. 다음 번에 저절로 다시 시도합니다.' : '')+
+        '</p>'+
       '<p style="margin:3px 0 0;font-size:var(--fs-xs);word-break:break-all" class="muted">'+
         esc(String(LAST_FAIL.앞부분||'').substring(0,200))+'</p></div>';
   }
