@@ -1426,7 +1426,7 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
       <div class="col"><div class="colhead"><span class="live"></span>진행중 <span class="n" id="cRun">0</span></div>
         <div class="cards" id="listRun"></div></div>
       <div class="col canfold colshut" id="colDone">
-        <div class="colhead" onclick="toggleCol('colDone')"><span class="cfold">▾</span>완료 <span class="n" id="cDone">최근 30일</span>
+        <div class="colhead" onclick="toggleCol('colDone')"><span class="cfold">▾</span>완료 <span class="n" id="cDone">최근 7일</span>
         <button class="btn sm" style="margin-left:auto;padding:3px 9px" onclick="event.stopPropagation();openDoneAll()">전체 보기</button></div>
         <div class="cards slim" id="listDone"></div>
         <div class="foldpart" id="doneSum"></div></div>
@@ -4141,7 +4141,7 @@ function renderBoard(){
 
   countUp($('cWait'), wait.length);
   /* 접혀 있어도 몇 건인지는 보여야 합니다 */
-  if($('cDone')) $('cDone').textContent = done.length + ' · 최근 30일';
+  if($('cDone')) $('cDone').textContent = done.length + ' · 최근 7일';
   countUp($('cRun'), run.length);
   /* ★ 새 업무 더하기는 **대기 목록 바로 아래 가운데**에 둔다 (2026-09-01).
      머리글 오른쪽에 두었더니 '완료 · 전체 보기' 와 헷갈렸습니다.
@@ -4313,7 +4313,7 @@ function sechead(title, n, hot){
     (n!=null? '<span class="n">'+n+'</span>':'')+'</div>';
 }
 
-/** 완료 전체보기 — board 가 이미 최근 30일치를 들고 있으므로 왕복 0회로 즉시 그린다 */
+/** 완료 전체보기 — board 가 이미 최근 7일치를 들고 있으므로 왕복 0회로 즉시 그린다 */
 function openDoneAll(){
   var rows=(S.data? S.data.tasks:[]).filter(function(t){
     return t.status==='완료' && (S.corp==='ALL' || t.corp===S.corp);
@@ -4328,7 +4328,7 @@ function openDoneAll(){
     '<div id="daBody">'+doneBody(rows, monthsOf(rows), true)+'</div></div></div>';
 }
 
-/** 30일보다 오래된 것까지 — 눌렀을 때만 서버를 부른다 */
+/** 7일보다 오래된 것까지 — 눌렀을 때만 서버를 부른다 */
 function loadDoneOld(ym){
   var btn=$('daOld');
   if(btn){ btn.disabled=true; btn.textContent='불러오는 중...'; }
