@@ -698,9 +698,6 @@ table.mk-tb .al-c{text-align:center} table.mk-tb .al-r{text-align:right}
 .offbar{background:var(--wn-bg);color:var(--t1);border-bottom:1px solid var(--wn-line);
   padding:7px var(--sp-4);font-size:var(--fs-sm);text-align:center}
 
-/* 자주 쓰는 업무 — 고르는 것이 아니라 채워 넣는 단추라 '켜짐' 이 없다 */
-.chks.tmpl label{cursor:pointer}
-
 /* 댓글 사진 클립 (2026-09-02) */
 .clip{display:flex;align-items:center;justify-content:center;width:34px;height:34px;
   border-radius:var(--r-sm);cursor:pointer;color:var(--t3);font-size:var(--fs-icon);flex:0 0 auto}
@@ -3754,7 +3751,9 @@ function takeDocPack(b){
 
 function applyBoard(b){
   if(!b || !b.ok) return false;
-  S.data=b; S.me=b.me;
+  /* ★ `me` 가 없으면 로그인한 사람이 아닙니다. 그리려 들면 흰 화면이 됩니다. */
+  if(!b.me && !S.me) return false;
+  S.data=b; S.me=b.me||S.me;
   S.lastUpdate=b.lastUpdate||S.lastUpdate; S.lastSync=Date.now(); if(b.t) S.lastT=b.t;
   takeDocPack(b);
   mkSetNames(b.staff);          /* @이름 강조·고르기에 쓰는 명부 (2026-09-02) */
@@ -3951,6 +3950,11 @@ function taskRecent(a, b){
 }
 
 function renderBoard(){
+  /* 서버가 이상한 줄을 보내도 화면은 떠야 합니다 — 빈 줄만 걸러 냅니다 */
+  if(S.data && S.data.tasks && !Array.isArray(S.data.tasks)) S.data.tasks = [];
+  if(S.data && Array.isArray(S.data.tasks)){
+    S.data.tasks = S.data.tasks.filter(function(t){ return t && t.id; });
+  }
   var d=S.data;
   var A=S.anim;            // 이번 그리기에서 애니메이션을 쓸지
   S.anim=false;            // 다음 자동갱신부터는 조용히
@@ -4014,7 +4018,7 @@ function renderBoard(){
   var apv=d.approvals||[];
   var apvBox = $('apvTitle') ? $('apvTitle').parentNode : null;
   if(apvBox) apvBox.classList.toggle('hide', apv.length===0);
-  $('apvTitle').textContent = (S.me.grade>=3?'결재 대기 ':'내 결재 ')+apv.length;
+  $('apvTitle').textContent = ((S.me&&S.me.grade>=3)?'결재 대기 ':'내 결재 ')+apv.length;
   $('railApv').innerHTML = apv.map(function(a){
     return '<div class="apv" onclick="openDoc(\''+a.no+'\')"><b>'+esc(a.title)+'</b><br>'+
            esc([a.amount? won(a.amount)+'원':'', a.who].filter(function(x){return x;}).join(' · '))+
@@ -4022,7 +4026,8 @@ function renderBoard(){
   }).join('');
 
   var att=d.attendance||{rows:[]};
-  $('railAtt').innerHTML = att.rows.length ? att.rows.map(function(a){
+  var 출근줄=(att.rows)||[];
+  $('railAtt').innerHTML = 출근줄.length ? 출근줄.map(function(a){
     var on=(a.state==='출근'||a.state==='퇴근');
     /* 아직 안 온 사람만 노랑(곧 문제), 나머지는 무채색.
        ★ 현장에 나간 사람은 이름 아래 어디로 갔는지 한 줄 (2026-09-02).
@@ -4153,13 +4158,29 @@ function openDoneAll(){
 }
 
 /** 30일보다 오래된 것까지 — 눌렀을 때만 서버를 부른다 */
-function loadDoneOld(){
+function loadDoneOld(ym){
   var btn=$('daOld');
   if(btn){ btn.disabled=true; btn.textContent='불러오는 중...'; }
-  call('api_doneAll', S.token, S.corp).then(function(r){
+  call('api_doneAll', S.token, S.corp, ym||'').then(function(r){
     if(!$('daBody')) return;
     if(!r.ok){ if(btn){ btn.disabled=false; btn.textContent='더 오래된 것까지 보기'; } toast(r.msg||'불러오지 못했습니다'); return; }
-    $('daBody').innerHTML=doneBody(r.rows||[], r.months||[], false);
+    /* ★ 달을 안 골랐고 잘린 것이 있으면 달 고르기를 얹는다 (2026-09-02).
+       예전에는 3년치를 한 번에 그렸습니다. */
+    var 머리 = '';
+    if((r.months||[]).length > 1){
+      머리 = '<div class="field"><label class="fl">달</label>'+
+        '<select onchange="loadDoneOld(this.value)">'+
+          '<option value=""'+(r.ym?'':' selected')+'>최근 '+(r.rows||[]).length+'건</option>'+
+          (r.months||[]).map(function(m){
+            return '<option value="'+esc(m.month)+'"'+(r.ym===m.month?' selected':'')+'>'+
+                   esc(m.month)+' · '+m.count+'건</option>';
+          }).join('')+
+        '</select></div>';
+    }
+    if(r.more){
+      머리 += '<p class="note">전체 '+r.total+'건 중 최근 '+(r.rows||[]).length+'건입니다. 달을 고르면 그달 전부를 봅니다</p>';
+    }
+    $('daBody').innerHTML = 머리 + doneBody(r.rows||[], r.months||[], false);
   });
 }
 
@@ -4306,9 +4327,13 @@ function sumBox(A){
     '<p>완료 '+(s.count||0)+'건</p><p>'+won(s.amount||0)+'원</p></div>';
 }
 
-function lv(t){ 
-  var d=t.flags.some(function(f){return f.lv==='danger'});
-  var w=t.flags.some(function(f){return f.lv==='warn'});
+/* ★★ 서버가 칸 하나를 안 보내도 **흰 화면이 되면 안 됩니다** (2026-09-02).
+   화면이 통째로 안 뜨면 사람은 '앱이 안 켜져요' 말고는 할 말이 없습니다.
+   `_점검/화면튼튼시험.js` 가 칸을 하나씩 빼 가며 이것을 지킵니다. */
+function lv(t){
+  var fl=(t&&t.flags)||[];
+  var d=fl.some(function(f){return f&&f.lv==='danger'});
+  var w=fl.some(function(f){return f&&f.lv==='warn'});
   return d?'dg':(w?'wn':'');
 }
 
@@ -4317,7 +4342,7 @@ function anim_(i){
 }
 
 function cardSlim(t, i){
-  var f=t.flags[0];
+  var f=((t&&t.flags)||[])[0];
   // 빈 값이면 그 줄 자체를 만들지 않는다 (v42)
   var when=[];
   if(t.status==='완료'){
@@ -4374,7 +4399,8 @@ function cardFull(t, i){
 
      ★ 철거의 네 칸(오늘 투입·폐기물·계약·담당)은 **다른 데 없는 값**이라 그대로 둡니다. */
   var cells = (t.type==='DEMO')
-    ? kv('오늘 투입', (t.manpower.g||t.manpower.j)? ('기공'+t.manpower.g+' 조공'+t.manpower.j) : '')+
+    ? kv('오늘 투입', (function(){ var m=t.manpower||{};
+          return (m.g||m.j)? ('기공'+(m.g||0)+' 조공'+(m.j||0)) : ''; })())+
       kv('폐기물', t.waste? t.waste+'t' : '')+
       kv('계약', t.amount? won(t.amount) : '')+
       kv('남는 것', settleMargin_(t.id))
@@ -4388,9 +4414,10 @@ function cardFull(t, i){
     h+='<p class="lastline">'+(dt? '<span class="dt">'+esc(dt)+'</span>':'')+esc(tx)+'</p>';
   }
 
-  if(t.flags.length || t.next){
+  var 표시들=(t.flags)||[];
+  if(표시들.length || t.next){
     h+='<div class="flags">';
-    t.flags.forEach(function(f){ h+='<span class="tag '+(f.lv==='danger'?'dg':'wn')+'">'+esc(f.t)+'</span>'; });
+    표시들.forEach(function(f){ if(!f) return; h+='<span class="tag '+(f.lv==='danger'?'dg':'wn')+'">'+esc(f.t)+'</span>'; });
     if(t.next) h+='<span class="tag gy">다음: '+esc(t.next)+'</span>';
     h+='</div>';
   }
@@ -4407,11 +4434,6 @@ function settleMargin_(id){
 function kv(k,v){
   if(v===null||v===undefined||v===''||v==='-') return '';
   return '<div><p class="k">'+k+'</p><p class="num">'+esc(v)+'</p></div>';
-}
-/* 값이 이미 HTML 인 경우 (담당자 이름처럼 누를 수 있게 만든 것) */
-function kvRaw(k,v){
-  if(!v) return '';
-  return '<div><p class="k">'+k+'</p><p class="num">'+v+'</p></div>';
 }
 function dday(due){
   var d=Math.round((new Date(due+'T00:00:00')-new Date(todayStr()+'T00:00:00'))/86400000);
@@ -4436,13 +4458,6 @@ function go(v){
   if(v==='doc') renderDocs();
   if(v==='me') renderMe();
   if(v==='settings') renderSettings();
-}
-
-/* ===================== 업무 상세 ===================== */
-/** 정산 줄이 하나도 없는 업무용 빈 합계 */
-function emptySum(){
-  return { base:0, add:0, minus:0, supply:0, vat:0, total:0, claim:0,
-           paid:0, unpaid:0, payCount:0, taxCount:0, rate:0 };
 }
 
 /** 접었다 펴는 구역. 제목줄에 요약을 얹는다 */
@@ -5578,50 +5593,6 @@ function openTaskForm(id){
   });
 }
 
-/* ── 자주 쓰는 업무 (2026-09-02) ────────────────────────────
- *
- *  철거는 반복입니다. 같은 순서, 같은 확인 항목을 매번 다시 칩니다.
- *
- *  ★ **시트에 두지 않습니다.** 여섯 명 회사에서 양식을 시트로 관리하면
- *    관리 화면이 하나 더 생기고, 그것을 쓰는 사람이 아무도 없습니다.
- *    바꿀 일이 생기면 여기 표를 고치면 됩니다.
- *  ★ 담당자·법인·마감일은 건드리지 않습니다 — 그건 건마다 다릅니다.
- */
-var TASK_TMPL = [
-  { name:'철거 현장', type:'DEMO', title:' 철거',
-    body:'# 확인할 것\n\n[ ] 현장 실측\n[ ] 전기·수도 차단\n[ ] 폐기물 반출 경로\n'+
-         '[ ] 주차·양중 방법\n[ ] 이웃 고지\n\n# 일정\n\n- 착공\n- 준공' },
-  { name:'실측·견적', type:'DEMO', title:' 실측',
-    body:'[ ] 현장 방문\n[ ] 사진 촬영\n[ ] 견적 작성\n[ ] 고객 발송' },
-  { name:'폐기물 반출', type:'WASTE', title:' 폐기물 반출',
-    body:'| 종류 | 톤수 | 차수 |\n|---|--:|--:|\n|  |  |  |' },
-  { name:'세금계산서', type:'ETC', title:'세금계산서 발행',
-    body:':! 발행 전에 입금 조건을 확인하세요' },
-  { name:'장비 대여', type:'ETC', title:' 장비 대여',
-    body:'[ ] 업체 확인\n[ ] 반입일\n[ ] 반출일' }
-];
-
-function useTmpl(i){
-  var x = TASK_TMPL[i];
-  if(!x) return;
-
-  /* 유형 — 이미 고른 것이 있으면 건드리지 않는다 */
-  var 고른것 = document.querySelector('#tfType label.on');
-  if(!고른것){
-    var b2 = document.querySelector('#tfType label[data-v="'+x.type+'"]');
-    if(b2) pickType(b2);
-  }
-
-  var ti = $('tfTitle');
-  if(ti && !ti.value.trim()) ti.value = x.title;
-  if(ti) ti.focus();
-
-  /* 내용은 **비어 있을 때만** 채운다. 쓰던 글을 지우지 않는다 */
-  if(mkValue('tfContent').trim()) { toast('업무명만 채웠습니다'); return; }
-  var ed = $('tfContent');
-  if(ed) ed.innerHTML = fmt(x.body);
-}
-
 function drawTaskForm(id, t){
   var types=(S.meta.types||[]).slice(), corps=S.meta.corps;
   /* 지금 고를 수 있는 유형만 버튼으로 만든다 (철거·영업·시스템·기타).
@@ -5648,15 +5619,6 @@ function drawTaskForm(id, t){
       '<div class="field"><label class="fl req">담당자</label>'+
         '<select id="tfOwner" onchange="syncCo()">'+staffOptions(t?t.owner:S.me.phone)+'</select></div>'+
     '</div>'+
-    (id? '' :
-      /* ★ 자주 쓰는 것 (2026-09-02) — 새 업무일 때만.
-         철거는 늘 같은 순서로 돕니다. 매번 같은 글을 다시 치지 않게 합니다.
-         ★ 누르면 **채워만 넣습니다.** 저장은 사람이 합니다. */
-      '<div class="field"><label class="fl">자주 쓰는 것</label><div class="chks tmpl">'+
-        TASK_TMPL.map(function(x,i){
-          return '<label onclick="useTmpl('+i+')">'+esc(x.name)+'</label>';
-        }).join('')+
-      '</div></div>')+
     '<div class="field"><label class="fl req">업무명</label><input type="text" id="tfTitle" value="'+esc(t?t.title:'')+'"></div>'+
     '<div class="field"><label class="fl">내용</label>'+
       mkEditor('tfContent', (t&&t.content)?t.content:'', 86)+
@@ -6091,11 +6053,11 @@ function saveLog(){
    ★ 최대 5장. 그보다 많이 고르면 앞의 다섯 장만 담고 알려 줍니다.
    =========================================================================== */
 var PHOTO_MAX = 5;
-var PICKED = {};            // { 칸이름: [ {url, name} ] }
+var PICKED = {};            // { 칸이름: [ {url, name, blob, thumb} ] }
 
 /** 사진 칸 하나를 그린다. 창을 만들 때 이 한 줄만 넣으면 된다 */
 function photoField(id, label){
-  PICKED[id] = [];
+  photoClear(id);
   return '<div class="field"><label class="fl">'+esc(label)+'</label>'+
     '<input type="file" id="'+id+'" accept="image/*" multiple '+
       'onchange="photoAdd(&#39;'+id+'&#39;,this)">'+
@@ -6147,34 +6109,92 @@ function photoAdd(id, el){
   }
 
   var box = $(id+'Box');
-  if(box) box.innerHTML = '<p class="none">사진을 줄이는 중입니다...</p>';
+  if(box) box.innerHTML = '<p class="none">사진을 확인하는 중입니다...</p>';
 
-  /* 여러 장이면 한 장당 한도를 나눠 갖는다.
-     그래야 다섯 장을 올려도 보내는 크기가 한 장일 때와 비슷하게 유지된다. */
-  var total = have + files.length;
-  var per = Math.floor(PHOTO_LIMIT / Math.max(1, total));
-
-  var jobs = files.map(function(f){ return shrinkPhoto(f, per); });
-
+  /* ★★ 한 장씩 따로 봅니다 (2026-09-03).
+     5MB 이하면 **손대지 않고 그대로**, 넘을 때만 5MB 미만이 되는 만큼만 줄입니다.
+     예전에는 장수로 한도를 나눠 가져서, 다섯 장을 고르면 한 장당 1.4MB 밖에
+     못 써 **작은 사진까지 전부 다시 압축**되었습니다. */
   photoBusy(1);
-  Promise.all(jobs).then(function(urls){
+  Promise.all(files.map(function(f){ return photoFit(f); })).then(function(rs){
     var 못담음 = 0;
-    urls.forEach(function(u, i){
-      if(u) PICKED[id].push({ url:u, name:(files[i] && files[i].name) || '사진' });
-      else 못담음 += 1;
+    rs.forEach(function(r, i){
+      if(r){
+        PICKED[id].push({
+          blob: r.blob, url: '', thumb: '',
+          name: r.changed ? r.name : ((files[i] && files[i].name) || '사진')
+        });
+      }else{
+        못담음 += 1;
+      }
     });
-    photoDraw(id);
-    /* ★ 조용히 빠뜨리지 않는다. 예전에는 못 읽은 사진이 아무 말 없이 사라졌다 */
-    if(못담음) toast(못담음+'장은 담지 못했습니다. 다시 촬영해 주세요.');
+    return photoFitTotal(id).then(function(더줄임){
+      return photoMakeUrls(id).then(function(){
+        photoDraw(id);
+        /* ★ 조용히 빠뜨리지 않는다. 예전에는 못 읽은 사진이 아무 말 없이 사라졌다 */
+        if(못담음) toast(못담음+'장은 담지 못했습니다. 다시 촬영해 주세요.');
+        else if(더줄임) toast('사진이 많아 크기를 조금 더 줄였습니다.');
+      });
+    });
   }).catch(function(err){
     quiet('사진 담기', err);
+    photoDraw(id);
+    toast('사진을 담지 못했습니다. 다시 시도해 주세요.');
   }).then(function(){
     photoBusy(-1);          /* 실패해도 반드시 풀어 준다 (버튼이 굳으면 아무것도 못 한다) */
   });
 }
 
+/** 담은 것을 보낼 수 있는 글자(data URL)로 바꾼다 */
+function photoMakeUrls(id){
+  var list = PICKED[id] || [];
+  return Promise.all(list.map(function(o){
+    if(o.url) return null;
+    return photoDataUrl(o.blob).then(function(u){
+      o.url = u;
+      /* ★ 미리보기는 data URL 이 아니라 blob 주소를 씁니다.
+         5MB 글자를 화면에 그대로 박으면 그 자리에서 버벅입니다. */
+      if(!o.thumb && window.URL && URL.createObjectURL){
+        try{ o.thumb = URL.createObjectURL(o.blob); }catch(e){ o.thumb = u; }
+      }
+    });
+  }));
+}
+
+/** 워크보드만 있는 총량 확인.
+    한 요청에 다 실어 보내므로 전부 합쳐 너무 크면 요청이 통째로 실패합니다.
+    ★ 걸렸을 때만 조금 더 줄이고, **사람에게 알립니다.** */
+function photoFitTotal(id){
+  var list = PICKED[id] || [];
+  var bin = 0;
+  list.forEach(function(o){ bin += (o.blob && o.blob.size) || 0; });
+  if(bin * 4 / 3 <= PHOTO_TOTAL_LIMIT) return Promise.resolve(false);
+
+  var per = Math.floor(PHOTO_TOTAL_LIMIT * 3 / 4 / Math.max(1, list.length));
+  return Promise.all(list.map(function(o){
+    if(!o.blob || o.blob.size <= per) return null;
+    return photoFit(o.blob, per).then(function(r){
+      if(r){ o.blob = r.blob; o.url = ''; photoFreeThumb(o); }
+    });
+  })).then(function(){ return true; });
+}
+
+function photoFreeThumb(o){
+  if(o && o.thumb && o.thumb.indexOf('blob:') === 0){
+    try{ URL.revokeObjectURL(o.thumb); }catch(e){}
+  }
+  if(o) o.thumb = '';
+}
+
+/** 사진 칸을 비운다 (미리보기 주소도 같이 돌려준다) */
+function photoClear(id){
+  (PICKED[id] || []).forEach(photoFreeThumb);
+  PICKED[id] = [];
+}
+
 function photoDrop(id, i){
-  (PICKED[id] || []).splice(i, 1);
+  var 뺀것 = (PICKED[id] || []).splice(i, 1)[0];
+  photoFreeThumb(뺀것);
   photoDraw(id);
 }
 
@@ -6184,7 +6204,7 @@ function photoDraw(id){
   if(!list.length){ box.innerHTML = ''; return; }
   var h = '';
   list.forEach(function(o, i){
-    h += '<div class="thumb"><img src="'+o.url+'" alt="">'+
+    h += '<div class="thumb"><img src="'+(o.thumb || o.url)+'" alt="">'+
          '<button type="button" class="tx" onclick="photoDrop(&#39;'+id+'&#39;,'+i+')" '+
          'aria-label="사진 빼기">&times;</button></div>';
   });
@@ -6212,70 +6232,200 @@ function photoValues(id){
 
    ★ 한도는 **한 번에 보내는 전체 크기**입니다. 다섯 장을 고르면 한 장당 1/5 을 씁니다.
      현장에서 기다리는 시간이 장수에 비례해 늘지 않게 하려는 것입니다. */
-var PHOTO_STEPS=[
-  {w:2400,q:0.92},{w:2400,q:0.85},{w:2400,q:0.75},
-  {w:1800,q:0.85},{w:1800,q:0.75},
-  {w:1200,q:0.75}
-];
-var PHOTO_LIMIT=7*1024*1024;   // base64 로 보낼 수 있는 한도
+/* ===== 사진 맞추기 시작 — 세 앱이 **글자까지 같은** 코드입니다 =====
+   여기를 고치면 워크보드 · 현장견적 · 출퇴근 **세 곳을 다** 고치세요.
+   `node _점검/사진시험.js` 가 세 벌이 어긋나면 바로 알려 줍니다.
 
-function loadImg(file){
-  return new Promise(function(res){
-    var fr=new FileReader();
-    fr.onload=function(e){
-      var img=new Image();
-      img.onload=function(){ res(img); };
-      img.onerror=function(){ res(null); };
-      img.src=e.target.result;
-    };
-    fr.onerror=function(){ res(null); };
-    fr.readAsDataURL(file);
+   ★★ 규칙은 둘뿐입니다.
+       5MB 이하  →  **손대지 않는다.** 원본 그대로 올린다
+       5MB 초과  →  원본 화질을 최대한 지키면서 5MB 미만이 되는 만큼만 줄인다
+
+   ★ 품질을 먼저 낮추고, 그래도 안 될 때만 크기를 한 단계씩 줄입니다.
+     품질을 0.70 아래로 내리는 것은 **마지막 크기에서만** 합니다 —
+     그 아래로 내리면 글씨가 뭉개져 영수증·도면을 읽을 수 없습니다.
+
+   ★ 사진 방향(EXIF)은 그대로 둡니다.
+     · 5MB 이하는 원본을 그대로 보내므로 EXIF 가 통째로 살아 있습니다.
+     · 5MB 초과는 `imageOrientation:'from-image'` 로 **돌려서 푼 뒤** 그려서,
+       방향이 그림 자체에 박힙니다 (EXIF 표가 없어도 바로 서 있습니다).
+*/
+var PHOTO_FIT_LIMIT = 5 * 1024 * 1024;   /* 5MB */
+
+/* 이 형식은 PC·폰 어디서나 그대로 열립니다. 그래서 손대지 않고 보냅니다.
+   ★ HEIC·TIFF·BMP 는 여기 없습니다 — 아이폰 HEIC 을 그대로 올리면
+     사무실 PC 에서 안 열립니다. 크기가 작아도 JPEG 으로 바꿉니다. */
+var PHOTO_PASS = { 'image/jpeg': 1, 'image/jpg': 1, 'image/png': 1, 'image/webp': 1 };
+
+var PHOTO_Q_TOP = 0.92;   /* 먼저 이 품질로 해 본다 */
+var PHOTO_Q_MID = 0.70;   /* 여기까지는 글씨가 읽힌다 */
+var PHOTO_Q_LOW = 0.45;   /* 마지막 크기에서만 여기까지 */
+var PHOTO_SCALES = [1, 0.85, 0.7, 0.55, 0.45, 0.35];
+var PHOTO_SEARCH = 3;     /* 이분 탐색 횟수 (품질 눈금 약 0.03) */
+
+function photoPass_(type) {
+  return !!PHOTO_PASS[String(type || '').toLowerCase()];
+}
+
+/** 이름 끝을 .jpg 로 (형식을 바꿨으니 이름도 맞춰 준다) */
+function photoJpgName_(name) {
+  var n = String(name || '사진');
+  var i = n.lastIndexOf('.');
+  if (i > 0 && n.length - i <= 6) n = n.substring(0, i);
+  return n + '.jpg';
+}
+
+/** EXIF 방향을 살려서 그림을 푼다 */
+function photoDecode_(file) {
+  return new Promise(function (res, rej) {
+    var p = null;
+    if (typeof createImageBitmap === 'function') {
+      try { p = createImageBitmap(file, { imageOrientation: 'from-image' }); }
+      catch (e) { p = null; }
+    }
+    if (p && p.then) {
+      p.then(res, function () { photoDecodeImg_(file).then(res, rej); });
+      return;
+    }
+    photoDecodeImg_(file).then(res, rej);
   });
 }
 
-/** 긴 변을 max 로 줄여 JPEG 로. 원본이 더 작으면 크기를 건드리지 않는다 */
-function drawJpeg(img, max, q){
-  var w=img.width, h=img.height;
-  if(w>max||h>max){
-    if(w>h){ h=Math.round(h*max/w); w=max; } else { w=Math.round(w*max/h); h=max; }
-  }
-  var c=document.createElement('canvas'); c.width=w; c.height=h;
-  var g=c.getContext('2d');
-  g.fillStyle='#FFFFFF'; g.fillRect(0,0,w,h);   // 투명 배경이 검게 나오지 않게
-  g.drawImage(img,0,0,w,h);
-  return { url:c.toDataURL('image/jpeg',q), w:w, h:h };
+/* <img> 로 푸는 길. 요즘 브라우저는 <img> 에도 EXIF 방향을 적용합니다 */
+function photoDecodeImg_(file) {
+  return new Promise(function (res, rej) {
+    var url = URL.createObjectURL(file);
+    var img = new Image();
+    img.onload = function () { URL.revokeObjectURL(url); res(img); };
+    img.onerror = function () { URL.revokeObjectURL(url); rej(new Error('사진을 읽지 못했습니다.')); };
+    img.src = url;
+  });
 }
 
-/**
- * 사진을 한도 안에 들어오는 가장 좋은 화질로 만든다.
- * 사용자는 실패를 겪지 않는다 — 마지막 단계까지 안 되면 그때만 빈 값을 돌려준다.
- */
-function shrinkPhoto(file, limit){
-  var cap = Number(limit) > 0 ? Number(limit) : PHOTO_LIMIT;
-  return new Promise(function(res){
-    if(!file){ res(''); return; }
-    loadImg(file).then(function(img){
-      if(!img){
-        console.log('[사진] 이미지를 읽지 못했습니다 (형식 문제일 수 있습니다)');
-        res(''); return;
-      }
-      for(var i=0;i<PHOTO_STEPS.length;i++){
-        var s=PHOTO_STEPS[i];
-        var out=drawJpeg(img, s.w, s.q);
-        var kb=Math.round(out.url.length/1024);
-        if(out.url.length<=cap){
-          console.log('[사진] '+s.w+'px 품질 '+s.q+' · 실제 '+out.w+'×'+out.h+
-                      ' · '+kb+'KB · '+(i? (i+1)+'번째 시도에서 성공':'첫 시도에서 성공'));
-          res(out.url); return;
-        }
-        console.log('[사진] '+s.w+'px 품질 '+s.q+' · '+kb+'KB — 한도('+
-                    Math.round(PHOTO_LIMIT/1024)+'KB)를 넘어 보내지 않고 다음 단계로');
-      }
-      console.log('[사진] 마지막 단계까지 갔는데도 한도를 넘었습니다');
-      res('');
+function photoCanvas_(img, scale) {
+  var w0 = img.naturalWidth || img.width;
+  var h0 = img.naturalHeight || img.height;
+  var w = Math.max(1, Math.round(w0 * scale));
+  var h = Math.max(1, Math.round(h0 * scale));
+  var c = document.createElement('canvas');
+  c.width = w; c.height = h;
+  var g = c.getContext('2d');
+  g.fillStyle = '#FFFFFF'; g.fillRect(0, 0, w, h);   /* 투명한 곳이 검게 나오지 않게 */
+  g.drawImage(img, 0, 0, w, h);
+  return c;
+}
+
+/** 캔버스를 JPEG 덩어리로. 화면을 붙잡지 않게 toBlob 을 씁니다 */
+function photoBlob_(canvas, q) {
+  return new Promise(function (res) {
+    if (!canvas.toBlob) {
+      try {
+        var u = canvas.toDataURL('image/jpeg', q);
+        var s = atob(u.slice(u.indexOf(',') + 1));
+        var a = new Uint8Array(s.length);
+        for (var i = 0; i < s.length; i++) a[i] = s.charCodeAt(i);
+        res(new Blob([a], { type: 'image/jpeg' }));
+      } catch (e) { res(null); }
+      return;
+    }
+    canvas.toBlob(function (b) { res(b || null); }, 'image/jpeg', q);
+  });
+}
+
+/** 이 크기에서 **한도 안에 들어오는 가장 높은 품질**을 찾는다.
+    못 들어오면 null (부르는 쪽이 크기를 한 단계 줄인다) */
+function photoBest_(canvas, cap, floorQ) {
+  return photoBlob_(canvas, PHOTO_Q_TOP).then(function (top) {
+    if (!top) return null;
+    if (top.size < cap) return { blob: top, q: PHOTO_Q_TOP };
+
+    return photoBlob_(canvas, floorQ).then(function (low) {
+      if (!low || low.size >= cap) return null;      /* 이 크기로는 안 된다 */
+
+      /* 들어오기는 한다 — 이제 **가장 높은 품질**을 찾는다 (최소한의 압축) */
+      var lo = floorQ, hi = PHOTO_Q_TOP, best = { blob: low, q: floorQ };
+      var 한번 = function (n) {
+        if (n <= 0) return Promise.resolve(best);
+        var mid = Math.round((lo + hi) / 2 * 100) / 100;
+        if (mid <= lo || mid >= hi) return Promise.resolve(best);
+        return photoBlob_(canvas, mid).then(function (b) {
+          if (b && b.size < cap) { best = { blob: b, q: mid }; lo = mid; }
+          else { hi = mid; }
+          return 한번(n - 1);
+        });
+      };
+      return 한번(PHOTO_SEARCH);
     });
   });
 }
+
+/**
+ * 사진 한 장을 규칙에 맞춰 돌려준다.
+ *   { blob, type, name, w, h, q, changed, from, size }
+ * 못 하면 null — 부르는 쪽이 **반드시 사람에게 알려야** 합니다.
+ */
+function photoFit(file, limit) {
+  var cap = Number(limit) > 0 ? Number(limit) : PHOTO_FIT_LIMIT;
+  return new Promise(function (res) {
+    if (!file) { res(null); return; }
+    var from = Number(file.size) || 0;
+
+    /* ① 5MB 이하이고 어디서나 열리는 형식이면 — 아무것도 하지 않는다 */
+    if (photoPass_(file.type) && from <= cap) {
+      res({
+        blob: file, type: String(file.type).toLowerCase(),
+        name: file.name || '사진', w: 0, h: 0, q: 1,
+        changed: false, from: from, size: from
+      });
+      return;
+    }
+
+    /* ② 넘으면 — 품질부터, 그래도 안 되면 크기를 한 단계씩 */
+    photoDecode_(file).then(function (img) {
+      var i = 0;
+      var 다음 = function () {
+        if (i >= PHOTO_SCALES.length) {
+          if (img && img.close) img.close();
+          res(null); return;
+        }
+        var s = PHOTO_SCALES[i];
+        var 마지막 = (i === PHOTO_SCALES.length - 1);
+        i += 1;
+        var c = photoCanvas_(img, s);
+        /* 품질 0.70 아래로는 **마지막 크기에서만** 내려갑니다 */
+        photoBest_(c, cap, 마지막 ? PHOTO_Q_LOW : PHOTO_Q_MID).then(function (r) {
+          if (!r) { 다음(); return; }
+          if (img && img.close) img.close();
+          res({
+            blob: r.blob, type: 'image/jpeg', name: photoJpgName_(file.name),
+            w: c.width, h: c.height, q: r.q,
+            changed: true, from: from, size: r.blob.size
+          });
+        }, function () { 다음(); });
+      };
+      다음();
+    }, function () { res(null); });
+  });
+}
+
+/** 덩어리를 data URL 로 (형식 표시가 앞에 붙습니다) */
+function photoDataUrl(blob) {
+  return new Promise(function (res) {
+    var fr = new FileReader();
+    fr.onload = function () { res(String(fr.result || '')); };
+    fr.onerror = function () { res(''); };
+    fr.readAsDataURL(blob);
+  });
+}
+/* ===== 사진 맞추기 끝 ===== */
+
+/* ★★ 워크보드만 총량 한도가 따로 있습니다.
+   워크보드는 사진을 **저장 요청 하나에 같이 실어** 보냅니다
+   (견적·출퇴근은 한 장에 한 번씩 따로 보냅니다).
+   그래서 다섯 장이 전부 5MB 면 base64 로 34MB 가 되어 요청이 통째로 실패합니다.
+
+   ★ 보통 폰 사진은 2~4MB 라 이 한도에 걸리지 않습니다.
+     한 장당 평균 4.4MB 를 넘을 때만 걸리고, 그때는 **사람에게 알립니다.** */
+var PHOTO_TOTAL_LIMIT = 30 * 1024 * 1024;   /* base64 기준 */
 
 /* ===================== 회사 일정표 (탭이 아니라 모달) =========================
    달력 하나에 세 가지가 같이 뜬다.
@@ -7241,7 +7391,7 @@ function commentsHtml(kind, targetId, list, total, withHead){
   /* ★ 사진은 클립 하나로 (2026-09-02).
      서식 도구는 안 두기로 했으므로 늘어나는 것은 이 단추 하나뿐입니다.
      '여기 이렇게 깨졌어요' 한 장이 글 열 줄보다 빠릅니다. */
-  PICKED['cmPhoto'] = [];
+  photoClear('cmPhoto');
   h+='<div class="tdwrite" style="margin-top:10px">'+
      '<textarea id="cmText" rows="1" spellcheck="false" '+
        'onkeydown="cmKey(event,\''+kind+'\',\''+targetId+'\')" '+
@@ -7395,7 +7545,7 @@ function sendComment(kind, targetId, parentId){
   syncCommentCount(1);
 
   if(!답글){
-    PICKED['cmPhoto']=[];
+    photoClear('cmPhoto');
     var pb=$('cmPhotoBox'); if(pb) pb.innerHTML='';
     var pf=$('cmPhoto'); if(pf) pf.value='';
   }
@@ -8085,7 +8235,7 @@ function openDocForm(code, prefill){
        '<input type="file" id="dfPhoto" accept="image/*" multiple '+
          'onchange="photoAdd(&#39;dfPhoto&#39;,this)">'+
        '<div class="thumbs" id="dfPhotoBox"></div></div>';
-    PICKED['dfPhoto']=[];
+    photoClear('dfPhoto');
   }
 
   h+='<div class="field"><label class="fl">비고</label><input type="text" id="dfMemo"></div>'+
