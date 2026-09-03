@@ -1002,6 +1002,12 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 
 .rail{display:flex;flex-direction:column;gap:14px}
 .rail h4{margin:0 0 7px;font-size:var(--fs-body);font-weight:600;color:var(--t1)}
+/* ★ 오른쪽 판에서도 접을 수 있게 (2026-09-03). 판의 대기·완료와 같은 방식입니다.
+   ★ 이름을 `.shut` 이라고만 지으면 나중에 또 부딪힙니다 — `.secshut` 입니다. */
+.rsec > h4{display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none}
+.rsec > h4 .n{color:var(--t3);font-weight:400;margin-left:auto}
+.rsec.secshut .cfold{transform:rotate(-90deg)}
+.rsec.secshut > div{display:none}
 .rail .row{display:flex;justify-content:space-between;gap:8px;font-size:var(--fs-body);padding:3px 0}
 /* 이름 + (현장) — 현장은 이름 아래 한 단계 작고 어둡게.
    ★ min-width:0 이 없으면 긴 현장 이름이 오른쪽 시각을 밀어냅니다. */
@@ -1438,7 +1444,12 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
         <div class="foldpart" id="doneSum"></div></div>
       <div class="rail">
         <div><h4 id="apvTitle" class="dgv">결재 대기</h4><div id="railApv"></div></div>
-        <div><h4>오늘 출근</h4><div id="railAtt"></div></div>
+        <!-- ★ 접힌 채로 시작합니다 (2026-09-03 대표님 지시). 판의 대기·완료와 같습니다.
+             접혀 있어도 **몇 명 왔는지는 머리글에 남습니다** — 그게 이 칸의 요점입니다 -->
+        <div class="rsec secshut" id="secAtt">
+          <h4 onclick="toggleSec('secAtt')"><span class="cfold">▾</span>오늘 출근
+            <span class="n" id="cAtt"></span></h4>
+          <div id="railAtt"></div></div>
         <div id="railTodo"></div>
         <div><h4>방금 올라온 기록</h4><div id="railLog"></div></div>
       </div>
@@ -4196,6 +4207,17 @@ function renderBoard(){
 
   var att=d.attendance||{rows:[]};
   var 출근줄=(att.rows)||[];
+  /* 접혀 있어도 **몇 명 왔는지는 보여야** 합니다. 그게 이 칸의 요점입니다.
+     휴가는 '안 온 사람' 이 아니므로 전체 인원에서 뺍니다. */
+  if($('cAtt')){
+    var 온사람=0, 셀사람=0;
+    출근줄.forEach(function(a){
+      if(a.leave) return;
+      셀사람 += 1;
+      if(a.state==='출근'||a.state==='퇴근') 온사람 += 1;
+    });
+    $('cAtt').textContent = 셀사람 ? (온사람+' / '+셀사람) : '';
+  }
   $('railAtt').innerHTML = 출근줄.length ? 출근줄.map(function(a){
     var on=(a.state==='출근'||a.state==='퇴근');
     /* 아직 안 온 사람만 노랑(곧 문제), 나머지는 무채색.
@@ -4302,6 +4324,14 @@ function empty(msg){ return '<p class="none">'+msg+'</p>'; }
 function toggleCol(id){
   var el=$(id); if(!el) return;
   el.classList.toggle('colshut');
+}
+
+/* 오른쪽 판의 구역 펼치기/접기 (2026-09-03).
+   판의 칸(`toggleCol`)과 같은 방식입니다 — 구역 자체는 다시 만들어지지 않으므로
+   30초 갱신에 펼쳐 둔 것이 닫히지 않습니다. 저장하지 않습니다. */
+function toggleSec(id){
+  var el=$(id); if(!el) return;
+  el.classList.toggle('secshut');
 }
 
 /** 이 기기에 지난번 화면이 없는데 통신까지 안 될 때. 뼈대를 계속 두지 않는다. */
@@ -9743,7 +9773,7 @@ boot();
  *    이름은 서버가 명단에 든 사람에게만 `board.note = {key,label}` 로 보내 줍니다.
  *    명단 밖 사람은 이 코드를 다 읽어도 무엇인지 알 수 없습니다.
  *
- *  ★ 여는 법 — 왼쪽 위 **로고마크를 세 번** 누르면 탭이 잠깐 나타납니다.
+ *  ★ 여는 법 — 왼쪽 위 **로고마크를 두 번** 누르면 탭이 잠깐 나타납니다.
  *    5초 안에 누르지 않으면 다시 사라집니다. 또 보려면 다시 세 번 누릅니다.
  *
  *  ★ 서버 왕복
@@ -9761,7 +9791,7 @@ function roomAllowed(){
   return !!(S.data && S.data.note && S.data.note.label);
 }
 
-/** 로고마크를 눌렀을 때. 세 번이면 탭이 나타난다 */
+/** 로고마크를 눌렀을 때. **두 번**이면 탭이 나타난다 (2026-09-03) */
 function brandTap(){
   var now = Date.now();
   if(now - ROOM.tapAt > 900) ROOM.tapN = 0;
@@ -9771,7 +9801,7 @@ function brandTap(){
      세 번째만 화면을 안 옮기게 두면, 명단 밖 사람도 '세 번째는 뭔가 다르다' 를
      알아챕니다. 언제나 판으로 가고, 명단에 든 사람에게만 탭이 하나 더 뜹니다. */
   go('board');
-  if(ROOM.tapN >= 3){
+  if(ROOM.tapN >= 2){
     ROOM.tapN = 0;
     roomReveal();
   }
