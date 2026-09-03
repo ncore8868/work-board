@@ -1478,7 +1478,9 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
       <button class="btn" onclick="openPinChange()">PIN 변경</button>
       <button class="btn" onclick="logout()">이 기기에서 로그아웃</button>
     </div>
-    <div class="field" style="margin-top:20px">
+    <!-- ★ 속도·버전은 **관리자에게만** 보입니다 (2026-09-03 대표님 지시).
+         직원이 서버 사정을 볼 이유가 없습니다. 자가진단 줄도 같은 규칙입니다. -->
+    <div class="field hide" style="margin-top:20px" id="perfWrap">
       <label class="fl">속도</label>
       <div class="sumbox" id="perfBox"></div>
       <div class="actions" style="margin-top:8px">
@@ -1486,7 +1488,7 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
         <button class="btn sm" onclick="PERF=[];paintPerf()">지우기</button>
       </div>
     </div>
-    <p class="muted" style="margin-top:18px;font-size:var(--fs-sm)" id="verText"></p>
+    <p class="muted hide" style="margin-top:18px;font-size:var(--fs-sm)" id="verText"></p>
   </div>
 </div>
 
@@ -8883,13 +8885,28 @@ function pushRefresh(){
   }).catch(function(e){ quiet('푸시 갱신', e); });
 }
 
+/** 관리자(9)인가 — 서버가 준 등급만 봅니다 */
+function isAdmin(){ return !!(S.me && Number(S.me.grade||0) >= 9); }
+
+/* ★★ 속도표·버전줄은 **관리자에게만** 보입니다 (2026-09-03).
+   직원에게는 서버 사정을 알 이유가 없고, 알아도 할 수 있는 일이 없습니다.
+   자가진단 줄(`healthFor_`)이 이미 같은 규칙이라 그것과 맞춥니다.
+   ★ `설정 화면을 그릴 때마다` 다시 정합니다 — 등급이 서버 응답으로 바뀔 수 있습니다. */
+function paintAdminOnly(){
+  var 보임 = isAdmin();
+  ['perfWrap','verText'].forEach(function(id){
+    var el=$(id); if(el) el.classList.toggle('hide', !보임);
+  });
+  return 보임;
+}
+
 function renderSettings(){
   applyTheme();
   renderPush();                  // 폰 알림 (서버에 안 켜져 있으면 아예 안 그린다)
   [].forEach.call($('themePick').children,function(l){
     l.onclick=function(){ setTheme(l.dataset.v); };
   });
-  paintPerf();
+  if(paintAdminOnly()) paintPerf();
   // 한 번 받아둔 게 있으면 즉시 그린다 (왕복 0회). 최신 값은 뒤에서 갈아끼운다
   if(S.setCache){
     paintSettings(S.setCache);
@@ -8933,9 +8950,14 @@ function paintSettings(r){
     $('verText').textContent='버전 '+((S.meta&&S.meta.version)||'')+
       ((S.meta&&S.meta.code)? ' · 코드 '+S.meta.code : ' · 코드 (옛 버전)');
 
-    if(!r.ok || !me.grade || me.grade<9){
-      $('adminBox').innerHTML='<p class="muted" style="margin-top:18px;font-size:var(--fs-sm)">'+
-        '관리자 설정은 권한등급 9에서만 보입니다.</p>';
+    /* 서버가 준 등급으로 다시 정합니다 (여기가 최종입니다) */
+    var 관리자 = paintAdminOnly();
+    if(관리자) paintPerf();
+
+    if(!r.ok || !관리자){
+      /* ★ `관리자 설정은 권한등급 9에서만 보입니다` 라고 적어 두지 않습니다.
+         그 한 줄이 곧 '여기 뭔가 더 있다' 는 안내가 됩니다. 그냥 비웁니다. */
+      $('adminBox').innerHTML='';
       return;
     }
     paintAdmin(r);
