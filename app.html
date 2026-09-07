@@ -1490,6 +1490,23 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
     </div>
     <div id="pushBox"></div>
     <div class="field"><label class="fl">내 정보</label><div class="sumbox" id="meInfo"></div></div>
+    <!-- ★ 세무 자료는 임원(3) 이상에게만 보입니다 (2026-09-07).
+         화면에서 가리는 것은 보조일 뿐이고 서버가 등급을 다시 봅니다. -->
+    <div class="field hide" id="taxBox">
+      <label class="fl">세무 자료</label>
+      <div class="chks" id="taxKind">
+        <label data-v="분기" class="on" onclick="pickOne(this);taxFill()">분기</label>
+        <label data-v="달" onclick="pickOne(this);taxFill()">달</label>
+      </div>
+      <div class="grid2" style="margin-top:var(--sp-2)">
+        <select id="taxYear" onchange="taxFill()"></select>
+        <select id="taxNo"></select>
+      </div>
+      <div class="actions" style="margin-top:var(--sp-2)">
+        <button class="btn pri" id="taxGo" onclick="taxExport()">파일로 뽑기</button>
+      </div>
+      <div id="taxOut"></div>
+    </div>
     <div id="adminBox"></div>
     <div class="actions">
       <button class="btn" onclick="openPinChange()">PIN 변경</button>
@@ -8984,10 +9001,91 @@ function isAdmin(){ return !!(S.me && Number(S.me.grade||0) >= 9); }
    ★ `설정 화면을 그릴 때마다` 다시 정합니다 — 등급이 서버 응답으로 바뀔 수 있습니다. */
 function paintAdminOnly(){
   var 보임 = isAdmin();
-  ['perfWrap','verText'].forEach(function(id){
+  /* ★ 세무 자료(taxBox)도 관리자 전용입니다 (2026-09-07).
+     워크스페이스가 1석이라 대표님 말고는 만든 파일을 열 수 없습니다 —
+     넓혀 두면 '눌러도 안 열리는 버튼' 이 됩니다. */
+  ['perfWrap','verText','taxBox'].forEach(function(id){
     var el=$(id); if(el) el.classList.toggle('hide', !보임);
   });
+  if(보임) taxInit();
   return 보임;
+}
+
+/* ===================== 세무 자료 (2026-09-07) =====================
+ *
+ *  분기나 달을 고르고 누르면 서버가 스프레드시트 한 장을 만들어
+ *  드라이브에 두고 링크를 줍니다. 세무사에게 그대로 넘길 수 있습니다.
+ *
+ *  ★ 서버 왕복은 **누를 때 1회**뿐입니다. 화면을 여는 것은 0회입니다.
+ *  ★ 만든 파일에는 **공유가 걸려 있지 않습니다.** 대표님 계정에서만 열립니다.
+ * ============================================================= */
+var TAX_URL = '';
+var TAX_KIND = '';
+
+function taxInit(){
+  var sel=$('taxYear');
+  if(!sel || sel.options.length) return;      // 한 번만 채운다
+  var 올해 = new Date().getFullYear();
+  var h='';
+  for(var y=올해; y>=올해-2; y--) h += '<option value="'+y+'">'+y+'년</option>';
+  sel.innerHTML=h;
+  taxFill();
+}
+
+/** 분기냐 달이냐에 따라 두 번째 드롭다운을 다시 채운다 */
+function taxFill(){
+  var box=$('taxNo'); if(!box) return;
+  var kind=pickedVal('taxKind')||'분기';
+  var 옛 = (kind===TAX_KIND) ? box.value : '';
+  TAX_KIND = kind;
+  var h='', i;
+  if(kind==='분기'){
+    for(i=1;i<=4;i++) h += '<option value="'+i+'">'+i+'분기</option>';
+  } else {
+    for(i=1;i<=12;i++) h += '<option value="'+i+'">'+i+'월</option>';
+  }
+  box.innerHTML=h;
+
+  /* 연도만 바꿨으면 고르던 것을 그대로 두고, 분기↔달을 바꿨으면 지금 것으로.
+     ★ 물려주면 '3분기' 에서 달로 바꿨을 때 '3월' 이 됩니다 — 숫자는 같아도
+       뜻이 다른 단위라 사람이 고른 적 없는 값이 남습니다 (2026-09-07). */
+  var 지금 = new Date();
+  var 기본 = (kind==='분기') ? (Math.floor(지금.getMonth()/3)+1) : (지금.getMonth()+1);
+  box.value = 옛 || String(기본);
+  TAX_URL=''; $('taxOut').innerHTML='';
+}
+
+function taxOpen(){ if(TAX_URL) window.open(TAX_URL,'_blank'); }
+
+function taxExport(){
+  var btn=$('taxGo'); if(!btn || btn.disabled) return;
+  var kind=pickedVal('taxKind')||'분기';
+  var y=Number($('taxYear').value), n=Number($('taxNo').value);
+  if(!y || !n){ toast('기간을 골라주세요'); return; }
+
+  var 옛글=btn.textContent;
+  btn.disabled=true; btn.textContent='만드는 중...';
+  $('taxOut').innerHTML='';
+
+  call('api_taxExport', S.token, kind, y, n).then(function(r){
+    btn.disabled=false; btn.textContent=옛글;
+    if(!r || !r.ok){ toast((r&&r.msg)||'만들지 못했습니다'); return; }
+    TAX_URL = r.url||'';
+    $('taxOut').innerHTML =
+      '<div class="sumbox" style="margin-top:var(--sp-2)">'+
+        '<div class="lrow plain"><div class="m"><p class="t">'+esc(r.label)+'</p>'+
+          byline([r.from+' ~ '+r.to])+'</div></div>'+
+        '<div class="lrow plain"><div class="m"><p class="t">입금</p>'+
+          byline([r.payCount+'건',
+                  '세금계산서 발행 '+r.taxYes+' · 미발행 '+r.taxNo])+'</div>'+
+          '<div class="r"><span class="v">'+won(r.paid)+'원</span></div></div>'+
+        '<div class="lrow plain"><div class="m"><p class="t">결재 지출</p>'+
+          byline([r.expCount+'건'])+'</div>'+
+          '<div class="r"><span class="v">'+won(r.exp)+'원</span></div></div>'+
+      '</div>'+
+      (TAX_URL? '<div class="actions" style="margin-top:var(--sp-2)">'+
+        '<button class="btn pri" onclick="taxOpen()">파일 열기</button></div>' : '');
+  });
 }
 
 function renderSettings(){
