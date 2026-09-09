@@ -567,9 +567,11 @@ label.fl{display:block;font-size:var(--fs-xs);color:var(--t3);margin:0 0 6px;fon
 .roomtab.stay .rt-bar{animation:none;transform:scaleX(0)}
 @keyframes rtBar{from{transform:scaleX(1)}to{transform:scaleX(0)}}
 
-.clock{font-size:var(--fs-body);color:var(--t2);font-variant-numeric:tabular-nums;margin-right:2px}
+.clock{font-size:var(--fs-sm);color:var(--t2);font-variant-numeric:tabular-nums}
+.clockbtn{display:flex;align-items:center;gap:4px;padding:5px 8px}
+.clockbtn .rico{font-size:var(--fs-h1);line-height:1;display:inline-block}
 @media (max-width:420px){ .clock{display:none} }
-#refBtn.spin{animation:spin .8s linear infinite}
+#refBtn.spin .rico{animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 
 /* 공지 줄 — 상단바 바로 아래. 어느 화면에서나 보인다 */
@@ -596,10 +598,10 @@ label.fl{display:block;font-size:var(--fs-xs);color:var(--t3);margin:0 0 6px;fon
 .nrow.read{opacity:.45}
 .nrow:hover .t{text-decoration:underline}
 .nrow .tag{flex-shrink:0}
-/* 폰에서는 맨 위 공지 한 줄만. 나머지는 게시판에서 본다 */
+.nrow .more{text-decoration:underline;text-underline-offset:2px}
+/* 폰에서는 누가·언제를 감춘다. `외 N건` 은 남긴다 */
 @media (max-width:719px){
-  .nrow:nth-child(n+2){display:none}
-  .nrow .w{display:none}
+  .nrow .w:not(.more){display:none}
 }
 
 /* 접었다 펴는 구역 — 제목줄에 요약을 얹는다 */
@@ -640,6 +642,10 @@ label.fl{display:block;font-size:var(--fs-xs);color:var(--t3);margin:0 0 6px;fon
    같은 모양을 서른 곳에 손으로 적어 두면 크기를 한 단계 올릴 때 반드시 몇 곳을 놓칩니다. */
 .note{margin:4px 0 0;font-size:var(--fs-sm);color:var(--t3)}
 .note.t2{color:var(--t2)}
+/* 글자처럼 보이는 버튼 — 드문 동작을 작은 링크로 둘 때 (2026-09-09) */
+.linkbtn{border:none;background:transparent;padding:0;font:inherit;color:inherit;cursor:pointer;
+  text-decoration:underline;text-underline-offset:2px}
+.linkbtn:hover{color:var(--t1)}
 .note.right{text-align:right}
 .note.tight{margin-top:2px}
 .note.loose{margin-top:var(--sp-3)}
@@ -654,6 +660,11 @@ ul.mk li,ol.mk li{margin:2px 0}
 
 /* ── 글 서식 편집기 (v44) — 버튼을 누르면 그 자리에서 바로 굵어진다 ── */
 .mkbar{display:flex;gap:4px;margin:0 0 6px}
+/* slim 편집기는 커서가 들어갔을 때만 툴바를 보인다 (2026-09-09) */
+.mked.slim:not(.on) .mkbar,.mked.slim:not(.on) .mkbar2{display:none}
+/* 내역 줄 위 머리줄 — 품목·일자·금액이 어느 칸인지 (2026-09-09) */
+.ithead{margin:0 0 4px}
+.ithead span{font-size:var(--fs-xs);color:var(--t3);letter-spacing:.02em}
 .mkbar button{border:1px solid var(--line2);background:var(--field);border-radius:var(--r);
   padding:5px 8px;cursor:pointer;color:var(--t3);line-height:0;
   transition:background .12s,color .12s,border-color .12s}
@@ -996,6 +1007,7 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 .stats .num{color:var(--t1);font-weight:600}
 .lastline{margin:8px 0 0;padding-top:6px;border-top:1px solid var(--line);
   font-size:var(--fs-sm);color:var(--t2)}
+.lastline .nx{color:var(--t3)}
 .flags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
 .slim .cn{font-size:var(--fs-body)}
 .slim .stats{display:none}
@@ -1041,8 +1053,11 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 .rail .item .del{border:none;background:transparent;color:var(--t3);cursor:pointer;
   font-size:var(--fs-h1);line-height:1;padding:1px 4px;border-radius:var(--r-sm)}
 .rail .item .del:hover{background:var(--dg-bg);color:var(--dg)}
-.apv{background:var(--dg-bg);color:var(--dg);border:1px solid var(--dg-line);
-  border-radius:var(--r-lg);padding:var(--pad-card);margin-bottom:var(--sp-2);cursor:pointer;font-size:var(--fs-sm)}
+/* 레일의 결재 상자는 결재 탭의 카드(.ucard.hot)와 같은 모양입니다 (2026-09-09).
+   빨강은 왼쪽 선 하나로 충분합니다. */
+.rail .apv{margin-bottom:var(--sp-2);padding:10px 12px}
+.rail .apv .t{font-size:var(--fs-body)}
+.rail h4.dgv{color:var(--t1)}
 /* ★★ 누적 상자는 **업무가 아닙니다** (2026-09-02).
    흰 카드에 테두리까지 같아서 완료 목록의 여섯 번째 업무처럼 보였습니다.
    바탕을 한 단계 파고 테두리를 없애 '같은 층이 아니다' 를 눈으로 갈라 둡니다. */
@@ -1081,14 +1096,29 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
   .board{grid-template-columns:1fr}
   .rail{border-top:1px solid var(--line);padding-top:12px}
   .slim .stats{display:none}
+  .todobar{display:flex}
 }
+/* 폰 전용 '지금 손댈 것' 한 줄 — PC 에서는 레일이 같은 것을 보여주므로 감춘다 */
+.todobar{display:none;gap:6px;margin:0 0 var(--sp-3);overflow-x:auto;scrollbar-width:none}
+.todobar::-webkit-scrollbar{display:none}
+.todobar button{border:1px solid var(--line);background:var(--card);color:var(--t2);cursor:pointer;
+  border-radius:99px;padding:6px 12px;font-size:var(--fs-sm);white-space:nowrap;flex:none}
+.todobar button b{color:var(--t1);font-family:var(--font-title);font-size:var(--fs-body)}
+.todobar button.dgv{border-color:var(--dg-line)}
+.todobar button.dgv b{color:var(--dg)}
+/* 카드 안 담당자 이름은 폰에서 글자로만 (2026-09-09). 카드를 누르려다 이름에 닿으면
+   업무가 안 열리고 판이 걸러졌습니다. 담당자 필터는 드롭다운이 있습니다. */
+@media (hover:none){ .card .who{pointer-events:none;text-decoration:none} }
 
 /* ===================== 하단 탭 (모바일) ===================== */
 .tabs{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--card);
   border-top:1px solid var(--line);display:grid;grid-template-columns:repeat(4,1fr);
   padding:7px 0 calc(9px + env(safe-area-inset-bottom));text-align:center}
-.tabs button{border:none;background:transparent;cursor:pointer;color:var(--t3);font-size:var(--fs-xs)}
+.tabs button{border:none;background:transparent;cursor:pointer;color:var(--t3);font-size:var(--fs-xs);position:relative}
 .tabs button.on{color:var(--t1);font-weight:600}
+/* 하단 탭 결재에도 숫자 — PC 탭과 같은 값 (2026-09-09) */
+.tabs .cnt{position:absolute;top:0;left:calc(50% + 6px);min-width:16px;height:16px;line-height:16px;
+  border-radius:99px;padding:0 4px;background:var(--accent);color:var(--on-accent);font-size:var(--fs-cnt);font-weight:700}
 .tabs .ic{display:block;font-size:var(--fs-icon-lg);margin-bottom:2px}
 @media (min-width:720px){ .tabs{display:none} }
 .deskmenu{display:none}
@@ -1398,9 +1428,11 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
   </nav>
 
   <div class="spacer"></div>
-  <span class="clock" id="atTime"></span>
+  <!-- ★ 시계와 새로고침은 한 단추입니다 (2026-09-09 대표님 결정).
+       시계는 실은 '마지막으로 받아온 시각' 이고, 판은 30초마다 저절로 받아오므로
+       새로고침 단추를 따로 두면 '눌러 줘야 갱신되나' 를 가르칩니다. -->
+  <button class="icobtn clockbtn" id="refBtn" onclick="refresh(true)" title="마지막으로 받아온 시각 · 누르면 다시 받아옵니다"><span class="rico">⟳</span><span class="clock" id="atTime"></span></button>
   <button class="icobtn" onclick="openSearch()" title="검색">🔍</button>
-  <button class="icobtn" id="refBtn" onclick="refresh(true)" title="새로고침">⟳</button>
   <button class="icobtn" onclick="openCal()" title="일정">📅</button>
   <button class="icobtn" onclick="openNoti()" title="알림">🔔<span class="badge hide" id="notiBadge">0</span></button>
   <button class="icobtn" onclick="go('settings')" title="설정">⚙</button>
@@ -1419,13 +1451,15 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 <!-- ================= 공지 줄 (탭이 아니라 한 줄 + 모달) ================= -->
 <div class="notice hide" id="noticeBar"><div class="noticein">
   <div class="nlist" id="noticeList"></div>
-  <button class="btn sm" onclick="openBoard()">게시판</button>
+  <button class="btn sm" onclick="openBoard()">공지 보기</button>
 </div></div>
 
 <div class="wrap">
   <!-- ================= 워크보드 ================= -->
   <div id="view-board">
     <div class="filterbar" id="corpFilter"></div>
+    <!-- 폰에서만 보이는 '지금 손댈 것' 한 줄. 셋 다 0이면 그리지 않는다 (2026-09-09) -->
+    <div class="todobar hide" id="todoBar"></div>
     <div class="board">
       <!-- ★ 대기·완료는 **접힌 채로 시작**합니다 (2026-09-03).
            항상 보이는 것은 `진행중` 하나입니다. 머리글을 누르면 그때 카드가 보입니다.
@@ -1460,8 +1494,8 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
   <div id="view-doc" class="hide page">
     <div class="backbar"><button class="btn sm" onclick="go('board')">← 워크보드</button></div>
     <div class="pagehead">
-      <h3 class="tt">전자결재</h3>
-      <button class="btn pri sm" onclick="openDocForm()">＋ 문서 작성</button>
+      <h3 class="tt">결재</h3>
+      <button class="btn pri sm" onclick="openDocForm()">＋ 결재 올리기</button>
     </div>
     <div id="docLists"></div>
   </div>
@@ -1480,6 +1514,53 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
   <div id="view-settings" class="hide page">
     <div class="backbar"><button class="btn sm" onclick="go('board')">← 워크보드</button></div>
     <div class="pagehead"><h3 class="tt">설정</h3></div>
+    <!-- ★★ 차례는 '자주 누르는 것이 위' (2026-09-09).
+         예전에는 세무 자료·급여·시트 ID·글꼴 주소가 맨 위였고, 빨간 제목의 `승인 대기` 와
+         직원 목록이 폰으로 세 화면 아래였습니다. 관리자 화면이 세로 3.2장, 버튼 44개였습니다.
+         지금은 ① 승인 대기·직원·거래처·접속 기록  ② 이 달 자료(접힘)  ③ 내 정보·PIN·로그아웃
+         ④ 화면 밝기·폰 알림  ⑤ 처음 설정(접힘 — 도장·단가·시트ID·글꼴·동기화·속도·버전).
+         관리자 전용 구역은 paintAdminOnly() 가 통째로 감춥니다. -->
+    <div id="adminTop"></div>
+    <!-- ★ 세무 자료·급여 초안은 관리자(9) 전용입니다 (2026-09-07 · 2026-09-08).
+         워크스페이스가 1석이라 대표님 말고는 만든 파일을 열 수 없고, 급여는 남의 개인정보입니다.
+         화면에서 가리는 것은 보조일 뿐이고 서버가 등급을 다시 봅니다.
+         한 달에 한 번 누르는 것이라 접힌 채 시작합니다. -->
+    <div class="fold hide" id="monthFold">
+      <button class="fh" onclick="toggleFold('setMonth',this)">이 달 자료<span class="arrow">▾</span></button>
+      <div class="fb">
+        <div class="field" id="taxBox">
+          <label class="fl">세무 자료</label>
+          <div class="chks" id="taxKind">
+            <label data-v="분기" class="on" onclick="pickOne(this);taxFill()">분기</label>
+            <label data-v="달" onclick="pickOne(this);taxFill()">달</label>
+          </div>
+          <div class="grid2" style="margin-top:var(--sp-2)">
+            <select id="taxYear" onchange="taxFill()"></select>
+            <select id="taxNo"></select>
+          </div>
+          <div class="actions" style="margin-top:var(--sp-2)">
+            <button class="btn pri" id="taxGo" onclick="taxExport()">파일로 뽑기</button>
+          </div>
+          <div id="taxOut"></div>
+        </div>
+        <div class="field" id="payBox">
+          <label class="fl">급여 초안</label>
+          <div class="grid2">
+            <select id="payYear"></select>
+            <select id="payMon"></select>
+          </div>
+          <div class="actions" style="margin-top:var(--sp-2)">
+            <button class="btn pri" id="payGo" onclick="payExport()">파일로 뽑기</button>
+          </div>
+          <div id="payOut"></div>
+        </div>
+      </div>
+    </div>
+    <div class="field"><label class="fl">내 정보</label><div class="sumbox" id="meInfo"></div></div>
+    <div class="actions">
+      <button class="btn" onclick="openPinChange()">PIN 변경</button>
+      <button class="btn" onclick="logout()">이 기기에서 로그아웃</button>
+    </div>
     <div class="field">
       <label class="fl">화면 밝기</label>
       <div class="chks" id="themePick">
@@ -1489,53 +1570,23 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
       </div>
     </div>
     <div id="pushBox"></div>
-    <div class="field"><label class="fl">내 정보</label><div class="sumbox" id="meInfo"></div></div>
-    <!-- ★ 세무 자료는 임원(3) 이상에게만 보입니다 (2026-09-07).
-         화면에서 가리는 것은 보조일 뿐이고 서버가 등급을 다시 봅니다. -->
-    <div class="field hide" id="taxBox">
-      <label class="fl">세무 자료</label>
-      <div class="chks" id="taxKind">
-        <label data-v="분기" class="on" onclick="pickOne(this);taxFill()">분기</label>
-        <label data-v="달" onclick="pickOne(this);taxFill()">달</label>
-      </div>
-      <div class="grid2" style="margin-top:var(--sp-2)">
-        <select id="taxYear" onchange="taxFill()"></select>
-        <select id="taxNo"></select>
-      </div>
-      <div class="actions" style="margin-top:var(--sp-2)">
-        <button class="btn pri" id="taxGo" onclick="taxExport()">파일로 뽑기</button>
-      </div>
-      <div id="taxOut"></div>
-    </div>
-    <!-- ★ 급여 초안도 관리자(9) 전용입니다 (2026-09-08).
-         세무 자료와 같은 이유(워크스페이스 1석)에 더해, 급여는 남의 개인정보입니다. -->
-    <div class="field hide" id="payBox">
-      <label class="fl">급여 초안</label>
-      <div class="grid2">
-        <select id="payYear"></select>
-        <select id="payMon"></select>
-      </div>
-      <div class="actions" style="margin-top:var(--sp-2)">
-        <button class="btn pri" id="payGo" onclick="payExport()">파일로 뽑기</button>
-      </div>
-      <div id="payOut"></div>
-    </div>
-    <div id="adminBox"></div>
-    <div class="actions">
-      <button class="btn" onclick="openPinChange()">PIN 변경</button>
-      <button class="btn" onclick="logout()">이 기기에서 로그아웃</button>
-    </div>
-    <!-- ★ 속도·버전은 **관리자에게만** 보입니다 (2026-09-03 대표님 지시).
-         직원이 서버 사정을 볼 이유가 없습니다. 자가진단 줄도 같은 규칙입니다. -->
-    <div class="field hide" style="margin-top:20px" id="perfWrap">
-      <label class="fl">속도</label>
-      <div class="sumbox" id="perfBox"></div>
-      <div class="actions" style="margin-top:8px">
-        <button class="btn sm" onclick="paintPerf()">다시 재기</button>
-        <button class="btn sm" onclick="PERF=[];paintPerf()">지우기</button>
+    <!-- ★ 설치할 때 한 번 넣고 다시 안 만지는 것과 서버 사정(속도·버전)은 접힌 채 시작합니다.
+         속도·버전은 **관리자에게만** 보입니다 (2026-09-03 대표님 지시). -->
+    <div class="fold hide" id="setupFold">
+      <button class="fh" onclick="toggleFold('setSetup',this)">처음 설정<span class="arrow">▾</span></button>
+      <div class="fb">
+        <div id="adminBox"></div>
+        <div class="field" style="margin-top:20px" id="perfWrap">
+          <label class="fl">속도</label>
+          <div class="sumbox" id="perfBox"></div>
+          <div class="actions" style="margin-top:8px">
+            <button class="btn sm" onclick="paintPerf()">다시 재기</button>
+            <button class="btn sm" onclick="PERF=[];paintPerf()">지우기</button>
+          </div>
+        </div>
+        <p class="muted" style="margin-top:18px;font-size:var(--fs-sm)" id="verText"></p>
       </div>
     </div>
-    <p class="muted hide" style="margin-top:18px;font-size:var(--fs-sm)" id="verText"></p>
   </div>
 </div>
 
@@ -1543,7 +1594,7 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 <div class="tabs">
   <button data-view="board" class="on" onclick="go('board')"><span class="ic">▦</span>워크보드</button>
   <button data-view="log" onclick="openLogForm()"><span class="ic">✎</span>기록</button>
-  <button data-view="doc" onclick="go('doc')"><span class="ic">▤</span>결재</button>
+  <button data-view="doc" onclick="go('doc')"><span class="ic">▤</span>결재<span class="cnt hide" id="navDocM">0</span></button>
   <button data-view="me" onclick="go('me')"><span class="ic">◉</span>내 업무</button>
   <button class="roomtab" id="roomM" data-view="note" onclick="go('note')">
     <span class="ic">◈</span><span class="rt-name"></span>
@@ -3049,16 +3100,29 @@ function mkValue(id){
  * 서식 입력칸.
  * value 는 저장된 표시글(*굵게* 등). fmt() 로 서식을 살려 넣는다.
  */
-function mkEditor(id, value, minPx){
+/* ★ `slim` 이면 툴바는 **칸에 커서가 들어갔을 때만** 보입니다 (2026-09-09).
+   업무 등록·작업기록 창에서 아이콘 일곱 개가 빈 칸 위에 늘 떠 있어
+   등록 창이 글쓰기 도구처럼 보였습니다. 공지·기록장은 그대로 늘 보입니다.
+   툴바 버튼은 mousedown 에서 preventDefault 하므로 눌러도 커서가 칸을 떠나지 않습니다. */
+function mkEditor(id, value, minPx, slim){
   var min=minPx||86;
-  return '<div class="mked">'+mkBar(id)+
+  return '<div class="mked'+(slim?' slim':'')+'">'+mkBar(id)+
     '<div id="'+id+'" class="mkin" contenteditable="true" spellcheck="false" '+
       'style="min-height:'+min+'px" '+
       'onkeydown="mkKey(event,\''+id+'\')" '+
       'onkeyup="mkState(\''+id+'\');atKey(event,this)" '+
-      'onmouseup="mkState(\''+id+'\')" onfocus="mkState(\''+id+'\')" '+
+      'onmouseup="mkState(\''+id+'\')" onfocus="mkState(\''+id+'\');mkShow(this,true)" '+
+      'onblur="mkShow(this,false)" '+
       'onclick="mkClick(event,\''+id+'\')" '+
       'onpaste="mkPaste(event)">'+ fmt(value||'') +'</div></div>';
+}
+function mkShow(el, on){
+  var w=el && el.closest ? el.closest('.mked') : null;
+  if(!w) return;
+  if(on){ w.classList.add('on'); return; }
+  setTimeout(function(){
+    if(!w.contains(document.activeElement)) w.classList.remove('on');
+  }, 150);
 }
 
 /* ===================== 짧은 날짜 · 누가 언제 한 줄 (v42) ===================== */
@@ -3838,7 +3902,7 @@ function openPinChange(){
     '<div class="field"><label class="fl req">새 PIN 다시 입력</label>'+
     '<input type="password" id="pcNew2" maxlength="4" inputmode="numeric"></div>'+
     '<div class="actions"><button class="btn" onclick="closeModal()">취소</button>'+
-    '<button class="btn pri" onclick="savePin()">변경</button></div>'+
+    '<button class="btn pri" onclick="savePin()">저장</button></div>'+
     '<p class="muted" id="pcMsg" style="margin-top:8px"></p></div></div>';
 }
 function savePin(){
@@ -4246,12 +4310,18 @@ function renderBoard(){
   var apv=d.approvals||[];
   var apvBox = $('apvTitle') ? $('apvTitle').parentNode : null;
   if(apvBox) apvBox.classList.toggle('hide', apv.length===0);
-  $('apvTitle').textContent = ((S.me&&S.me.grade>=3)?'결재 대기 ':'내 결재 ')+apv.length;
+  /* ★ 숫자는 탭 하나에만 (2026-09-09). 탭 `결재 ③` · 레일 `결재 대기 3` ·
+     구역 `내가 결재할 문서 3` 세 곳에 같은 숫자가 있었습니다. 아래 상자 개수가 곧 숫자입니다.
+     ★ 상자는 결재 탭과 같은 모양(흰 바탕 + 왼쪽 빨간 선). 제목·배경·글자가 전부 빨강이라
+       진짜 빨간 것(마감 지남·못 받은 돈)과 무게가 같아졌습니다. */
+  $('apvTitle').textContent = (S.me&&S.me.grade>=3)?'결재 대기':'내 결재';
   $('railApv').innerHTML = apv.map(function(a){
-    return '<div class="apv" onclick="openDoc(\''+a.no+'\')"><b>'+esc(a.title)+'</b><br>'+
-           esc([a.amount? won(a.amount)+'원':'', a.who].filter(function(x){return x;}).join(' · '))+
-           '</div>';
+    return '<div class="ucard hot apv" onclick="openDoc(\''+a.no+'\')"><div class="m">'+
+           '<p class="t">'+esc(a.title)+'</p>'+
+           '<p class="b">'+esc([a.amount? won(a.amount)+'원':'', a.who].filter(function(x){return x;}).join(' · '))+'</p>'+
+           '</div></div>';
   }).join('');
+  renderTodoBar(d, apv.length);
 
   var att=d.attendance||{rows:[]};
   var 출근줄=(att.rows)||[];
@@ -4308,10 +4378,13 @@ function renderBoard(){
 
 /** 결재 탭에 내가 처리할 건수 표시 */
 function navCount(){
-  var el=$('navDoc'); if(!el || !S.data) return;
+  if(!S.data) return;
   var n=(S.data.approvals||[]).length;
-  if(n){ el.textContent=n; el.classList.remove('hide'); }
-  else el.classList.add('hide');
+  ['navDoc','navDocM'].forEach(function(id){      // PC 탭과 폰 하단 탭, 같은 값
+    var el=$(id); if(!el) return;
+    if(n){ el.textContent=n; el.classList.remove('hide'); }
+    else el.classList.add('hide');
+  });
 }
 
 /** 숫자가 바뀌면 짧게 굴려서 바뀐 걸 알아채게 한다 */
@@ -4539,9 +4612,23 @@ function renderTodo(){
   }
   if(qt.length){
     h+='<button class="todo" onclick="openQuiet()">'+
-       '<b>'+qt.length+'건</b>견적 보내고 '+UNPAID_DAYS+'일 넘게 답 없음</button>';
+       '<b>'+qt.length+'건</b>답 없는 견적</button>';
   }
   box.innerHTML = h ? ('<h4>챙길 것</h4>'+h) : '';
+}
+
+/* ★ 폰에서는 '지금 손댈 것' 을 판 **위** 한 줄로 (2026-09-09).
+   폰 세로 순서가 대기 → 진행중 카드들 → 완료 → 레일이라, 아침에 폰으로 열면
+   결재 대기·못 받은 돈이 카드 열 장 아래에 있었습니다. 셋 다 0이면 줄째 안 그립니다.
+   PC 에서는 CSS 가 감춥니다 — 레일이 이미 같은 것을 보여줍니다. */
+function renderTodoBar(d, apvN){
+  var box=$('todoBar'); if(!box) return;
+  var up=unpaidList(), qt=quietList(), parts=[];
+  if(apvN) parts.push('<button onclick="go(\'doc\')"><b>'+apvN+'</b> 결재</button>');
+  if(up.length) parts.push('<button class="dgv" onclick="openUnpaid()"><b>'+up.length+'</b> 못 받은 돈</button>');
+  if(qt.length) parts.push('<button onclick="openQuiet()"><b>'+qt.length+'</b> 답 없는 견적</button>');
+  box.classList.toggle('hide', !parts.length);
+  box.innerHTML = parts.join('');
 }
 
 function openUnpaid(){
@@ -4582,7 +4669,10 @@ function sumBox(A){
   return '<div class="sumbox'+(A?' in':'')+(볼수있나?' go':'')+'"'+
     (볼수있나? ' onclick="openMonthly()"' : '')+
     '><p class="muted" style="font-size:var(--fs-sm)">'+esc(s.month||'')+' 누적</p>'+
-    '<p>완료 '+(s.count||0)+'건</p><p>'+won(s.amount||0)+'원</p></div>';
+    '<p>완료 '+(s.count||0)+'건</p><p>'+won(s.amount||0)+'원</p>'+
+    /* 폰에는 커서가 없어 누를 수 있는지 아무도 몰랐습니다 (2026-09-09) */
+    (볼수있나? '<p class="muted" style="font-size:var(--fs-sm);font-weight:400;margin-top:4px">이번 달 한 장 ›</p>' : '')+
+    '</div>';
 }
 
 /* ★★ 서버가 칸 하나를 안 보내도 **흰 화면이 되면 안 됩니다** (2026-09-02).
@@ -4599,8 +4689,17 @@ function anim_(i){
   return i>=0 ? ' in" style="animation-delay:'+Math.min(i*80,640)+'ms' : '';
 }
 
+/* ★★ 마감 표시는 태그가 아니라 **날짜 글자만 빨갛게** (2026-09-09).
+   `09-04 D+3` 옆에 태그 `마감 지남` 이 또 붙어 같은 사실이 한 카드에 두 번 적혔습니다.
+   서버가 주는 표시(flags) 중 마감 계열은 카드의 왼쪽 빨간 선과 날짜 색으로만 보이고,
+   태그 줄에는 노랑 계열(기록 N일 없음 · 추가견적 필요 · 미승인 추가)만 남습니다.
+   ★ 법인명은 **법인이 둘 이상일 때만** — 필터 칩과 같은 조건입니다. */
+function isDueFlag(f){ return !!(f && (f.t==='마감 지남' || f.t==='오늘 마감')); }
+function dueHot(t){ return ((t&&t.flags)||[]).some(isDueFlag); }
+function manyCorps(){ return ((S.meta && S.meta.corps) || []).length > 1; }
+
 function cardSlim(t, i){
-  var f=((t&&t.flags)||[])[0];
+  var f=((t&&t.flags)||[]).filter(function(x){ return x && !isDueFlag(x); })[0];
   // 빈 값이면 그 줄 자체를 만들지 않는다 (v42)
   var when=[];
   if(t.status==='완료'){
@@ -4608,7 +4707,7 @@ function cardSlim(t, i){
     if(t.amount) when.push(won(t.amount)+'원');
   } else {
     if(t.start) when.push(shortDate(t.start)+' 시작');
-    if(t.due) when.push('마감 '+shortDate(t.due));
+    if(t.due) when.push((dueHot(t)?'<span class="dgv">':'')+'마감 '+shortDate(t.due)+(dueHot(t)?'</span>':''));
   }
   return '<div data-tid="'+t.id+'" class="card '+lv(t)+(t.status==='완료'?' done':'')+anim_(i)+'" onclick="openTask(\''+t.id+'\')">'+
     '<p class="cn tt">'+esc(t.title)+cmtBadge(t.id)+
@@ -4620,7 +4719,7 @@ function cardSlim(t, i){
     (f? '<p style="margin:4px 0 0;font-size:var(--fs-sm);color:var(--'+(f.lv==='danger'?'dg':'wn')+')">'+esc(f.t)+'</p>' : '')+
     '<p class="cb">'+
       [esc(t.typeName||''), (t.ownerName? ownerChip(t) : ''),
-       (f? '' : esc(when.join(' · ')))].filter(function(x){ return x; }).join(' · ')+
+       (f? '' : when.join(' · '))].filter(function(x){ return x; }).join(' · ')+
     '</p>'+
   '</div>';
 }
@@ -4634,17 +4733,18 @@ function cardFull(t, i){
     '<div class="ct"><p class="cn tt">'+esc(t.title)+cmtBadge(t.id)+
     (hasNewComment(t.id)?'<span class="cdot"></span>':'')+'</p>'+
     '<span class="meta">'+(t.ownerName? ownerChip(t)+' · ':'')+
-    esc(t.typeName)+' · '+esc(t.corpName)+
+    esc(t.typeName)+(manyCorps()? ' · '+esc(t.corpName) : '')+
     (t.site?' · '+esc(t.site):'')+'</span></div>';
 
+  var hot=dueHot(t);
   if(t.type==='DEMO' || t.progress>0){
     h+='<div style="display:flex;align-items:center;gap:7px;margin-top:6px">'+
        '<div class="bar"><i style="width:'+(t.progress||0)+'%"></i></div>'+
        '<span class="pct" style="white-space:nowrap">'+(t.progress||0)+'%'+
-       (t.due?'<span class="sub" style="font-weight:400"> · '+shortDate(t.due)+
+       (t.due?'<span class="sub'+(hot?' dgv':'')+'" style="font-weight:400"> · '+shortDate(t.due)+
               ' '+dday(t.due)+'</span>':'')+'</span></div>';
   } else if(t.due){
-    h+='<p class="sub note">'+dday(t.due)+'</p>';
+    h+='<p class="sub note'+(hot?' dgv':'')+'">'+shortDate(t.due)+' '+dday(t.due)+'</p>';
   }
 
   /* ★★ 격자는 **철거에만** 둡니다 (2026-09-02).
@@ -4665,18 +4765,22 @@ function cardFull(t, i){
     : '';
   if(cells) h+='<div class="stats">'+cells+'</div>';
 
+  /* ★ `다음: …` 은 태그가 아니라 마지막 기록 줄 뒤에 (2026-09-09).
+     두세 글자용 태그에 한 문장이 들어가 두 줄로 접히고 카드가 다시 길어졌습니다. */
+  var nx = t.next ? '<span class="nx">'+(t.lastLog?' · ':'')+'다음 '+esc(t.next)+'</span>' : '';
   if(t.lastLog){
     var sp=String(t.lastLog).indexOf(' ');
     var dt=sp>0? shortDate(t.lastLog.substring(0,sp)) : '';
     var tx=sp>0? t.lastLog.substring(sp+1) : t.lastLog;
-    h+='<p class="lastline">'+(dt? '<span class="dt">'+esc(dt)+'</span>':'')+esc(tx)+'</p>';
+    h+='<p class="lastline">'+(dt? '<span class="dt">'+esc(dt)+'</span>':'')+esc(tx)+nx+'</p>';
+  } else if(nx){
+    h+='<p class="lastline">'+nx+'</p>';
   }
 
-  var 표시들=(t.flags)||[];
-  if(표시들.length || t.next){
+  var 표시들=((t.flags)||[]).filter(function(f){ return f && !isDueFlag(f); });
+  if(표시들.length){
     h+='<div class="flags">';
-    표시들.forEach(function(f){ if(!f) return; h+='<span class="tag '+(f.lv==='danger'?'dg':'wn')+'">'+esc(f.t)+'</span>'; });
-    if(t.next) h+='<span class="tag gy">다음: '+esc(t.next)+'</span>';
+    표시들.forEach(function(f){ h+='<span class="tag '+(f.lv==='danger'?'dg':'wn')+'">'+esc(f.t)+'</span>'; });
     h+='</div>';
   }
   return h+'</div>';
@@ -5231,7 +5335,7 @@ function fileBox_(t, files){
       byline([f.who])+'</div>'+
       ((f.mine || (S.me&&S.me.grade>=9))
         ? '<div class="r"><button class="btn sm" onclick="dropTaskFile(&quot;'+esc(f.id)+
-          '&quot;,&quot;'+esc(t.id)+'&quot;)">떼기</button></div>' : '')+
+          '&quot;,&quot;'+esc(t.id)+'&quot;)">빼기</button></div>' : '')+
       '</div>';
   });
   if(붙일수있나){
@@ -5561,13 +5665,12 @@ function deleteLog(logId){
 /** 차감·입금 등록 창 */
 function openSettleForm(taskId, kind){
   var isPay = (kind==='입금');
+  BACK_TASK = taskId;                       // 상세에서만 여는 창 — 취소하면 상세로
+  /* 안내 문단 대신 라벨에 담습니다 (2026-09-09). 설명문을 두지 않는 규칙의 예외였습니다. */
   $('modal').innerHTML='<div class="veil"><div class="sheet">'+
-    '<div class="sheethead"><h3 class="tt">'+esc(kind)+' 등록</h3>'+
-    '<button class="btn sm" onclick="closeModal()">닫기</button></div>'+
-    (isPay? '<p class="sub" style="margin:0 0 12px">통장에 찍힌 금액을 그대로 적어주세요. 부가세 포함 금액입니다.</p>'
-          : '<p class="sub" style="margin:0 0 12px">집기 인수분, 고객 자체처리분 등 계약금액에서 빼는 금액입니다.</p>')+
+    '<div class="sheethead"><h3 class="tt">'+esc(kind)+' 등록</h3></div>'+
     '<div class="grid2">'+
-      '<div class="field"><label class="fl req">금액</label>'+
+      '<div class="field"><label class="fl req">'+(isPay? '금액 (통장에 찍힌 대로 · 부가세 포함)' : '빼는 금액')+'</label>'+
         '<input type="text" id="stAmt" inputmode="numeric" oninput="moneyInput(this)">'+
         '<p class="muted" id="stAmt_ko" style="margin:3px 0 0;font-size:var(--fs-sm)"></p></div>'+
       '<div class="field"><label class="fl">일자</label>'+
@@ -5584,7 +5687,7 @@ function openSettleForm(taskId, kind){
     '<div class="field"><label class="fl'+(isPay?'':' req')+'">사유</label>'+
       '<input type="text" id="stMemo"></div>'+
     '<div class="actions"><button class="btn" onclick="closeModal()">취소</button>'+
-    '<button class="btn pri" id="stSave" onclick="saveSettle(\''+taskId+'\',\''+kind+'\')">등록</button></div>'+
+    '<button class="btn pri" id="stSave" onclick="saveSettle(\''+taskId+'\',\''+kind+'\')">저장</button></div>'+
     '<p class="muted" id="stMsg" style="margin-top:8px"></p></div></div>';
 }
 
@@ -5798,7 +5901,15 @@ function closeModal(force){
   }
   box.innerHTML='';
   MODAL_ROOT=null; MODAL_SIG=null; MODAL_TOUCHED=false; MODAL_DRAWN=false;
+  /* ★ 어디서 열었으면 거기로 돌아간다 (2026-09-09).
+     업무 상세에서 연 수정·기록·입금 창을 [취소] 하면 판으로 떨어져서,
+     어떤 창은 돌아오고 어떤 창은 안 돌아오는 상태였습니다.
+     저장(closeOk)으로 닫을 때는 각 저장 함수가 알아서 갈 곳을 정합니다. */
+  var back=BACK_TASK; BACK_TASK=null;
+  if(!force && back) openTask(back, true);
 }
+/** 업무 상세에서 연 창이 [취소] 됐을 때 돌아갈 업무 */
+var BACK_TASK=null;
 
 /** 저장·상신·삭제가 끝나서 닫는 경우 — 묻지 않는다 */
 function closeOk(){ closeModal(true); }
@@ -5848,6 +5959,7 @@ function closeOk(){ closeModal(true); }
 
 /* ===================== 업무 등록/수정 ===================== */
 function openTaskForm(id){
+  BACK_TASK = id || null;                  // 수정 창은 상세에서만 엽니다 — 취소하면 상세로
   if(!id){ drawTaskForm('', null); return; }
   // 화면이 이미 들고 있는 값으로 즉시 띄운다 (서버에 가지 않음)
   var t=null;
@@ -5870,9 +5982,10 @@ function drawTaskForm(id, t){
     (S.meta.typeAll||[]).forEach(function(x){ if(x.code===t.type) old=x; });
     types.push(old || { code:t.type, name:t.typeName||t.type });
   }
+  /* 입력 창의 닫는 길은 아래 [취소] 하나 (2026-09-09). 위 [닫기] 와 아래 [취소] 가
+     같은 일을 해서 '둘이 다른가' 를 생각하게 했습니다. 보기 창만 [닫기] 를 씁니다. */
   var h='<div class="veil"><div class="sheet">'+
-    '<div class="sheethead"><h3 class="tt">'+(id?'업무 수정':'새 업무')+'</h3>'+
-    '<button class="btn sm" onclick="closeModal()">닫기</button></div>'+
+    '<div class="sheethead"><h3 class="tt">'+(id?'업무 수정':'새 업무')+'</h3></div>'+
     '<input type="hidden" id="tfId" value="'+(id||'')+'">'+
     '<input type="hidden" id="tfCo" value="'+esc(t&&t.co?t.co:'')+'">'+
     '<div class="field"><label class="fl req">업무 유형</label><div class="chks" id="tfType">'+
@@ -5888,7 +6001,7 @@ function drawTaskForm(id, t){
     '</div>'+
     '<div class="field"><label class="fl req">업무명</label><input type="text" id="tfTitle" value="'+esc(t?t.title:'')+'"></div>'+
     '<div class="field"><label class="fl">내용</label>'+
-      mkEditor('tfContent', (t&&t.content)?t.content:'', 86)+
+      mkEditor('tfContent', (t&&t.content)?t.content:'', 86, true)+
       '</div>'+
     '<div class="field"><label class="fl">마감일</label>'+
       '<input type="date" id="tfDue" value="'+esc(t?t.due:'')+'"></div>'+
@@ -6129,9 +6242,14 @@ function openLogForm(taskId){
       '<button class="btn pri" onclick="openTaskForm()">업무 등록</button></div></div></div>';
     return;
   }
+  BACK_TASK = taskId || null;              // 상세에서 열었으면 취소할 때 상세로
+  /* ★★ 차례는 '먼저 적는 것이 위' (2026-09-09).
+       예전에는 철거 업무면 기공·조공·폐기물·톤수·장비·일수 여섯 칸이 **작업내용보다 위**에 있었고
+       창이 세로 1.6화면이었습니다. 기공은 출근 인원으로 자동으로 채워지고,
+       폐기물·장비·다음 할일은 있는 날만 적으므로 접힌 채 시작합니다.
+       칸 이름(id)은 그대로라 saveLog · fillFromAttendance 는 손대지 않았습니다. */
   var h='<div class="veil"><div class="sheet">'+
-    '<div class="sheethead"><h3 class="tt">오늘 작업기록</h3>'+
-    '<button class="btn sm" onclick="closeModal()">닫기</button></div>'+
+    '<div class="sheethead"><h3 class="tt">오늘 기록</h3></div>'+
     '<div class="grid2">'+
       '<div class="field"><label class="fl req">업무</label><select id="lgTask" onchange="syncLogForm()">'+
         tasks.map(function(t){ return '<option value="'+t.id+'" data-type="'+t.type+
@@ -6140,6 +6258,9 @@ function openLogForm(taskId){
       '</select></div>'+
       '<div class="field"><label class="fl">일자</label><input type="date" id="lgDate" value="'+todayStr()+'"></div>'+
     '</div>'+
+    '<div class="field"><label class="fl req">작업내용</label>'+
+      mkEditor('lgText', '', 92, true)+'</div>'+
+    '<div class="field"><label class="fl">진행률</label>'+progBox('lg', 0)+'</div>'+
     '<div id="lgDemo">'+
       '<div class="grid2">'+
         '<div class="field"><label class="fl">기공</label><div class="count">'+
@@ -6147,35 +6268,34 @@ function openLogForm(taskId){
         '<div class="field"><label class="fl">조공</label><div class="count">'+
           '<button onclick="stepN(\'lgJ\',-1)">−</button><span id="lgJ">0</span><button onclick="stepN(\'lgJ\',1)">＋</button></div></div>'+
       '</div>'+
-      '<div class="grid2">'+
-        '<div class="field"><label class="fl">폐기물 종류</label><select id="lgWt">'+
-          ['','혼합폐기물','폐콘크리트','목재','금속','기타'].map(function(v){
-            return '<option value="'+v+'">'+(v||'없음')+'</option>'; }).join('')+
-        '</select></div>'+
-        '<div class="field"><label class="fl">폐기물 톤수</label><input type="number" id="lgWton" step="0.5"></div>'+
-      '</div>'+
-      '<div class="grid2">'+
-        '<div class="field"><label class="fl">장비</label><select id="lgEq">'+
-          ['','사다리차','암롤박스 5톤','집게차','기타'].map(function(v){
-            return '<option value="'+v+'">'+(v||'없음')+'</option>'; }).join('')+
-        '</select></div>'+
-        '<div class="field"><label class="fl">장비 사용일수</label><input type="number" id="lgEqd" step="0.5"></div>'+
-      '</div>'+
+      foldBox('log:demo', '폐기물 · 장비',
+        '<div class="grid2">'+
+          '<div class="field"><label class="fl">폐기물 종류</label><select id="lgWt">'+
+            ['','혼합폐기물','폐콘크리트','목재','금속','기타'].map(function(v){
+              return '<option value="'+v+'">'+(v||'없음')+'</option>'; }).join('')+
+          '</select></div>'+
+          '<div class="field"><label class="fl">폐기물 톤수</label><input type="number" id="lgWton" step="0.5"></div>'+
+        '</div>'+
+        '<div class="grid2">'+
+          '<div class="field"><label class="fl">장비</label><select id="lgEq">'+
+            ['','사다리차','암롤박스 5톤','집게차','기타'].map(function(v){
+              return '<option value="'+v+'">'+(v||'없음')+'</option>'; }).join('')+
+          '</select></div>'+
+          '<div class="field"><label class="fl">장비 사용일수</label><input type="number" id="lgEqd" step="0.5"></div>'+
+        '</div>')+
     '</div>'+
-    '<div class="field"><label class="fl">진행률</label>'+progBox('lg', 0)+'</div>'+
-    '<div class="field"><label class="fl req">작업내용</label>'+
-      mkEditor('lgText', '', 92)+'</div>'+
-    '<div class="field"><div class="chks"><label id="lgExtra" onclick="this.classList.toggle(\'on\')">추가견적 필요</label></div></div>'+
-    '<div class="field"><label class="fl">다음 할일</label>'+
-      '<input type="text" id="lgNext"></div>'+
-    '<div class="field"><label class="fl">다음 일정일</label>'+
-      '<div class="chks" id="lgNextQuick">'+
-        '<label onclick="setNextDate(this,1)">내일</label>'+
-        '<label onclick="setNextDate(this,3)">3일 뒤</label>'+
-        '<label onclick="setNextDate(this,7)">다음주</label>'+
-      '</div><div style="height:6px"></div>'+
-      '<input type="date" id="lgNextDate" value=""></div>'+
     photoField('lgPhoto', '사진')+
+    foldBox('log:next', '다음 할일 · 추가견적',
+      '<div class="field"><div class="chks"><label id="lgExtra" onclick="this.classList.toggle(\'on\')">추가견적 필요</label></div></div>'+
+      '<div class="field"><label class="fl">다음 할일</label>'+
+        '<input type="text" id="lgNext"></div>'+
+      '<div class="field"><label class="fl">다음 일정일</label>'+
+        '<div class="chks" id="lgNextQuick">'+
+          '<label onclick="setNextDate(this,1)">내일</label>'+
+          '<label onclick="setNextDate(this,3)">3일 뒤</label>'+
+          '<label onclick="setNextDate(this,7)">다음주</label>'+
+        '</div><div style="height:6px"></div>'+
+        '<input type="date" id="lgNextDate" value=""></div>')+
     '<div class="actions"><button class="btn" onclick="closeModal()">취소</button>'+
     '<button class="btn pri" id="lgSave" onclick="saveLog()">저장</button></div>'+
     '<p class="muted" id="lgMsg2" style="margin-top:8px"></p></div></div>';
@@ -7010,8 +7130,9 @@ function calDayBox(){
       /* 휴가는 결재로만 생깁니다. 잘못 올라간 줄을 치우는 길만 관리자에게 엽니다 (v52).
          ★ canDel 은 서버가 정해서 보낸 값입니다. 화면에서 등급을 비교하지 마세요.
          ★ 고치기는 없습니다. 고칠 일이 있으면 결재를 다시 올립니다. */
+      /* 되돌릴 수 없는 삭제만 빨강 — 낱말도 `삭제` 로 통일 (2026-09-09) */
       var btn = v.canDel
-        ? '<button class="btn sm" onclick="deleteLeave(\''+esc(v.id)+'\')">지우기</button>'
+        ? '<button class="btn sm dg" onclick="deleteLeave(\''+esc(v.id)+'\')">삭제</button>'
         : '';
       return '<div class="lrow plain"><div class="m">'+
         '<p class="t">'+esc(v.name)+' <span class="tag wn">'+esc(v.kind||'휴가')+'</span></p>'+
@@ -7025,8 +7146,8 @@ function calDayBox(){
     h += sechead('일정', ev.length);
     h += ev.map(function(v){
       var btn = v.canEdit
-        ? ('<button class="btn sm" onclick="openEventForm(\''+esc(ds)+'\',\''+esc(v.id)+'\')">고치기</button> '+
-           '<button class="btn sm" onclick="deleteEvent(\''+esc(v.id)+'\')">지우기</button>')
+        ? ('<button class="btn sm" onclick="openEventForm(\''+esc(ds)+'\',\''+esc(v.id)+'\')">수정</button> '+
+           '<button class="btn sm dg" onclick="deleteEvent(\''+esc(v.id)+'\')">삭제</button>')
         : '';
       return '<div class="lrow plain"><div class="m">'+
         '<p class="t">'+esc([v.time, v.title].filter(Boolean).join('  '))+'</p>'+
@@ -7072,21 +7193,28 @@ function openEventForm(ds, id){
   }
   if(!kinds.length) kinds = [{ code:'PERSONAL', name:'개인일정' }];
 
+  /* ★★ 사람이 실제로 넣는 것은 날짜·시각·제목 셋 (2026-09-09).
+       종료일·구분·대상자·내용·반복은 대부분 기본값 그대로라 `더 적기` 로 접습니다.
+       칸 이름(id)은 그대로라 saveEvent 는 손대지 않았습니다.
+       고칠 때 종료일·내용이 들어 있으면 접기를 열어 둡니다. */
+  var 더있나 = !!(ev && ((ev.to && ev.to!==ev.from) || ev.body));
+  if(더있나) FOLD['ev:more']=true;
   var h='<div class="veil"><div class="sheet">'+
-    '<div class="sheethead"><h3 class="tt">'+(ev?'일정 수정':'일정 추가')+'</h3>'+
-    '<button class="btn sm" onclick="closeEventForm()">닫기</button></div>'+
+    '<div class="sheethead"><h3 class="tt">'+(ev?'일정 수정':'일정 추가')+'</h3></div>'+
     '<input type="hidden" id="evId" value="'+esc(ev?ev.id:'')+'">'+
-    '<div class="grid2">'+
-      '<div class="field"><label class="fl req">날짜</label>'+
-        '<input type="date" id="evFrom" value="'+esc(ev?ev.from:ds)+'"></div>'+
-      '<div class="field"><label class="fl">종료일</label>'+
-        '<input type="date" id="evTo" value="'+esc(ev&&ev.to!==ev.from?ev.to:'')+'"></div>'+
-    '</div>'+
+    '<div class="field"><label class="fl req">날짜</label>'+
+      '<input type="date" id="evFrom" value="'+esc(ev?ev.from:ds)+'"></div>'+
     /* ★ 시각은 한 줄을 통째로 씁니다 (v50). 구분과 반씩 나눠 쓰면 폰에서
-         칸 하나가 70px 남짓이 되어 '오전 12시' 가 잘립니다.
-         대신 드롭다운인 구분·대상자를 나란히 놓아 줄 수는 그대로입니다. */
+         칸 하나가 70px 남짓이 되어 '오전 12시' 가 잘립니다. */
     '<div class="field"><label class="fl req">시각</label>'+
       timeSelect(ev?ev.time:'09:00')+'</div>'+
+    '<div class="field"><label class="fl req">제목</label>'+
+      '<input type="text" id="evTitle" value="'+esc(ev?ev.title:'')+'"></div>'+
+    '<div class="fold'+(FOLD['ev:more']?' open':'')+'">'+
+    '<button class="fh" onclick="toggleFold(\'ev:more\',this)">더 적기<span class="arrow">▾</span></button>'+
+    '<div class="fb">'+
+    '<div class="field"><label class="fl">종료일</label>'+
+      '<input type="date" id="evTo" value="'+esc(ev&&ev.to!==ev.from?ev.to:'')+'"></div>'+
     '<div class="grid2">'+
       '<div class="field"><label class="fl req">구분</label><select id="evKind">'+
         kinds.map(function(k){
@@ -7097,8 +7225,6 @@ function openEventForm(ds, id){
       '<div class="field"><label class="fl req">대상자</label><select id="evWho">'+
         staffOptions(ev? ev.phone : (S.me? S.me.phone : ''))+'</select></div>'+
     '</div>'+
-    '<div class="field"><label class="fl req">제목</label>'+
-      '<input type="text" id="evTitle" value="'+esc(ev?ev.title:'')+'"></div>'+
     '<div class="field"><label class="fl">내용</label>'+
       '<textarea id="evBody" rows="3">'+esc(ev?ev.body:'')+'</textarea></div>'+
     (ev? '' :
@@ -7120,6 +7246,7 @@ function openEventForm(ds, id){
             }).join('')+
           '</select></div>'+
       '</div>')+
+    '</div></div>'+
     '<div class="actions"><button class="btn" onclick="closeEventForm()">취소</button>'+
     '<button class="btn pri" id="evSave" onclick="saveEvent()">저장</button></div>'+
     '<p class="muted" id="evMsg" style="margin-top:8px"></p></div></div>';
@@ -7363,18 +7490,22 @@ function recheckHealth(){
 function renderNotices(){
   var box=$('noticeList'); if(!box) return;
   var bar=$('noticeBar');
-  if(bar) bar.classList.toggle('hide', !S.me);     // 로그인 전에는 감춘다
   var list=(S.data && S.data.notices) || [];
-  if(!list.length){
-    box.innerHTML='<span class="muted" style="font-size:var(--fs-sm)">공지 없음</span>';
-    return;
-  }
-  box.innerHTML=list.map(function(n){
-    return '<div class="nrow'+(S.seen['N'+n.no]?' read':'')+'" onclick="openPost(\''+n.no+'\')">'+
-      '<span class="tag dg">공지</span>'+
-      '<span class="t">'+esc(n.title)+'</span>'+
-      '<span class="muted w">'+esc(n.who)+' · '+esc(shortDate(n.at))+'</span></div>';
-  }).join('');
+  /* ★ 0건이면 줄째 감춥니다 (2026-09-09). '공지 없음' 글자로 한 줄이 남아
+     '0건 구역은 그리지 않는다' 규칙을 이 줄만 어기고 있었습니다.
+     ★ 최신 한 줄 + `외 N건` 만. 세 줄이 상시 70px 를 차지하고 줄마다 빨간
+       `공지` 태그가 붙어 상단이 빨갛게 시작했습니다 — 공지는 '지금 손댈 것' 이 아닙니다. */
+  if(bar) bar.classList.toggle('hide', !S.me || !list.length);
+  if(!list.length){ box.innerHTML=''; return; }
+  var n=list[0];
+  box.innerHTML='<div class="nrow'+(S.seen['N'+n.no]?' read':'')+'" onclick="openPost(\''+n.no+'\')">'+
+    '<span class="tag gy">공지</span>'+
+    '<span class="t">'+esc(n.title)+'</span>'+
+    '<span class="muted w">'+esc(n.who)+' · '+esc(shortDate(n.at))+'</span>'+
+    (list.length>1
+      ? '<span class="muted w more" onclick="event.stopPropagation();openBoard()">외 '+(list.length-1)+'건</span>'
+      : '')+
+    '</div>';
 }
 
 /** 게시판 열기 — 캐시가 있으면 즉시, 바뀐 게 있을 때만 뒤에서 다시 받는다 */
@@ -7951,9 +8082,20 @@ function paintDocs(r){
          '</div>'+
        '</div>';
   }
-  h+=docSec('내가 결재할 문서', r.toAct, true);
-  h+=docSec('내가 올린 문서', r.drafts, false);
-  h+=docSec('열람 문서', r.others, false);
+  /* ★★ 끝난 문서는 접습니다 (2026-09-09).
+     승인완료·반려 카드가 `내가 올린 문서 27 · 열람 문서 84` 아래 영원히 쌓여
+     진짜 할 일 두 건 아래로 회색 카드 100장이 이어졌습니다. 완료 업무는 최근 7일로
+     끊었는데 결재만 규칙이 없었습니다. 서버 응답은 그대로이고 화면에서만 가릅니다. */
+  function 살아있나(d){ return String(d.status||'진행중')==='진행중'; }
+  var drafts=r.drafts||[], others=r.others||[];
+  var done = drafts.filter(function(d){ return !살아있나(d); })
+    .concat(others.filter(function(d){ return !살아있나(d) && !d.canRead; }));
+  h+=docSec('내가 결재할 것', r.toAct, true);
+  h+=docSec('내가 올린 것', drafts.filter(살아있나), false);
+  h+=docSec('열람할 것', others.filter(function(d){ return 살아있나(d) || d.canRead; }), false);
+  if(done.length){
+    h+=foldBox('docDone', '끝난 문서 <span class="n">'+done.length+'</span>', docSec('', done, false));
+  }
   if(!h) h='<p class="none big">결재할 문서가 없습니다</p>';
   $('docLists').innerHTML=h;
 }
@@ -8026,19 +8168,25 @@ function docBadge(st){
 function docSec(title, arr, hot){
   arr = arr || [];
   if(!arr.length) return '';                 // 0건이면 구역 자체를 만들지 않는다
-  var h='<div class="sec"><h4'+(hot?' class="hot"':'')+'>'+title+'</h4>'+
-        '<span class="n">'+arr.length+'</span></div>';
+  var h = title
+    ? '<div class="sec"><h4'+(hot?' class="hot"':'')+'>'+title+'</h4>'+
+      '<span class="n">'+arr.length+'</span></div>'
+    : '';
   arr.forEach(function(d){
-    var sub=[d.who, shortDate(d.at), d.formName].filter(function(x){ return x; }).join(' · ');
-    var tags=(d.canRead? '<span class="tag dg">확인 필요</span> ':'')+
-             (d.proxy? '<span class="tag wn">대리</span>':'');
+    /* ★ 색 신호는 한 겹만 (2026-09-09). 결재할 구역의 문서는 전부 진행중이라
+       노란 `진행중` 뱃지는 정보가 0이고, `확인 필요` 빨간 태그는 카드의 빨간 선과 같은 말입니다.
+       진행중은 회색 글자로, 승인완료는 표시 없음, 반려만 빨강. */
+    var st=String(d.status||'진행중');
+    var sub=[d.who, shortDate(d.at), d.formName, (!hot && st==='진행중')? '진행중' : '']
+      .filter(function(x){ return x; }).join(' · ');
+    var tags=(d.proxy? '<span class="tag wn">대리</span>':'');
     /* 체크칸은 실제로 결재할 수 있는 문서에만. 눌러도 창이 안 열리게 막는다 */
     var 체크 = (hot && d.canAct)
       ? '<label class="dpickbox" onclick="event.stopPropagation()">'+
           '<input type="checkbox" class="dpick" onchange="docPick(&quot;'+d.no+'&quot;,this.checked)">'+
         '</label>'
       : '';
-    h+='<div class="ucard'+(hot?' hot':'')+'" onclick="openDoc(\''+d.no+'\')">'+
+    h+='<div class="ucard'+((hot||d.canRead)?' hot':'')+'" onclick="openDoc(\''+d.no+'\')">'+
        체크+
        '<div class="m">'+
          '<p class="t">'+esc(d.title)+'</p>'+
@@ -8047,7 +8195,7 @@ function docSec(title, arr, hot){
        '</div>'+
        '<div class="r">'+
          (d.amount? '<span class="v">'+won(d.amount)+'원</span>':'')+
-         '<span class="s">'+docBadge(d.status)+'</span>'+
+         (st==='반려'? '<span class="s">'+docBadge(st)+'</span>' : '')+
        '</div></div>';
   });
   return h;
@@ -8155,7 +8303,7 @@ function waitingBody(d){
        (d.proxy? '<p class="none wnv">'+
                  '대리로 처리합니다. 누가 눌렀는지 문서에 남습니다</p>':'')+
        '<div class="actions">'+
-       '<button class="btn dg" onclick="actDoc(\''+d.no+'\',\'reject\')">반려</button>'+
+       '<button class="btn" onclick="actDoc(\''+d.no+'\',\'reject\')">반려</button>'+
        '<button class="btn pri" onclick="actDoc(\''+d.no+'\',\'approve\')">'+
          (d.proxy?'대리 승인':'승인')+'</button></div>';
   }
@@ -8241,7 +8389,7 @@ function docDetailBody(r){
        (r.proxy? '<p class="none wnv">'+
                  '대리로 처리합니다. 누가 눌렀는지 문서에 남습니다</p>' : '')+
        '<div class="actions">'+
-       '<button class="btn dg" onclick="actDoc(\''+d.no+'\',\'reject\')">반려</button>'+
+       '<button class="btn" onclick="actDoc(\''+d.no+'\',\'reject\')">반려</button>'+
        '<button class="btn pri" onclick="actDoc(\''+d.no+'\',\'approve\')">'+
          (r.proxy?'대리 승인':'승인')+'</button></div>';
   }
@@ -8478,8 +8626,7 @@ function openDocForm(code, prefill){
 
   var corps=S.meta.corps, tasks=(S.data? S.data.tasks:[]);
   var h='<div class="veil"><div class="sheet">'+
-    '<div class="sheethead"><h3 class="tt">'+esc(f.name)+'</h3>'+
-    '<button class="btn sm" onclick="closeModal()">닫기</button></div>';
+    '<div class="sheethead"><h3 class="tt">'+esc(f.name)+'</h3></div>';
 
   if(forms.length>1){
     h+='<div class="field"><label class="fl">문서 종류</label><div class="chks">'+
@@ -8491,55 +8638,60 @@ function openDocForm(code, prefill){
   // 인감·휴가는 업무와 상관이 없다. 승인자가 판단할 때 쓰지 않으므로 칸을 만들지 않는다
   var useTask = (f.code!=='SEAL' && f.code!=='LEAVE');
 
-  h+='<input type="hidden" id="dfCode" value="'+esc(f.code)+'">'+
-    (useTask? '<div class="grid2">' : '')+
-      '<div class="field"><label class="fl req">법인</label><select id="dfCorp">'+
+  /* ★★ 칸의 자리는 '매번 적는 것이 위, 자동으로 채워지거나 드문 것은 아래 접기' (2026-09-09).
+       예전에는 종류 → 법인·관련 업무 → 제목 → 항목 → 내역 → 사진 → 비고 → 인감이
+       같은 크기로 늘어서서 한 화면 반을 내려야 [상신] 이 나왔습니다.
+       칸 이름(id)과 막는 규칙(saveDoc)은 그대로입니다. 자리만 옮겼습니다. */
+  var 법인칸 = '<div class="field"><label class="fl req">법인</label><select id="dfCorp">'+
         corps.map(function(c){ return '<option value="'+c.code+'">'+esc(c.name)+'</option>'; }).join('')+
-      '</select></div>'+
-      (useTask?
-        '<div class="field"><label class="fl'+(f.code==='ADD'?' req':'')+'">관련 업무</label>'+
+      '</select></div>';
+  var 업무칸 = useTask
+      ? '<div class="field"><label class="fl'+(f.code==='ADD'?' req':'')+'">관련 업무</label>'+
         '<select id="dfTask">'+
           (f.code==='ADD' ? '<option value=""></option>' : '<option value="">없음</option>')+
           tasks.map(function(t){ return '<option value="'+t.id+'">'+esc(t.title)+'</option>'; }).join('')+
-        '</select></div>' : '<input type="hidden" id="dfTask" value="">')+
-    (useTask? '</div>' : '');
+        '</select></div>'
+      : '<input type="hidden" id="dfTask" value="">';
 
   /* ★ 제목 칸 (v42에서 되살림).
      자동 생성만 남겼더니 '지출 57,680원 · 콩나물 350g' 처럼 첫 품목만 남아
      무슨 지출인지 알 수 없었다. 판단이 틀렸으므로 되돌린다.
      빈칸으로 두지 않고 자동 제목을 미리 채워둔다 — 그대로 두면 그게 저장되고,
      고치면 고친 것이 저장된다. 한 번이라도 직접 건드리면 그때부터 덮어쓰지 않는다. */
-  h+='<div class="field"><label class="fl req">제목</label>'+
+  var 제목칸 = '<div class="field"><label class="fl req">제목</label>'+
      '<input type="text" id="dfTitle" oninput="DF_TITLE_TOUCHED=1"></div>';
 
   // 양식별 항목
+  var 항목들='';
   (f.fields||[]).forEach(function(fd,i){
     var id='fd_'+i;
-    h+='<div class="field"><label class="fl'+(fd.req?' req':'')+'">'+esc(fd.name)+'</label>';
+    항목들+='<div class="field"><label class="fl'+(fd.req?' req':'')+'">'+esc(fd.name)+'</label>';
     if(fd.kind==='선택'){
-      h+='<select id="'+id+'" data-name="'+esc(fd.name)+'" class="dfField">'+
+      항목들+='<select id="'+id+'" data-name="'+esc(fd.name)+'" class="dfField">'+
          (fd.req?'':'<option value=""></option>')+
          fd.opts.map(function(o){ return '<option value="'+esc(o)+'">'+esc(o)+'</option>'; }).join('')+
          '</select>';
     } else if(fd.kind==='여러줄'){
-      h+='<textarea id="'+id+'" data-name="'+esc(fd.name)+'" class="dfField"></textarea>';
+      항목들+='<textarea id="'+id+'" data-name="'+esc(fd.name)+'" class="dfField"></textarea>';
     } else if(fd.kind==='날짜'){
       /* 휴가 시작일을 고르면 종료일이 같이 따라온다 (하루짜리가 대부분) */
       var 따라감 = (f.code==='LEAVE' && fd.name==='시작일') ? ' onchange="leaveSyncEnd()"' : '';
-      h+='<input type="date" id="'+id+'" data-name="'+esc(fd.name)+'" class="dfField"'+따라감+'>';
+      항목들+='<input type="date" id="'+id+'" data-name="'+esc(fd.name)+'" class="dfField"'+따라감+'>';
     } else if(fd.kind==='숫자'){
-      h+='<input type="number" id="'+id+'" data-name="'+esc(fd.name)+'" class="dfField">';
+      항목들+='<input type="number" id="'+id+'" data-name="'+esc(fd.name)+'" class="dfField">';
     } else {
-      h+='<input type="text" id="'+id+'" data-name="'+esc(fd.name)+'" class="dfField">';
+      항목들+='<input type="text" id="'+id+'" data-name="'+esc(fd.name)+'" class="dfField">';
     }
-    
-    h+='</div>';
+    항목들+='</div>';
   });
 
+  var 내역='';
   if(f.useItems){
     /* ★ 내역은 반드시 한 줄 이상 있어야 상신됩니다 (금액도 0원이면 막힙니다).
-       그런데 구역 제목이라 * 가 없어서, 상신을 눌러야만 알 수 있었습니다 (v55에서 붙임) */
-    h+='<h4 class="sech req">'+esc(f.itemsTitle)+'</h4>'+
+       그런데 구역 제목이라 * 가 없어서, 상신을 눌러야만 알 수 있었습니다 (v55에서 붙임)
+       ★ 머리줄 한 번 (2026-09-09) — 세 칸에 라벨이 없어 금액 칸에 품목을 쓰는 일이 있었습니다. */
+    내역='<h4 class="sech req">'+esc(f.itemsTitle)+'</h4>'+
+       '<div class="grid3 ithead"><span>품목</span><span>일자</span><span>금액</span></div>'+
        '<div id="dfItems"></div>'+
        '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px">'+
        '<button class="btn sm" onclick="addItem()">＋ 줄 추가</button>'+
@@ -8548,8 +8700,9 @@ function openDocForm(code, prefill){
 
   // 사진은 영수증이 필요한 양식과 돈이 오가는 양식에만 (인감·휴가는 만들지 않는다)
   var usePhoto = (f.needReceipt || f.useItems);
+  var 사진칸='';
   if(usePhoto){
-    h+='<div class="field" style="margin-top:14px"><label class="fl'+
+    사진칸='<div class="field" style="margin-top:14px"><label class="fl'+
        (f.needReceipt?' req':'')+'">'+(f.needReceipt?'영수증 사진':'첨부 사진')+'</label>'+
        '<input type="file" id="dfPhoto" accept="image/*" multiple '+
          'onchange="photoAdd(&#39;dfPhoto&#39;,this)">'+
@@ -8557,13 +8710,27 @@ function openDocForm(code, prefill){
     photoClear('dfPhoto');
   }
 
-  h+='<div class="field"><label class="fl">비고</label><input type="text" id="dfMemo"></div>'+
-    // ■ 인감이 찍힌 문서가 필요하면 날인 품의서가 자동으로 같이 올라간다
-    (f.code!=='SEAL'
+  var 비고칸='<div class="field"><label class="fl">비고</label><input type="text" id="dfMemo"></div>';
+  /* 인감 체크는 지출·구매·추가공사에만 (2026-09-09). 휴가에 인감이 필요한 경우는 없습니다 —
+     칸이 하나 더 있는 것보다 "내가 모르는 뭔가가 있나" 하고 멈추게 하는 것이 문제였습니다. */
+  var 인감칸 = useTask
       ? '<div class="field"><div class="chks"><label id="dfSeal" '+
         'onclick="this.classList.toggle(\'on\')">회사 인감이 찍힌 문서가 필요합니다</label></div></div>'
-      : '')+
-    '<div class="actions"><button class="btn" onclick="closeModal()">취소</button>'+
+      : '';
+
+  h+='<input type="hidden" id="dfCode" value="'+esc(f.code)+'">';
+  if(f.useItems){
+    /* 지출·구매·추가공사: 내역이 첫 자리. 추가공사의 관련 업무는 필수라 위에 둔다 */
+    h+=(f.code==='ADD' ? 업무칸 : '')+
+       내역+ 항목들+ 사진칸+ 제목칸+
+       foldBox('doc:more', '그 밖에',
+         법인칸+ (f.code==='ADD' ? '' : 업무칸)+ 비고칸+ 인감칸);
+  } else {
+    /* 인감·휴가: 항목이 곧 본문 */
+    h+=제목칸+ 항목들+ 업무칸+
+       foldBox('doc:more', '그 밖에', 법인칸+ 비고칸);
+  }
+  h+='<div class="actions"><button class="btn" onclick="closeModal()">취소</button>'+
     '<button class="btn pri" id="dfSave" onclick="saveDoc()">상신</button></div>'+
     '<p class="muted" id="dfMsg" style="margin-top:8px"></p></div></div>';
 
@@ -8819,32 +8986,33 @@ function renderMe(){
 
   var h='<div class="sumbox" style="margin-bottom:14px">'+
     '<p><b>'+esc(S.me.name)+'</b> '+esc(S.me.rank)+(S.me.dept?' · '+esc(S.me.dept):'')+'</p>'+
-    '<p class="sub">오늘 '+(att&&att.state==='출근'? ('출근 '+att.time) : '출근 기록 없음')+'</p>'+
-    '<p class="sub">진행중 '+run.length+'건 · 대기 '+wait.length+'건</p>'+
-    /* ★ 화면 판 번호도 같이 보여줍니다 (2026-09-02).
-       예전에는 서버 코드만 보여서, **화면이 옛것인지 새것인지 알 방법이 없었습니다.**
-       "고쳤는데 그대로예요" 의 원인이 대개 이것입니다 (폰에 옛 화면이 남아 있는 것).
-       런처가 붙여 준 ?v= 를 그대로 읽으므로 따로 관리할 번호가 늘지 않습니다. */
-    '<p class="muted" style="font-size:var(--fs-sm);margin:4px 0 0">화면 '+esc(screenVer())+
-      ' · 서버 코드 '+((S.meta && S.meta.code) ? esc(S.meta.code) : '(옛 버전 — 배포 안 됨)')+'</p></div>'+
+    /* 한 줄로 — 아래 `내 업무 N` 과 겹치는 건수는 짧게 (2026-09-09) */
+    '<p class="sub">'+(att&&att.state==='출근'? ('오늘 출근 '+att.time) : '오늘 출근 기록 없음')+
+      ' · 진행중 '+run.length+' · 대기 '+wait.length+'</p>'+
+    /* ★ 화면 판 번호는 **관리자에게만** (2026-09-09). 직원에게는 뜻 모를 한 줄이고
+       `(옛 버전 — 배포 안 됨)` 은 직원을 불안하게만 합니다. 설정(⚙)의 verText 와 같은 규칙. */
+    (isAdmin()
+      ? '<p class="muted" style="font-size:var(--fs-sm);margin:4px 0 0">화면 '+esc(screenVer())+
+        ' · 서버 코드 '+((S.meta && S.meta.code) ? esc(S.meta.code) : '(옛 버전 — 배포 안 됨)')+'</p>'
+      : '')+
+    '</div>'+
     '<div class="actions" style="margin-bottom:16px">'+
       '<button class="btn" onclick="openLogForm()">기록 남기기</button>'+
       '<button class="btn pri" onclick="openTaskForm()">＋ 새 업무</button></div>';
 
   h+=sechead('내 업무', mine.length);
   if(!mine.length) h+=empty('담당 업무가 없습니다');
+  /* ★ 줄마다 [수정] [삭제] 를 두지 않습니다 (2026-09-09). 업무 6건이면 빨간 삭제가 6개였습니다.
+     줄을 누르면 상세가 열리고, 수정·삭제는 상세의 ⋯ 하나에 있습니다. */
   mine.forEach(function(t){
-    var safe=esc(t.title).replace(/'/g,'');
-    h+='<div class="lrow plain">'+
-       '<div class="m" style="cursor:pointer" onclick="openTask(\''+t.id+'\')">'+
+    h+='<div class="lrow" onclick="openTask(\''+t.id+'\')">'+
+       '<div class="m">'+
        '<p class="t">'+esc(t.title)+'</p>'+
        '<p class="b">'+
-       esc([t.typeName, t.status+' '+(t.progress||0)+'%',
-            t.due? '마감 '+shortDate(t.due):''].filter(function(x){ return x; }).join(' · '))+
+       esc([t.typeName, t.due? '마감 '+shortDate(t.due):''].filter(function(x){ return x; }).join(' · '))+
        '</p></div>'+
-       '<div class="r"><button class="btn sm" onclick="openTaskForm(\''+t.id+'\')">수정</button> '+
-       '<button class="btn sm dg" onclick="deleteTask(\''+t.id+'\',\''+safe+'\')">삭제</button>'+
-       '</div></div>';
+       '<div class="r"><span class="v">'+(t.progress||0)+'%</span>'+
+       '<span class="s muted" style="font-size:var(--fs-sm)">'+esc(t.status)+'</span></div></div>';
   });
   $('meBody').innerHTML=h;
 }
@@ -9034,10 +9202,12 @@ function paintAdminOnly(){
   /* ★ 세무 자료(taxBox)도 관리자 전용입니다 (2026-09-07).
      워크스페이스가 1석이라 대표님 말고는 만든 파일을 열 수 없습니다 —
      넓혀 두면 '눌러도 안 열리는 버튼' 이 됩니다. */
-  ['perfWrap','verText','taxBox','payBox'].forEach(function(id){
+  /* 관리자 구역은 접기 상자째로 감춥니다 (2026-09-09) — 안 보이는 사람에게는 접기 제목도 없습니다 */
+  ['monthFold','setupFold','adminTop','perfWrap','verText','taxBox','payBox'].forEach(function(id){
     var el=$(id); if(el) el.classList.toggle('hide', !보임);
   });
   if(보임){ taxInit(); payInit(); }
+  else if($('adminTop')) $('adminTop').innerHTML='';
   return 보임;
 }
 
@@ -9235,7 +9405,7 @@ function vendorRow(v){
   return '<div class="lrow plain"><div class="m"><p class="t">'+esc(v.name)+
     (v.use?'':' <span class="tag gy">안 씀</span>')+'</p>'+
     (밑.length? byline([밑.join(' · ')]) : '')+'</div>'+
-    '<div class="r"><button class="btn sm" onclick="vendorForm(\''+esc(v.name).replace(/'/g,"\\'")+'\')">고치기</button></div></div>';
+    '<div class="r"><button class="btn sm" onclick="vendorForm(\''+esc(v.name).replace(/'/g,"\\'")+'\')">수정</button></div></div>';
 }
 
 function vendorForm(name){
@@ -9307,10 +9477,9 @@ function renderSettings(){
     var me0=S.me||{};
     $('meInfo').innerHTML='<p><b>'+esc(me0.name||'')+'</b> '+esc(me0.rank||'')+
       (me0.dept?' · '+esc(me0.dept):'')+'</p>'+
-      '<p class="sub">'+esc(me0.phone||'')+'</p>'+
-      '<p class="sub">권한등급 '+(me0.grade==null?'?':me0.grade)+
-      ' ('+gradeName(me0.grade)+')</p>';
+      '<p class="sub">'+esc(me0.phone||'')+' · '+gradeName(me0.grade)+'</p>';
     $('adminBox').innerHTML='';
+    if($('adminTop')) $('adminTop').innerHTML='';
   }
 
   call('api_settings', S.token).then(function(r){
@@ -9331,11 +9500,11 @@ function paintSettings(r){
     if(r.me) S.me=r.me;
 
     var me=S.me||{};
+    /* 등급 숫자는 사람에게 보여주지 않습니다 — `현장` 만으로 충분합니다 (2026-09-09).
+       숫자는 관리자의 직원 정보 창에서만 봅니다. */
     $('meInfo').innerHTML='<p><b>'+esc(me.name||'(이름 없음)')+'</b> '+esc(me.rank||'')+
       (me.dept?' · '+esc(me.dept):'')+'</p>'+
-      '<p class="sub">'+esc(me.phone||'')+'</p>'+
-      '<p class="sub">권한등급 '+(me.grade==null?'?':me.grade)+
-      ' ('+gradeName(me.grade)+')</p>';
+      '<p class="sub">'+esc(me.phone||'')+' · '+gradeName(me.grade)+'</p>';
     $('verText').textContent='버전 '+((S.meta&&S.meta.version)||'')+
       ((S.meta&&S.meta.code)? ' · 코드 '+S.meta.code : ' · 코드 (옛 버전)');
 
@@ -9347,6 +9516,7 @@ function paintSettings(r){
       /* ★ `관리자 설정은 권한등급 9에서만 보입니다` 라고 적어 두지 않습니다.
          그 한 줄이 곧 '여기 뭔가 더 있다' 는 안내가 됩니다. 그냥 비웁니다. */
       $('adminBox').innerHTML='';
+      if($('adminTop')) $('adminTop').innerHTML='';
       return;
     }
     paintAdmin(r);
@@ -9365,6 +9535,47 @@ function paintAdmin(r){
     if(!r.ok){ $('adminBox').innerHTML='<p class="muted">'+esc(r.msg||'')+'</p>'; return; }
     var st=r.settings;
     var h='';
+    S.staffCache=r.staff;
+
+    /* ── 위쪽: 매일 누르는 것 (2026-09-09) ────────────────────────────
+       승인 대기 → 직원 → 거래처·접속 기록. `#adminTop` 에 그립니다. */
+    var top='';
+    var wait=r.staff.filter(function(s){ return s.state==='승인대기'; });
+    if(wait.length){
+      top+='<h4 class="sech hot">승인 대기 '+wait.length+'명</h4>';
+      wait.forEach(function(s){
+        top+='<div class="lrow plain">'+
+           '<div class="m"><p class="t">'+esc(s.name)+'</p>'+
+           '<p class="b">'+esc(s.phone)+'</p></div>'+
+           '<div class="r" style="display:flex;gap:var(--sp-2)">'+
+           '<button class="btn dg sm" onclick="rejectStaff(\''+s.phone+'\',\''+esc(s.name)+'\')">거절</button>'+
+           '<button class="btn pri sm" onclick="approveStaff(\''+s.phone+'\',\''+esc(s.name)+'\')">승인</button>'+
+           '</div></div>';
+      });
+    }
+    /* ★ 직원 한 줄에 버튼은 **하나** (2026-09-09). 예전에는 [권한] [대리인] [초기화] × 6명 = 18개였고,
+       급여를 넣으려면 `권한` 을 눌러야 한다는 것을 알 수 없었습니다.
+       부서·직급·급여·등급·재직·대리인·PIN 초기화가 전부 `정보` 창 하나에 있습니다. */
+    var members=r.staff.filter(function(s){ return s.state!=='승인대기'; });
+    top+='<h4 class="sech">직원 '+members.length+'명</h4>';
+    members.forEach(function(s){
+      top+='<div class="lrow plain">'+
+         '<div class="m"><p class="t">'+esc(s.name)+' '+esc(s.rank)+
+         (s.state==='퇴사'? ' <span class="tag gy">퇴사</span>':'')+'</p>'+
+         '<p class="b">'+esc(s.phone)+' · '+gradeName(s.grade)+
+         (s.deputyName? ' · 대리 '+esc(s.deputyName):'')+
+         (s.hasPin? '' : ' · <span class="wnv">PIN 미설정</span>')+'</p></div>'+
+         '<div class="r"><button class="btn sm" onclick="openStaff(\''+s.phone+'\')">정보</button></div></div>';
+    });
+    top+='<div class="actions" style="margin:14px 0 4px">'+
+        /* 거래처 (2026-09-08). 지출결의서 드롭다운이 여기서 채워집니다 */
+        '<button class="btn" onclick="openVendors()">거래처</button>'+
+        /* 누가 언제 들어왔는지 (2026-09-02). 누를 때만 불러옵니다 */
+        '<button class="btn" onclick="openAccess()">접속 기록</button>'+
+      '</div>';
+    if($('adminTop')) $('adminTop').innerHTML=top;
+
+    /* ── 아래쪽: 처음 설정 (접힘) ── */
 
     /* ★ 캐시에 못 담고 있는 시트 (v43).
        시트가 캐시 한 칸 한도(100KB)를 넘으면 그 시트만 조용히 예전 방식으로 돌아간다.
@@ -9404,61 +9615,30 @@ function paintAdmin(r){
 
     /* ★ 단가 (2026-09-02) — 여기를 채우면 그때부터 업무 카드에 '남는 것' 이 뜹니다.
        비워 두면 그 항목은 세지 않습니다. */
+    /* ★ 저장 버튼은 구역마다 **하나** (2026-09-09). 칸마다 `저장` 이 아홉 개 서 있었고,
+       하나 고치고 안 누르면 조용히 안 저장됐습니다. 바뀐 칸만 보냅니다. */
+    var 단가키=['기공일당','조공일당','장비일당','폐기물톤당'];
     h+='<h4 class="sech">단가</h4>'+
       cfg('기공일당','기공 하루 품삯 (원)',st['기공일당'])+
       cfg('조공일당','조공 하루 품삯 (원)',st['조공일당'])+
       cfg('장비일당','장비 하루 대여료 (원)',st['장비일당'])+
-      cfg('폐기물톤당','폐기물 1톤 처리비 (원)',st['폐기물톤당']);
+      cfg('폐기물톤당','폐기물 1톤 처리비 (원)',st['폐기물톤당'])+
+      '<div class="actions"><button class="btn pri sm" onclick="saveCfgGroup(\''+단가키.join(',')+'\')">저장</button></div>';
 
-    h+='<h4 class="sech">관리자 설정</h4>'+
+    var 관리키=['출퇴근시트ID','출퇴근시트명','견적시트ID','폰트URL_제목','폰트URL_숫자'];
+    h+='<h4 class="sech">연결</h4>'+
       cfg('출퇴근시트ID','출퇴근앱 스프레드시트 ID',st['출퇴근시트ID'])+
       cfg('출퇴근시트명','출퇴근 기록 시트 이름',st['출퇴근시트명'])+
       cfg('견적시트ID','현장견적 스프레드시트 ID',st['견적시트ID'])+
-      cfg('폰트URL_제목','에이투지체 Bold 주소 (비우면 앱에 들어있는 것을 씁니다)',st['폰트URL_제목'])+
-      cfg('폰트URL_숫자','에이투지체 Medium 주소 (비우면 앱에 들어있는 것을 씁니다)',st['폰트URL_숫자'])+
-      '<div class="actions" style="margin:14px 0">'+
+      cfg('폰트URL_제목','제목 글꼴 주소 (비우면 앱에 들어있는 것)',st['폰트URL_제목'])+
+      cfg('폰트URL_숫자','숫자 글꼴 주소 (비우면 제목 것)',st['폰트URL_숫자'])+
+      '<div class="actions"><button class="btn pri sm" onclick="saveCfgGroup(\''+관리키.join(',')+'\')">저장</button></div>'+
+      '<div class="actions" style="margin:14px 0 0">'+
         '<button class="btn" id="syncBtn" onclick="syncNow()">지금 연동 동기화</button>'+
         '<button class="btn" onclick="refreshMeta()">기준정보 새로고침</button>'+
-        /* 누가 언제 들어왔는지 (2026-09-02). 누를 때만 불러옵니다 */
-        '<button class="btn" onclick="openAccess()">접속 기록</button>'+
-        /* 거래처 (2026-09-08). 지출결의서 드롭다운이 여기서 채워집니다 */
-        '<button class="btn" onclick="openVendors()">거래처</button>'+
       '</div>'+
-      '<p class="muted" id="syncMsg" style="font-size:var(--fs-sm);margin:0 0 8px"></p>';
-    S.staffCache=r.staff;
+      '<p class="muted" id="syncMsg" style="font-size:var(--fs-sm);margin:4px 0 8px"></p>';
 
-    /* 승인 대기 — 지금 손대야 할 것이라 직원 목록보다 위에 둔다.
-       0명이면 구역 자체를 그리지 않는다. */
-    var wait=r.staff.filter(function(s){ return s.state==='승인대기'; });
-    if(wait.length){
-      h+='<h4 class="sech hot">승인 대기 '+wait.length+'명</h4>';
-      wait.forEach(function(s){
-        h+='<div class="lrow plain">'+
-           '<div class="m"><p class="t">'+esc(s.name)+'</p>'+
-           '<p class="b">'+esc(s.phone)+'</p></div>'+
-           '<div class="r" style="display:flex;gap:var(--sp-2)">'+
-           '<button class="btn dg sm" onclick="rejectStaff(\''+s.phone+'\',\''+esc(s.name)+'\')">거절</button>'+
-           '<button class="btn pri sm" onclick="approveStaff(\''+s.phone+'\',\''+esc(s.name)+'\')">승인</button>'+
-           '</div></div>';
-      });
-    }
-
-    var members=r.staff.filter(function(s){ return s.state!=='승인대기'; });
-    h+='<h4 class="sech">직원 '+members.length+'명</h4>';
-    members.forEach(function(s){
-      h+='<div class="lrow plain">'+
-         '<div class="m"><p class="t">'+esc(s.name)+' '+esc(s.rank)+
-         (s.state==='퇴사'? ' <span class="tag gy">퇴사</span>':'')+
-         (s.deputyName? ' <span class="tag wn">대리 '+esc(s.deputyName)+'</span>':'')+'</p>'+
-         '<p class="b">'+esc(s.phone)+' · 등급 '+s.grade+
-         ' · PIN '+(s.hasPin?'설정됨':'미설정')+'</p></div>'+
-         '<div class="r" style="display:flex;gap:var(--sp-2)">'+
-         '<button class="btn sm" onclick="openStaff(\''+s.phone+'\')">권한</button>'+
-         '<button class="btn sm" onclick="openDeputy(\''+s.phone+'\')">대리인</button>'+
-         (s.hasPin?'<button class="btn sm" onclick="resetPin(\''+s.phone+'\',\''+esc(s.name)+'\')">초기화</button>':'')+
-         '</div></div>';
-    });
-    
     $('adminBox').innerHTML=h;
 }
 /* ---- 사용 신청 승인 · 거절 (관리자만, v46b) ----
@@ -9493,8 +9673,7 @@ function openStaff(phone){
 
   var grades=[[1,'현장'],[2,'사무실'],[3,'임원'],[9,'관리자']];
   $('modal').innerHTML='<div class="veil"><div class="sheet">'+
-    '<div class="sheethead"><h3 class="tt">'+esc(t.name)+'</h3>'+
-    '<button class="btn sm" onclick="closeModal()">닫기</button></div>'+
+    '<div class="sheethead"><h3 class="tt">'+esc(t.name)+'</h3></div>'+
     byline([t.phone])+
     '<div class="field"><label class="fl">부서</label>'+
     '<input type="text" id="stDept" value="'+esc(t.dept||'')+'"></div>'+
@@ -9521,9 +9700,24 @@ function openStaff(phone){
         return '<option value="'+v+'"'+(t.state===v?' selected':'')+'>'+v+'</option>';
       }).join('')+
     '</select></div>'+
+    /* ★ 대리인도 이 창에서 (2026-09-09). 예전에는 칸 하나짜리 창이 따로 있었습니다.
+       A 의 대리인에 B 를 넣으면 B 가 A 몫의 결재를 승인·반려할 수 있습니다. 판정은 서버가 합니다. */
+    '<div class="field"><label class="fl">대리인</label><select id="stDeputy" data-was="'+esc(t.deputy||'')+'">'+
+      '<option value="">없음</option>'+
+      list.filter(function(s){ return s.phone!==phone && s.state!=='퇴사' && s.state!=='승인대기'; })
+          .map(function(s){
+            return '<option value="'+s.phone+'"'+(s.phone===t.deputy?' selected':'')+'>'+
+                   esc(s.name)+' '+esc(s.rank)+'</option>';
+          }).join('')+
+    '</select></div>'+
     '<div class="actions"><button class="btn" onclick="closeModal()">취소</button>'+
     '<button class="btn pri" id="stSave" onclick="saveStaff(\''+phone+'\')">저장</button></div>'+
-    '<p class="muted" id="stMsg" style="margin-top:8px"></p></div></div>';
+    '<p class="muted" id="stMsg" style="margin-top:8px"></p>'+
+    /* PIN 초기화는 드문 일이라 작은 글자 링크로 맨 아래에 */
+    (t.hasPin
+      ? '<p class="note t2"><button class="linkbtn" onclick="resetPin(\''+phone+'\',\''+esc(t.name)+'\')">PIN 초기화 (등록된 기기도 모두 해제)</button></p>'
+      : '')+
+    '</div></div>';
 }
 
 function saveStaff(phone){
@@ -9534,51 +9728,23 @@ function saveStaff(phone){
   if(!t) return;
 
   btn.disabled=true; msg.textContent='저장 중입니다...';
+  var dp=$('stDeputy');
+  var 대리바뀜 = dp && dp.value !== String(dp.dataset.was||'');
   call('api_saveStaff', S.token, {
     phone: phone, name: t.name,
     dept: $('stDept').value.trim(), rank: $('stRank').value.trim(),
     grade: Number($('stGrade').value), state: $('stState').value,
     payKind: $('stPayKind').value, payAmount: $('stPayAmt').value.trim()
   }).then(function(r){
+    if(!r.ok){ btn.disabled=false; msg.textContent=r.msg; return null; }
+    /* 대리인은 바뀌었을 때만 한 번 더 — 평소에는 왕복 1회 그대로입니다 */
+    return 대리바뀜 ? call('api_setDeputy', S.token, phone, dp.value) : {ok:true};
+  }).then(function(r){
+    if(!r) return;
     btn.disabled=false;
-    if(!r.ok){ msg.textContent=r.msg; return; }
+    if(!r.ok){ msg.textContent=r.msg||'대리인을 저장하지 못했습니다'; return; }
     closeOk(); toast('저장되었습니다');
     S.setCache=null;
-    renderSettings();
-  });
-}
-
-/* ---- 대리인 지정 (관리자만) ---- */
-function openDeputy(phone){
-  var list=S.staffCache||[];
-  var me=null; list.forEach(function(s){ if(s.phone===phone) me=s; });
-  if(!me) return;
-
-  $('modal').innerHTML='<div class="veil"><div class="sheet">'+
-    '<div class="sheethead"><h3 class="tt">'+esc(me.name)+' 대리인</h3>'+
-    '<button class="btn sm" onclick="closeModal()">닫기</button></div>'+
-    '<div class="field"><label class="fl">대리인</label><select id="dpSel">'+
-      '<option value="">없음</option>'+
-      list.filter(function(s){ return s.phone!==phone && s.state!=='퇴사'; })
-          .map(function(s){
-            return '<option value="'+s.phone+'"'+(s.phone===me.deputy?' selected':'')+'>'+
-                   esc(s.name)+' '+esc(s.rank)+'</option>';
-          }).join('')+
-    '</select></div>'+
-    '<div class="actions"><button class="btn" onclick="closeModal()">취소</button>'+
-    '<button class="btn pri" id="dpSave" onclick="saveDeputy(\''+phone+'\')">저장</button></div>'+
-    '<p class="muted" id="dpMsg" style="margin-top:8px"></p></div></div>';
-}
-
-function saveDeputy(phone){
-  var btn=$('dpSave'), msg=$('dpMsg');
-  if(btn.disabled) return;
-  btn.disabled=true; msg.textContent='저장 중입니다...';
-  call('api_setDeputy', S.token, phone, $('dpSel').value).then(function(r){
-    btn.disabled=false;
-    if(!r.ok){ msg.textContent=r.msg; return; }
-    closeOk(); toast('저장되었습니다');
-    S.setCache=null;            // 낡은 값으로 한 번 그렸다가 바뀌는 깜빡임을 없앤다 (v43)
     renderSettings();
   });
 }
@@ -9648,9 +9814,28 @@ function saveSign(corp){
 
 function cfg(key,label,val){
   return '<div class="field"><label class="fl">'+esc(label)+'</label>'+
-    '<div style="display:flex;gap:6px">'+
-    '<input type="text" id="cfg_'+key+'" value="'+esc(val||'')+'">'+
-    '<button class="btn sm" onclick="saveCfg(\''+key+'\')">저장</button></div></div>';
+    '<input type="text" id="cfg_'+key+'" data-was="'+esc(val==null?'':String(val))+'" value="'+esc(val==null?'':String(val))+'"></div>';
+}
+/** 구역의 칸을 한 번에 — 바뀐 칸만 저장합니다 (2026-09-09) */
+function saveCfgGroup(keys){
+  var changed=String(keys||'').split(',').filter(function(k){
+    var el=$('cfg_'+k); return el && el.value.trim()!==String(el.dataset.was||'').trim();
+  });
+  if(!changed.length){ toast('바뀐 것이 없습니다'); return; }
+  var p=Promise.resolve(), bad=[];
+  changed.forEach(function(k){
+    p=p.then(function(){
+      return call('api_saveSetting', S.token, k, $('cfg_'+k).value.trim()).then(function(r){
+        if(!r.ok) bad.push(k); else if($('cfg_'+k)) $('cfg_'+k).dataset.was=$('cfg_'+k).value.trim();
+      });
+    });
+  });
+  p.then(function(){
+    S.setCache=null;            // 다음에 설정 화면을 열면 새로 받는다
+    if(bad.length) toast(bad.join(', ')+' 은 저장하지 못했습니다');
+    else toast('저장되었습니다');
+    if(changed.some(function(k){ return k.indexOf('출퇴근')===0; })) refresh(false);
+  });
 }
 function syncNow(){
   var b=$('syncBtn'); b.disabled=true; $('syncMsg').textContent='가져오는 중입니다...';
@@ -9679,15 +9864,8 @@ function resetPin(phone, name){
   if(!confirm(name+'님의 PIN을 초기화할까요? 등록된 기기도 모두 해제됩니다.')) return;
   call('api_resetPin', S.token, phone).then(function(r){
     if(!r.ok){ toast(r.msg); return; }
+    closeOk();                   // 직원 정보 창에서 눌렀으므로 그 창을 닫는다
     toast('초기화되었습니다'); S.setCache=null; renderSettings();
-  });
-}
-
-function saveCfg(key){
-  call('api_saveSetting', S.token, key, $('cfg_'+key).value.trim()).then(function(r){
-    if(!r.ok){ toast(r.msg); return; }
-    S.setCache=null;            // 다음에 설정 화면을 열면 새로 받는다 (v43)
-    toast('저장되었습니다'); if(key.indexOf('출퇴근')===0) refresh(false);
   });
 }
 
