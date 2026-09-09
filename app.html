@@ -1006,7 +1006,11 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 .stats .k{color:var(--t3)}
 .stats .num{color:var(--t1);font-weight:600}
 .lastline{margin:8px 0 0;padding-top:6px;border-top:1px solid var(--line);
-  font-size:var(--fs-sm);color:var(--t2)}
+  font-size:var(--fs-sm);color:var(--t2);display:flex;align-items:center;gap:8px}
+/* ★ 한 줄로 자르고, 비어 있어도 한 줄 높이를 지킨다 — 카드 높이가 같아지게 (2026-09-09) */
+.lastline .tx{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lastline .tx:empty::before{content:'\00a0'}
+.lastline .fg{flex:none;display:flex;gap:4px}
 .lastline .nx{color:var(--t3)}
 .flags{display:flex;flex-wrap:wrap;gap:4px;margin-top:6px}
 .slim .cn{font-size:var(--fs-body)}
@@ -1023,9 +1027,10 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 .rail .row{display:flex;justify-content:space-between;gap:8px;font-size:var(--fs-body);padding:3px 0}
 /* 이름 + (현장) — 현장은 이름 아래 한 단계 작고 어둡게.
    ★ min-width:0 이 없으면 긴 현장 이름이 오른쪽 시각을 밀어냅니다. */
-.rail .row .m{display:flex;flex-direction:column;min-width:0;line-height:1.35}
-.rail .row .m > b{font-weight:400}
-.rail .row .m > em{font-style:normal;font-size:var(--fs-sm);color:var(--t3);
+/* 현장명은 이름 **옆** 같은 줄에 (2026-09-09). 아랫줄로 두면 현장에 나간 사람만 두 줄이 됩니다 */
+.rail .row .m{display:flex;align-items:baseline;gap:6px;min-width:0;line-height:1.35}
+.rail .row .m > b{font-weight:400;flex:none}
+.rail .row .m > em{font-style:normal;font-size:var(--fs-sm);color:var(--t3);min-width:0;
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rail .row > span:last-child{flex:0 0 auto;white-space:nowrap}
 /* ── 최근 기록: 한 건 = 카드 하나 (v44) ── */
@@ -1036,23 +1041,13 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 .rail .item .tt{margin:0 22px 2px 0;font-size:var(--fs-h2);font-weight:600;color:var(--t1);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .rail .item .by{margin:0 0 4px;font-size:var(--fs-sm);color:var(--t3)}
+/* 본문은 한 줄 — 비어 있어도 자리를 지켜 카드 높이가 같다 (2026-09-09) */
 .rail .item .tx{margin:0;font-size:var(--fs-sm);color:var(--t2);line-height:1.55;
-  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rail .item .tx:empty::before{content:'\00a0'}
+.rail .item.go{cursor:pointer}
+.rail .item.go:hover{border-color:var(--t3)}
 .rail .item .tag{font-size:var(--fs-xs);padding:1px 6px;vertical-align:1px}
-.rail .item > .del{position:absolute;top:5px;right:5px;opacity:0;transition:opacity .12s}
-.rail .item:hover > .del,.rail .item:focus-within > .del{opacity:1}
-/* ★ 폰에는 hover 가 없어서 이 × 가 **영영 보이지 않았습니다.**
-   그런데 투명해도 눌리기는 합니다. 그래서 폰에서는
-   '보이지 않는데 눌리는 삭제 버튼' 이 카드 오른쪽 위에 있었던 셈입니다.
-   (확인 창이 떠서 지워지지는 않았지만, 왜 떴는지 알 수 없었습니다.
-    반대로 정말 지우고 싶은 사람은 버튼을 찾을 수 없었습니다.)
-   손가락으로 쓰는 기기에서는 항상 보이게 둡니다. */
-@media (hover:none){
-  .rail .item > .del{opacity:.75}   /* .6 은 2.5:1 이라 아이콘 기준(3:1)에 못 미쳤습니다 */
-}
-.rail .item .del{border:none;background:transparent;color:var(--t3);cursor:pointer;
-  font-size:var(--fs-h1);line-height:1;padding:1px 4px;border-radius:var(--r-sm)}
-.rail .item .del:hover{background:var(--dg-bg);color:var(--dg)}
 /* 레일의 결재 상자는 결재 탭의 카드(.ucard.hot)와 같은 모양입니다 (2026-09-09).
    빨강은 왼쪽 선 하나로 충분합니다. */
 .rail .apv{margin-bottom:var(--sp-2);padding:10px 12px}
@@ -1140,6 +1135,9 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 .sheethead{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
 .sheethead h3{margin:0}
 .actions{display:flex;gap:8px;margin-top:16px}
+/* 입력 창 안의 작은 단추 줄 — 저장·취소처럼 늘어나지 않는다 (2026-09-09) */
+.tfrow{display:flex;gap:8px;margin:0}
+.tfrow .btn{flex:none}
 
 /* ===================== 업무 상세 (v55에서 다시 짬) =====================
 
@@ -1184,6 +1182,8 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 .tdtop{margin:0 0 var(--sp-4)}
 .tdsite{margin:6px 0 0;font-size:var(--fs-sm);color:var(--t3);line-height:1.6}
 .tdsep{border:0;border-top:1px solid var(--line);margin:var(--sp-4) 0}
+.calbody{margin:2px 0 0;white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:2;
+  -webkit-box-orient:vertical;overflow:hidden}
 
 /* 관련 결재 — 구역 제목을 만들지 않고 한 줄짜리 칩으로 */
 .tdlink{display:flex;align-items:center;gap:var(--sp-2);width:100%;text-align:left;
@@ -1321,7 +1321,10 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 .lrow:hover{background:var(--panel)}
 .lrow.plain{cursor:default}
 .lrow.plain:hover{background:transparent}
-.lrow > .m{flex:1;min-width:0}
+/* ★★ 목록 줄은 **언제나 두 줄 높이**입니다 (2026-09-09 대표님 지시).
+   '누가 언제' 가 없는 줄만 한 줄이 되어 같은 목록 안에서 줄 높이가 들쭉날쭉했습니다
+   (완료 목록·미수금·검색·달력·월간). 빈 값을 적지는 않되 자리는 지킵니다. */
+.lrow > .m{flex:1;min-width:0;min-height:calc(var(--fs-body)*1.55 + var(--fs-sm)*1.55 + 2px)}
 .lrow .t{margin:0;font-size:var(--fs-body);font-weight:600;color:var(--t1);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lrow .b{margin:2px 0 0;font-size:var(--fs-sm);color:var(--t3);
@@ -1351,7 +1354,7 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 .ucard.plain{cursor:default}
 .ucard.plain:hover{border-color:var(--line)}
 .ucard.hot{border-left:3px solid var(--dg);border-color:var(--dg-line)}
-.ucard > .m{flex:1;min-width:0}
+.ucard > .m{flex:1;min-width:0;min-height:calc(var(--fs-h2)*1.55 + var(--fs-sm)*1.55 + 3px)}
 .ucard .t{margin:0;font-size:var(--fs-h2);font-weight:600;color:var(--t1);
   font-family:var(--font-title);
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -4359,19 +4362,21 @@ function renderBoard(){
 
   /* ★ 0건이면 구역째 그리지 않습니다 (2026-09-02).
      '아직 없습니다' 를 반복해 빈 공간을 만들지 않는다 — 규칙 그대로입니다. */
-  var canDel = S.me && S.me.grade>=9;
   var logBox = $('railLog') ? $('railLog').parentNode : null;
   if(logBox) logBox.classList.toggle('hide', (d.recent||[]).length===0);
   $('railLog').innerHTML = (d.recent||[]).length ? d.recent.map(function(l){
     /* 한 건을 카드로 (v44).
-       예전에는 네 건이 한 덩어리로 붙어 어디까지가 한 건인지 알 수 없었다.
-       위계: 업무명(굵고 밝게) → 누가 언제(작고 어둡게) → 내용(본문, 두 줄까지) */
-    return '<div class="item'+(l.gone?' gone':'')+'" data-lid="'+esc(l.id||'')+'">'+
-           (canDel && l.id ? '<button class="del" title="기록 삭제" onclick="deleteLog(\''+l.id+'\')">×</button>' : '')+
+       위계: 업무명(굵고 밝게) → 누가 언제(작고 어둡게) → 내용(본문 한 줄)
+       ★★ 카드는 언제나 세 줄 (2026-09-09). 본문이 없는 카드만 두 줄이 되고
+          있는 카드는 넉 줄까지 늘어나 레일이 들쭉날쭉했습니다. 본문은 한 줄로 자릅니다.
+       ★ 삭제 × 는 뺐습니다 — 레일은 보는 곳이고, 지우는 길은 업무 상세의 흐름에 있습니다.
+          누르면 그 업무 상세가 열립니다. */
+    var go = (l.taskId && !l.gone) ? ' onclick="openTask(\''+esc(l.taskId)+'\')"' : '';
+    return '<div class="item'+(l.gone?' gone':'')+(go?' go':'')+'" data-lid="'+esc(l.id||'')+'"'+go+'>'+
            '<p class="tt">'+(l.tag? '<span class="tag gy">'+esc(l.tag)+'</span> ':'')+
              esc(l.task)+'</p>'+
            '<p class="by">'+esc([l.who, shortDate(l.at)].filter(function(x){return x;}).join(' · '))+'</p>'+
-           (l.text? '<p class="tx">'+esc(l.text)+'</p>' : '')+
+           '<p class="tx">'+esc(l.text||'')+'</p>'+
            '</div>';
   }).join('') : '<p class="none">아직 없습니다</p>';
 }
@@ -4716,10 +4721,14 @@ function cardSlim(t, i){
        예전에는 `08-31` 과 `시스템 · 최원찬` 이 따로 놓여 카드가 세 줄이었습니다.
        둘 다 '이게 뭔가' 를 말하는 같은 층이라 눈이 두 번 멈췄습니다.
        ★ 급한 표시(빨강·노랑)만 자기 줄을 갖습니다 — 뜻이 다른 층이기 때문입니다. */
-    (f? '<p style="margin:4px 0 0;font-size:var(--fs-sm);color:var(--'+(f.lv==='danger'?'dg':'wn')+')">'+esc(f.t)+'</p>' : '')+
+    /* ★★ 급한 표시도 **같은 보조 줄**에 (2026-09-09 대표님 지시).
+       표시가 있는 카드만 세 줄이 되어 대기·완료 칸의 카드 높이가 들쭉날쭉했습니다.
+       날짜 자리에 색 글자로 대신 씁니다 — 표시는 날짜보다 급한 말이고,
+       마감이 지난 것은 날짜 자체가 이미 빨갛습니다. 모든 카드가 두 줄입니다. */
     '<p class="cb">'+
       [esc(t.typeName||''), (t.ownerName? ownerChip(t) : ''),
-       (f? '' : when.join(' · '))].filter(function(x){ return x; }).join(' · ')+
+       (f? '<span class="'+(f.lv==='danger'?'dgv':'wnv')+'">'+esc(f.t)+'</span>' : when.join(' · '))
+      ].filter(function(x){ return x; }).join(' · ')+
     '</p>'+
   '</div>';
 }
@@ -4737,7 +4746,8 @@ function cardFull(t, i){
     (t.site?' · '+esc(t.site):'')+'</span></div>';
 
   var hot=dueHot(t);
-  if(t.type==='DEMO' || t.progress>0){
+  /* 진행중 칸의 카드는 진행률 줄을 **언제나** 그립니다 — 줄 수가 같아야 높이가 같습니다 */
+  if(t.type==='DEMO' || t.progress>0 || t.status==='진행중'){
     h+='<div style="display:flex;align-items:center;gap:7px;margin-top:6px">'+
        '<div class="bar"><i style="width:'+(t.progress||0)+'%"></i></div>'+
        '<span class="pct" style="white-space:nowrap">'+(t.progress||0)+'%'+
@@ -4768,21 +4778,27 @@ function cardFull(t, i){
   /* ★ `다음: …` 은 태그가 아니라 마지막 기록 줄 뒤에 (2026-09-09).
      두세 글자용 태그에 한 문장이 들어가 두 줄로 접히고 카드가 다시 길어졌습니다. */
   var nx = t.next ? '<span class="nx">'+(t.lastLog?' · ':'')+'다음 '+esc(t.next)+'</span>' : '';
+  var body='';
   if(t.lastLog){
     var sp=String(t.lastLog).indexOf(' ');
     var dt=sp>0? shortDate(t.lastLog.substring(0,sp)) : '';
     var tx=sp>0? t.lastLog.substring(sp+1) : t.lastLog;
-    h+='<p class="lastline">'+(dt? '<span class="dt">'+esc(dt)+'</span>':'')+esc(tx)+nx+'</p>';
+    body=(dt? '<span class="dt">'+esc(dt)+'</span>':'')+esc(tx)+nx;
   } else if(nx){
-    h+='<p class="lastline">'+nx+'</p>';
+    body=nx;
   }
-
+  /* ★★ 진행중 카드는 **언제나 같은 줄 수**입니다 (2026-09-09 대표님 지시).
+     마지막 기록 줄과 표시 줄이 있는 카드만 있어서 높이가 카드마다 달랐습니다.
+     이제 맨 아래 한 줄은 항상 있고(비어 있어도 자리를 지킵니다 — `.tx:empty`),
+     표시(기록 N일 없음 · 추가견적 필요 · 미승인 추가)는 그 줄 **오른쪽 끝**에 붙습니다.
+     기록 글은 한 줄로 자릅니다 — 전문은 상세에서 봅니다.
+     ★ 철거 카드는 격자 한 줄이 더 있지만 철거끼리는 같습니다. */
   var 표시들=((t.flags)||[]).filter(function(f){ return f && !isDueFlag(f); });
-  if(표시들.length){
-    h+='<div class="flags">';
-    표시들.forEach(function(f){ h+='<span class="tag '+(f.lv==='danger'?'dg':'wn')+'">'+esc(f.t)+'</span>'; });
-    h+='</div>';
-  }
+  var tags=표시들.map(function(f){
+    return '<span class="tag '+(f.lv==='danger'?'dg':'wn')+'">'+esc(f.t)+'</span>';
+  }).join('');
+  h+='<p class="lastline"><span class="tx">'+body+'</span>'+
+     (tags? '<span class="fg">'+tags+'</span>' : '')+'</p>';
   return h+'</div>';
 }
 /** 값이 없으면 칸 자체를 만들지 않는다 (하이픈·'없음' 을 남기지 않는다) */
@@ -5267,15 +5283,47 @@ function deleteLogFromTask(logId, taskId){
  *    **판정과 걸러내기는 전부 서버가 합니다** — 화면에서 가리는 방식이 아닙니다.
  *  ★ [끄기] 를 누르면 이미 보낸 링크가 **그 자리에서** 안 열립니다.
  */
-function guestLink(taskId, on){
-  if(on && !confirm('이 현장의 진행률과 사진을 고객이 볼 수 있게 됩니다.\n' +
+/* ★ 수정 창의 한 칸에서 켜고 끕니다 (2026-09-09). `quiet` 는 이미 켜진 링크를 다시 보는 것 —
+   확인창을 또 띄우지 않습니다. 창이 열려 있으면 그 칸(`#tfGuest`)만 갈아끼웁니다. */
+function guestLink(taskId, on, quiet){
+  if(on && !quiet && !confirm('이 현장의 진행률과 사진을 고객이 볼 수 있게 됩니다.\n' +
                     '금액과 내부 기록은 나가지 않습니다. 만들까요?')) return;
 
   call('api_guestLink', S.token, taskId, on).then(function(r){
     if(!r || !r.ok){ toast((r&&r.msg)||'만들지 못했습니다'); return; }
-    if(!on){ toast('링크를 껐습니다'); softRefresh(); openTask(taskId, true); return; }
+    var t=taskOf_(taskId); if(t) t.guest = on ? 'Y' : '';
+    var box=$('tfGuest');
+    if(!on){
+      toast('링크를 껐습니다'); softRefresh();
+      if(box && t) box.innerHTML=guestRow_(t, ''); else openTask(taskId, true);
+      return;
+    }
+    if(box && t){
+      box.innerHTML=guestRow_(t, r.url);
+      var el=$('gsUrl'); if(el){ el.focus(); el.select(); }
+      return;
+    }
     guestShow(r.url, taskId);
   });
+}
+
+/** 수정 창의 '고객 진행 링크' 칸 — 주소를 받았으면 그 자리에 보여준다 */
+function guestRow_(t, url){
+  var id=esc(t.id);
+  if(url){
+    return '<input type="text" id="gsUrl" readonly value="'+esc(url)+'">'+
+      '<div class="tfrow" style="margin-top:6px">'+
+      '<button class="btn sm" onclick="guestCopy()">복사</button>'+
+      '<button class="btn sm" onclick="guestSend()">보내기</button>'+
+      '<button class="btn sm" onclick="guestLink(&quot;'+id+'&quot;,false)">끄기</button></div>';
+  }
+  if(t.guest){
+    return '<div class="tfrow">'+
+      '<button class="btn sm" onclick="guestLink(&quot;'+id+'&quot;,true,true)">링크 보기</button>'+
+      '<button class="btn sm" onclick="guestLink(&quot;'+id+'&quot;,false)">끄기</button></div>';
+  }
+  return '<div class="tfrow">'+
+    '<button class="btn sm" onclick="guestLink(&quot;'+id+'&quot;,true)">만들기</button></div>';
 }
 
 function guestShow(url, taskId){
@@ -5324,42 +5372,51 @@ function guestSend(){
  *   여기서는 단추를 보여줄지만 정합니다.
  * ★ 뗀다고 드라이브 파일을 지우지 않습니다. 실수로 지우면 되돌릴 수 없습니다.
  */
-function fileBox_(t, files){
+/* ★★ 상세(edit=false)에는 **있는 자료만**, 붙이고 떼는 것은 수정 창(edit=true)에서 (2026-09-09).
+   0개면 상세에 아무것도 안 그립니다 — '0건인 구역은 아예 그리지 않는다'. */
+function fileBox_(t, files, edit){
   var 붙일수있나 = S.me && (S.me.grade>=2 || (t && t.owner===S.me.phone));
-  if(!files.length && !붙일수있나) return '';
+  if(!edit){
+    if(!files.length) return '';
+    return foldBox('files:'+t.id, '자료 '+files.length+'개', fileRows_(t, files, false));
+  }
+  if(!붙일수있나) return '';
+  /* 올리고 떼면 `#tfFiles` 만 다시 그립니다 — 창을 통째로 다시 그리면 쓰던 글이 날아갑니다 */
+  return '<div class="field"><label class="fl">자료</label>'+
+         '<div id="tfFiles">'+fileRows_(t, files, true)+'</div>'+
+         '<input type="file" id="tfFile" multiple '+
+           'onchange="addTaskFile(&quot;'+esc(t.id)+'&quot;,this)"></div>';
+}
 
+function fileRows_(t, files, edit){
   var h = '';
   files.forEach(function(f){
     h += '<div class="lrow plain"><div class="m">'+
       '<p class="t"><a href="'+esc(f.url)+'" target="_blank" rel="noopener">'+esc(f.name)+'</a></p>'+
       byline([f.who])+'</div>'+
-      ((f.mine || (S.me&&S.me.grade>=9))
+      ((edit && (f.mine || (S.me&&S.me.grade>=9)))
         ? '<div class="r"><button class="btn sm" onclick="dropTaskFile(&quot;'+esc(f.id)+
           '&quot;,&quot;'+esc(t.id)+'&quot;)">빼기</button></div>' : '')+
       '</div>';
   });
-  if(붙일수있나){
-    h += '<div class="field" style="margin-top:var(--sp-2)">'+
-      '<input type="file" id="tfFile" multiple '+
-        'onchange="addTaskFile(&quot;'+esc(t.id)+'&quot;,this)"></div>';
-  }
-
-  /* ★★ 0개면 접힌 줄을 만들지 않습니다 (2026-09-02).
-     `자료 0개 ▾` 는 눌러도 빈 칸만 나오는데 자리는 한 줄을 씁니다.
-     '0건인 구역은 아예 그리지 않는다' 규칙 그대로, 붙일 사람에게만
-     `고객 진행 링크` 와 같은 모양의 한 줄로 보여 줍니다. */
-  if(!files.length){
-    return '<button class="tdlink" onclick="pickTaskFile(&quot;'+esc(t.id)+'&quot;)">'+
-           '<span class="n">자료</span><span class="g">붙이기</span></button>'+
-           '<input type="file" id="tfFile" multiple style="display:none" '+
-             'onchange="addTaskFile(&quot;'+esc(t.id)+'&quot;,this)">';
-  }
-  return foldBox('files:'+t.id, '자료 '+files.length+'개', h);
+  return h;
 }
 
-/** 숨겨둔 파일 고르기 칸을 대신 눌러 준다 */
-function pickTaskFile(){
-  var el=$('tfFile'); if(el) el.click();
+/** 수정 창이 열려 있으면 자료 칸만 다시 그린다. 아니면 상세를 다시 연다 */
+function refreshTaskFiles_(taskId){
+  var box=$('tfFiles'), t=taskOf_(taskId);
+  if(box && t){
+    box.innerHTML=fileRows_(t, (S.data && S.data.filesByTask && S.data.filesByTask[taskId])||[], true);
+    return;
+  }
+  openTask(taskId, true);
+}
+
+/** 판에 있는 업무 한 건 (없으면 null) */
+function taskOf_(id){
+  var t=null;
+  (S.data? S.data.tasks:[]).forEach(function(x){ if(x.id===id) t=x; });
+  return t;
 }
 
 /** 파일을 붙인다. ★ 한 번에 세 개까지 — 열 개를 한 번에 보내면 응답이 30초를 넘습니다 */
@@ -5392,7 +5449,7 @@ function addTaskFile(taskId, input){
       }
       toast((r.files||[]).length+'개 올렸습니다');
       softRefresh();
-      openTask(taskId, true);
+      refreshTaskFiles_(taskId);
     });
   });
 }
@@ -5402,7 +5459,7 @@ function dropTaskFile(id, taskId){
   if(S.data && S.data.filesByTask && S.data.filesByTask[taskId]){
     S.data.filesByTask[taskId] = S.data.filesByTask[taskId].filter(function(f){ return f.id!==id; });
   }
-  openTask(taskId, true);
+  refreshTaskFiles_(taskId);
   call('api_dropTaskFile', S.token, id).then(function(r){
     if(!r || !r.ok){ toast((r&&r.msg)||'떼지 못했습니다'); }
     softRefresh();
@@ -5451,16 +5508,11 @@ function taskDetailBody(r){
         (r.settle.sum.cost? ' · 남는 것 '+won(r.settle.sum.margin)+'원':''),
       settleHtml(r, t));
   }
-  /* ★ 도면·문서 (2026-09-02). 지금까지는 **사진만** 붙일 수 있었습니다. */
-  top += fileBox_(t, r.files||[]);
-
-  /* ★ 고객 링크 — 담당자·사무실에게만 보입니다 (판정은 서버가 다시 합니다) */
-  if(S.me && (S.me.grade>=2 || t.owner===S.me.phone)){
-    top += '<button class="tdlink" onclick="guestLink(&quot;'+esc(t.id)+'&quot;,'+
-             (t.guest?'false':'true')+')">'+
-           '<span class="n">고객 진행 링크</span>'+
-           '<span class="g">'+(t.guest? '켜져 있음 · 끄기' : '만들기')+'</span></button>';
-  }
+  /* ★★ 자료 붙이기·고객 진행 링크는 **수정 창**에 있습니다 (2026-09-09 대표님 지시).
+     첫 화면에는 중요한 정보만 남깁니다 — `자료 · 붙이기` `고객 진행 링크 · 만들기` 는
+     정보가 아니라 단추인데 업무마다 두 줄씩 자리를 차지했습니다.
+     이미 붙은 자료가 있을 때만 접힌 한 줄로 보여줍니다 (0개면 아무것도 안 그립니다). */
+  top += fileBox_(t, r.files||[], false);
 
   /* ★ 사진 모아보기 (2026-09-02).
      기록마다 흩어져 있어서 **사실상 아무도 안 봤습니다.**
@@ -5649,18 +5701,6 @@ function flowKey(e, taskId){
 }
 
 function row(k,v){ return '<div class="k">'+k+'</div><div>'+esc(v)+'</div>'; }
-
-function deleteLog(logId){
-  if(!confirm('이 기록을 삭제할까요?\n삭제하면 업무의 진행률과 최근기록일이 남은 기록 기준으로 다시 계산됩니다.')) return;
-  toast('삭제되었습니다');
-  var el=document.querySelector('[data-lid="'+logId+'"]');
-  if(el && el.parentNode) el.parentNode.removeChild(el);
-  S.taskCache={};
-  call('api_deleteLog', S.token, logId, S.corp).then(function(r){
-    if(!r.ok){ toast('삭제하지 못했습니다: '+r.msg); }
-    softRefresh();
-  });
-}
 
 /** 차감·입금 등록 창 */
 function openSettleForm(taskId, kind){
@@ -5964,15 +6004,15 @@ function openTaskForm(id){
   // 화면이 이미 들고 있는 값으로 즉시 띄운다 (서버에 가지 않음)
   var t=null;
   (S.data? S.data.tasks:[]).forEach(function(x){ if(x.id===id) t=x; });
-  if(t){ drawTaskForm(id, t); return; }
+  if(t){ drawTaskForm(id, t, (S.data.filesByTask && S.data.filesByTask[id])||[]); return; }
   // 진행판에 없는 업무(완료 오래된 건 등)일 때만 서버 조회
   call('api_taskDetail', S.token, id).then(function(r){
     if(!r.ok){ toast(r.msg); return; }
-    drawTaskForm(id, r.task);
+    drawTaskForm(id, r.task, r.files||[]);
   });
 }
 
-function drawTaskForm(id, t){
+function drawTaskForm(id, t, files){
   var types=(S.meta.types||[]).slice(), corps=S.meta.corps;
   /* 지금 고를 수 있는 유형만 버튼으로 만든다 (철거·영업·시스템·기타).
      ★ 단, 수정하려는 업무가 이미 '그만 쓰기로 한 유형'(총무)이면 그 버튼도 같이 만든다.
@@ -6027,6 +6067,14 @@ function drawTaskForm(id, t){
           '<input type="number" id="tfAmount" value="'+(t&&t.amount?t.amount:'')+'"></div>'+
       '</div>'+
     '</div>'+
+    /* ★★ 자료(도면·문서)와 고객 진행 링크는 여기, 수정 창에 (2026-09-09 대표님 지시).
+       상세 첫 화면에는 정보만 남기고 단추는 여기로 모았습니다.
+       새 업무에는 없습니다 — 저장해서 번호를 받아야 붙일 곳이 생깁니다. */
+    (id && t ? fileBox_(t, files||[], true) : '')+
+    (id && t && S.me && (S.me.grade>=2 || t.owner===S.me.phone)
+      ? '<div class="field"><label class="fl">고객 진행 링크</label>'+
+        '<div id="tfGuest">'+guestRow_(t, '')+'</div></div>'
+      : '')+
     '<div class="actions"><button class="btn" onclick="closeModal()">취소</button>'+
     '<button class="btn pri" id="tfSave" onclick="saveTask()">저장</button></div>'+
     '<p class="muted" id="tfMsg" style="margin-top:8px"></p></div></div>';
@@ -7153,7 +7201,8 @@ function calDayBox(){
         '<p class="t">'+esc([v.time, v.title].filter(Boolean).join('  '))+'</p>'+
         byline([v.name, kindName(v.kind),
                 (v.from!==v.to) ? (v.from+' ~ '+v.to) : ''])+
-        (v.body ? '<p class="sub" style="margin:2px 0 0;white-space:pre-wrap">'+esc(v.body)+'</p>' : '')+
+        /* 본문은 두 줄까지 — 긴 메모 하나가 목록을 열 줄로 늘렸습니다 (2026-09-09) */
+        (v.body ? '<p class="sub calbody">'+esc(v.body)+'</p>' : '')+
         '</div>'+(btn? '<div class="r">'+btn+'</div>' : '')+'</div>';
     }).join('');
   }
@@ -7601,16 +7650,18 @@ function drawPost(no, src){
   if(!p){ toast('글을 찾을 수 없습니다'); openBoard(); return; }
   var mine = S.me && (S.me.grade>=9 || p.phone===S.me.phone);
 
+  /* ★ 수정·삭제는 ⋯ 안에 (2026-09-09). 본문과 댓글 사이에 단추 줄이 늘 있어서
+     글쓴이와 남이 보는 첫 화면이 달랐습니다. 업무 상세와 같은 방식입니다. */
   var h='<div class="veil"><div class="sheet">'+
     '<div class="sheethead"><h3 class="tt">'+esc(p.title)+'</h3>'+
+      '<button class="btn sm" onclick="openBoard()">목록</button>'+
+      (mine? '<button class="tdico" onclick="taskMenu()" title="수정·삭제" aria-label="수정·삭제">⋯</button>':'')+
       '<button class="btn sm" onclick="closeModal()">닫기</button></div>'+
+    (mine? '<div class="tdmenu" id="tdMenu">'+
+      '<button class="btn sm" onclick="openPostForm(\''+p.no+'\')">수정</button>'+
+      '<button class="btn sm dg" onclick="deletePost(\''+p.no+'\')">삭제</button></div>':'')+
     byline([p.who, shortDate(p.at), p.edited? '수정 '+shortDate(p.edited) : ''])+
     '<div style="margin-bottom:20px">'+fmt(p.body)+shotsHtml(p.photos)+'</div>'+
-    '<div class="actions" style="margin-bottom:22px">'+
-      '<button class="btn sm" onclick="openBoard()">목록</button>'+
-      (mine? '<button class="btn sm" onclick="openPostForm(\''+p.no+'\')">수정</button>':'')+
-      (mine? '<button class="btn sm dg" onclick="deletePost(\''+p.no+'\')">삭제</button>':'')+
-    '</div>'+
     '<div id="pcBody">'+
       commentsHtml('게시글', p.no, (r.comments&&r.comments[p.no])||[], null, true)+
     '</div></div></div>';
@@ -8190,8 +8241,8 @@ function docSec(title, arr, hot){
        체크+
        '<div class="m">'+
          '<p class="t">'+esc(d.title)+'</p>'+
-         (sub? '<p class="b">'+esc(sub)+'</p>':'')+
-         (tags? '<p class="b">'+tags+'</p>':'')+
+         /* 대리 표시는 같은 보조 줄에 — 따로 줄을 만들면 그 카드만 높아집니다 (2026-09-09) */
+         '<p class="b">'+esc(sub)+(tags? (sub?' ':'')+tags : '')+'</p>'+
        '</div>'+
        '<div class="r">'+
          (d.amount? '<span class="v">'+won(d.amount)+'원</span>':'')+
@@ -8285,9 +8336,15 @@ function docSheetHtml(d, r){
   if(d.corp) head.push(d.corp);
   // 문서번호(EXP-260826-001)는 제목 아래에 쓰지 않는다 — 사람이 읽을 것이 아니다
 
+  /* ★ 관리자 삭제는 ⋯ 안에 (2026-09-09). 상세 맨 아래 빨간 단추가 늘 떠 있었습니다.
+     업무 상세의 ⋯ 와 같은 방식입니다 — 첫 화면에는 정보만 남깁니다. */
+  var 관리자 = S.me && S.me.grade>=9;
   return '<div class="veil"><div class="sheet">'+
     '<div class="sheethead"><h3 class="tt">'+esc(d.title)+'</h3>'+
+    (관리자? '<button class="tdico" onclick="taskMenu()" title="삭제" aria-label="삭제">⋯</button>' : '')+
     '<button class="btn sm" onclick="closeModal()">닫기</button></div>'+
+    (관리자? '<div class="tdmenu" id="tdMenu">'+
+      '<button class="btn sm dg" onclick="deleteDoc(\''+d.no+'\',\''+esc(d.title).replace(/'/g,'')+'\')">삭제</button></div>' : '')+
     byline(head)+
     (d.amount? '<p style="margin:0 0 18px"><b class="num" style="font-size:var(--fs-num-md)">'+
        won(d.amount)+'원</b> <span class="sub">'+esc(wonKo(d.amount))+'</span></p>' : '')+
@@ -8394,11 +8451,7 @@ function docDetailBody(r){
          (r.proxy?'대리 승인':'승인')+'</button></div>';
   }
 
-  if(S.me && S.me.grade>=9){
-    h+='<div style="margin-top:18px;padding-top:12px;border-top:1px solid var(--line)">'+
-       '<button class="btn dg sm" onclick="deleteDoc(\''+d.no+'\',\''+esc(d.title).replace(/'/g,'')+'\')">이 문서 삭제 (관리자)</button>'+
-       '</div>';
-  }
+  /* 관리자 삭제는 창 머리의 ⋯ 에 있습니다 (docSheetHtml) */
   return h;
 }
 
