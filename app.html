@@ -1182,7 +1182,11 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 .tdtop{margin:0 0 var(--sp-4)}
 .tdsite{margin:6px 0 0;font-size:var(--fs-sm);color:var(--t3);line-height:1.6}
 .tdsep{border:0;border-top:1px solid var(--line);margin:var(--sp-4) 0}
-.calbody{margin:2px 0 0;white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:2;
+/* ★★ 이름은 `.evbody` — `.calbody` 는 달력 본체(#calBody)가 이미 쓰는 이름입니다 (2026-09-10).
+   2026-09-09 에 그 이름으로 적어서 **달력 전체가 두 줄로 잘려** 날짜를 눌러도
+   머리글만 `…` 로 보이고 휴가·일정이 통째로 숨었습니다. 오류는 나지 않았습니다.
+   새 클래스는 만들기 전에 반드시 이름을 찾아보세요. `화면튼튼시험` ⑧ 이 이제 이것을 봅니다. */
+.evbody{margin:2px 0 0;white-space:pre-wrap;display:-webkit-box;-webkit-line-clamp:2;
   -webkit-box-orient:vertical;overflow:hidden}
 
 /* 관련 결재 — 구역 제목을 만들지 않고 한 줄짜리 칩으로 */
@@ -7202,7 +7206,7 @@ function calDayBox(){
         byline([v.name, kindName(v.kind),
                 (v.from!==v.to) ? (v.from+' ~ '+v.to) : ''])+
         /* 본문은 두 줄까지 — 긴 메모 하나가 목록을 열 줄로 늘렸습니다 (2026-09-09) */
-        (v.body ? '<p class="sub calbody">'+esc(v.body)+'</p>' : '')+
+        (v.body ? '<p class="sub evbody">'+esc(v.body)+'</p>' : '')+
         '</div>'+(btn? '<div class="r">'+btn+'</div>' : '')+'</div>';
     }).join('');
   }
