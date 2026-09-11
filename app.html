@@ -8777,17 +8777,19 @@ function openDocForm(code, prefill){
        '<span id="dfTotal" class="sub"></span></div>';
   }
 
-  // 사진은 영수증이 필요한 양식과 돈이 오가는 양식에만 (인감·휴가는 만들지 않는다)
-  var usePhoto = (f.needReceipt || f.useItems);
-  var 사진칸='';
-  if(usePhoto){
-    사진칸='<div class="field" style="margin-top:14px"><label class="fl'+
+  /* ★★ 사진 칸은 **모든 양식**에 있습니다 (2026-09-11 대표님 지시).
+       2026-09-11 까지는 지출·구매·추가공사에만 그리고 인감·휴가에는 안 그렸습니다.
+       그런데 휴가 신청서에 진단서·청첩장을, 인감 품의서에 날인할 서류 사진을
+       붙일 일이 있습니다. 서버(api_saveDoc)는 원래부터 양식과 상관없이 사진을 받아
+       `첨부` 시트에 남기고, 상세 화면도 그것을 그대로 보여줍니다 — 화면 작성 창만 막고 있었습니다.
+       ★ 필수는 영수증이 필요한 양식(지출결의서)뿐입니다. 나머지는 붙이고 싶을 때만.
+       `결재시험` ⑭ · `화면튼튼시험` ⑮ 가 이것을 지킵니다. */
+  var 사진칸='<div class="field" style="margin-top:14px"><label class="fl'+
        (f.needReceipt?' req':'')+'">'+(f.needReceipt?'영수증 사진':'첨부 사진')+'</label>'+
        '<input type="file" id="dfPhoto" accept="image/*" multiple '+
          'onchange="photoAdd(&#39;dfPhoto&#39;,this)">'+
        '<div class="thumbs" id="dfPhotoBox"></div></div>';
-    photoClear('dfPhoto');
-  }
+  photoClear('dfPhoto');
 
   var 비고칸='<div class="field"><label class="fl">비고</label><input type="text" id="dfMemo"></div>';
   /* 인감 체크는 지출·구매·추가공사에만 (2026-09-09). 휴가에 인감이 필요한 경우는 없습니다 —
@@ -8805,8 +8807,8 @@ function openDocForm(code, prefill){
        foldBox('doc:more', '그 밖에',
          법인칸+ (f.code==='ADD' ? '' : 업무칸)+ 비고칸+ 인감칸);
   } else {
-    /* 인감·휴가: 항목이 곧 본문 */
-    h+=제목칸+ 항목들+ 업무칸+
+    /* 인감·휴가: 항목이 곧 본문. 사진은 접기 밖 — 붙이려는 사람이 찾아야 하면 안 붙입니다 */
+    h+=제목칸+ 항목들+ 업무칸+ 사진칸+
        foldBox('doc:more', '그 밖에', 법인칸+ 비고칸);
   }
   h+='<div class="actions"><button class="btn" onclick="closeModal()">취소</button>'+
