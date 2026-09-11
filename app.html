@@ -1385,6 +1385,14 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 .thumbs{display:flex;flex-wrap:wrap;gap:var(--sp-2);margin-top:var(--sp-2)}
 .thumbs:empty{display:none}
 .thumb{position:relative;width:72px;height:72px;flex:none}
+.thumb.pdf{display:flex;align-items:center;justify-content:center;padding:6px;
+  border:1px solid var(--line2);border-radius:var(--r-sm);background:var(--field);
+  font-size:var(--fs-xs);color:var(--t2);text-align:center;line-height:1.25;overflow:hidden}
+.thumb.pdf span{display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden;word-break:break-all}
+.filechip{display:inline-flex;align-items:center;gap:6px;max-width:100%;padding:8px 12px;
+  border:1px solid var(--line2);border-radius:var(--r-sm);background:var(--field);
+  color:var(--t1);font-size:var(--fs-sm);text-decoration:none}
+.filechip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .thumb img{width:100%;height:100%;object-fit:cover;border-radius:var(--r-sm);
   border:1px solid var(--line2);background:var(--field);display:block}
 /* 빼기 단추 — 손가락으로 눌러야 하므로 보이는 것보다 누를 곳을 넓게 잡는다 */
@@ -6598,17 +6606,39 @@ function photoBusy(n){
   });
 }
 
+/* ★★ PDF 첨부 (2026-09-11 대표님 지시).
+   결재 문서에는 사진 말고도 견적서·계약서·진단서 같은 **PDF** 가 붙습니다.
+   사진 칸 하나로 같이 받되, PDF 는 줄이지도 그리지도 않고 **파일 그대로** 담습니다.
+   서버에서도 길이 다릅니다 — 사진은 savePhoto_(.jpg/.png), PDF 는 saveFile_(이름 그대로).
+   ★ 한 개 8MB 까지 (업무의 도면 PDF 와 같은 기준). 사진과 합쳐 PHOTO_MAX 개까지. */
+var PDF_MAX = 8 * 1024 * 1024;
+function isPdfFile(f){
+  return !!f && (String(f.type||'') === 'application/pdf' || /\.pdf$/i.test(String(f.name||'')));
+}
+
 function photoAdd(id, el){
   var files = Array.prototype.slice.call(el.files || []);
   el.value = '';                                  // 같은 사진을 다시 고를 수 있게
   if(!files.length) return;
 
+  /* PDF 는 받는 칸(accept 에 pdf 가 있는 칸)에서만. 다른 칸이면 알리고 뺀다 */
+  var pdfOk = String(el.accept || '').indexOf('pdf') >= 0;
+  var imgs = [], pdfs = [], 사진만 = 0;
+  files.forEach(function(f){
+    if(isPdfFile(f)){ if(pdfOk) pdfs.push(f); else 사진만 += 1; }
+    else imgs.push(f);
+  });
+  if(사진만) toast('이 칸에는 사진만 붙일 수 있습니다');
+  if(!imgs.length && !pdfs.length) return;
+
   var have = (PICKED[id] || []).length;
   var room = PHOTO_MAX - have;
-  if(room <= 0){ toast('사진은 '+PHOTO_MAX+'장까지입니다'); return; }
-  if(files.length > room){
-    toast('사진은 '+PHOTO_MAX+'장까지입니다');
-    files = files.slice(0, room);
+  if(room <= 0){ toast('첨부는 '+PHOTO_MAX+'개까지입니다'); return; }
+  if(imgs.length + pdfs.length > room){
+    toast('첨부는 '+PHOTO_MAX+'개까지입니다');
+    var all = imgs.concat(pdfs).slice(0, room);
+    imgs = all.filter(function(f){ return !isPdfFile(f); });
+    pdfs = all.filter(isPdfFile);
   }
 
   var box = $(id+'Box');
@@ -6619,23 +6649,37 @@ function photoAdd(id, el){
      예전에는 장수로 한도를 나눠 가져서, 다섯 장을 고르면 한 장당 1.4MB 밖에
      못 써 **작은 사진까지 전부 다시 압축**되었습니다. */
   photoBusy(1);
-  Promise.all(files.map(function(f){ return photoFit(f); })).then(function(rs){
+  var 너무큼 = 0;
+  var pdfJobs = pdfs.map(function(f){
+    if(f.size > PDF_MAX){ 너무큼 += 1; return Promise.resolve(null); }
+    return photoDataUrl(f).then(function(u){
+      return u ? { pdf: true, name: String(f.name || '첨부.pdf'), blob: f, url: u, thumb: '' } : null;
+    });
+  });
+  Promise.all(imgs.map(function(f){ return photoFit(f); })).then(function(rs){
     var 못담음 = 0;
     rs.forEach(function(r, i){
       if(r){
         PICKED[id].push({
           blob: r.blob, url: '', thumb: '',
-          name: r.changed ? r.name : ((files[i] && files[i].name) || '사진')
+          name: r.changed ? r.name : ((imgs[i] && imgs[i].name) || '사진')
         });
       }else{
         못담음 += 1;
       }
     });
-    return photoFitTotal(id).then(function(더줄임){
+    return Promise.all(pdfJobs).then(function(ps){
+      ps.forEach(function(o, i){
+        if(o) PICKED[id].push(o);
+        else if(!(pdfs[i] && pdfs[i].size > PDF_MAX)) 못담음 += 1;
+      });
+      return photoFitTotal(id);
+    }).then(function(더줄임){
       return photoMakeUrls(id).then(function(){
         photoDraw(id);
         /* ★ 조용히 빠뜨리지 않는다. 예전에는 못 읽은 사진이 아무 말 없이 사라졌다 */
-        if(못담음) toast(못담음+'장은 담지 못했습니다. 다시 촬영해 주세요.');
+        if(너무큼) toast('PDF 는 한 개 8MB 까지입니다. '+너무큼+'개는 담지 못했습니다.');
+        if(못담음) toast(못담음+'개는 담지 못했습니다. 다시 골라 주세요.');
         else if(더줄임) toast('사진이 많아 크기를 조금 더 줄였습니다.');
       });
     });
@@ -6675,7 +6719,7 @@ function photoFitTotal(id){
 
   var per = Math.floor(PHOTO_TOTAL_LIMIT * 3 / 4 / Math.max(1, list.length));
   return Promise.all(list.map(function(o){
-    if(!o.blob || o.blob.size <= per) return null;
+    if(o.pdf || !o.blob || o.blob.size <= per) return null;   // PDF 는 줄일 수 없다
     return photoFit(o.blob, per).then(function(r){
       if(r){ o.blob = r.blob; o.url = ''; photoFreeThumb(o); }
     });
@@ -6707,16 +6751,23 @@ function photoDraw(id){
   if(!list.length){ box.innerHTML = ''; return; }
   var h = '';
   list.forEach(function(o, i){
-    h += '<div class="thumb"><img src="'+(o.thumb || o.url)+'" alt="">'+
+    h += '<div class="thumb'+(o.pdf?' pdf':'')+'">'+
+         (o.pdf ? '<span title="'+esc(o.name)+'">'+esc(o.name)+'</span>'
+                : '<img src="'+(o.thumb || o.url)+'" alt="">')+
          '<button type="button" class="tx" onclick="photoDrop(&#39;'+id+'&#39;,'+i+')" '+
-         'aria-label="사진 빼기">&times;</button></div>';
+         'aria-label="빼기">&times;</button></div>';
   });
   box.innerHTML = h;
 }
 
-/** 저장할 때 꺼내 쓴다 — 사진 주소 배열 */
+/** 저장할 때 꺼내 쓴다 — 사진 주소 배열 (PDF 는 photoFiles 로 따로) */
 function photoValues(id){
-  return (PICKED[id] || []).map(function(o){ return o.url; });
+  return (PICKED[id] || []).filter(function(o){ return !o.pdf; }).map(function(o){ return o.url; });
+}
+/** 저장할 때 꺼내 쓴다 — PDF 배열 { data, name } (결재 첨부만 받는다) */
+function photoFiles(id){
+  return (PICKED[id] || []).filter(function(o){ return o.pdf; })
+    .map(function(o){ return { data: o.url, name: o.name }; });
 }
 
 /* ===================== 사진 (v42 · 2026-09-01 전체로 넓힘) =====================
@@ -8420,10 +8471,11 @@ function docDetailBody(r){
   });
 
   // 영수증 — 눌러서 원본 크기로 크게 볼 수 있게 (v42)
+  // PDF 는 그림으로 못 그리므로 이름 링크로 (2026-09-11)
   if(r.files.length){
     h+='<div style="margin-top:12px;display:flex;flex-wrap:wrap;gap:8px">';
     r.files.forEach(function(f, i2){
-      h+=receiptThumb(f.url, i2);
+      h+= /\.pdf$/i.test(String(f.name||'')) ? fileChip(f) : receiptThumb(f.url, i2);
     });
     h+='</div>';
   }
@@ -8511,6 +8563,12 @@ function shotsHtml(urls){
        'onerror="this.outerHTML=&#39;<a href=&quot;'+esc(u)+'&quot; target=_blank class=&quot;btn sm&quot;>사진 보기</a>&#39;">';
   });
   return h+'</div>';
+}
+
+/** 그림이 아닌 첨부(PDF) — 이름을 눌러 새 창에서 연다 */
+function fileChip(f){
+  return '<a class="filechip" href="'+esc(f.url)+'" target="_blank" rel="noopener">'+
+         '<span>'+esc(f.name||'첨부')+'</span></a>';
 }
 
 function receiptThumb(url, i){
@@ -8784,9 +8842,11 @@ function openDocForm(code, prefill){
        `첨부` 시트에 남기고, 상세 화면도 그것을 그대로 보여줍니다 — 화면 작성 창만 막고 있었습니다.
        ★ 필수는 영수증이 필요한 양식(지출결의서)뿐입니다. 나머지는 붙이고 싶을 때만.
        `결재시험` ⑭ · `화면튼튼시험` ⑮ 가 이것을 지킵니다. */
+  /* ★ 결재 첨부만 PDF 도 받습니다 (2026-09-11). `accept` 에 pdf 가 있는 칸에서만
+       photoAdd 가 PDF 를 담습니다 — 기록·공지 칸에 PDF 를 넣으면 '사진만' 이라고 알립니다. */
   var 사진칸='<div class="field" style="margin-top:14px"><label class="fl'+
-       (f.needReceipt?' req':'')+'">'+(f.needReceipt?'영수증 사진':'첨부 사진')+'</label>'+
-       '<input type="file" id="dfPhoto" accept="image/*" multiple '+
+       (f.needReceipt?' req':'')+'">'+(f.needReceipt?'영수증 사진 · PDF':'첨부 사진 · PDF')+'</label>'+
+       '<input type="file" id="dfPhoto" accept="image/*,application/pdf" multiple '+
          'onchange="photoAdd(&#39;dfPhoto&#39;,this)">'+
        '<div class="thumbs" id="dfPhotoBox"></div></div>';
   photoClear('dfPhoto');
@@ -9018,7 +9078,8 @@ function saveDoc(){
   /* 사진은 고르는 순간 이미 줄여서 담아 두었다 (photoAdd).
      그래서 상신을 누른 뒤에는 기다릴 것이 없다. */
   var shots = photoValues('dfPhoto');
-  if(f && f.needReceipt && !shots.length){
+  var pdfs = photoFiles('dfPhoto');               // PDF 첨부 (2026-09-11)
+  if(f && f.needReceipt && !shots.length && !pdfs.length){
     return void stop('영수증 사진을 첨부해주세요.', 'dfPhoto');
   }
 
@@ -9028,8 +9089,9 @@ function saveDoc(){
   if(btn.disabled) return;
   btn.disabled=true; btn.textContent='상신 중...'; msg.textContent='';
 
-  if(shots.length) msg.textContent='사진 '+shots.length+'장 올리는 중입니다...';
+  if(shots.length+pdfs.length) msg.textContent='첨부 '+(shots.length+pdfs.length)+'개 올리는 중입니다...';
   p.photos = shots;
+  p.files = pdfs;
 
   call('api_saveDoc', S.token, p, S.corp).then(function(r){
     btn.disabled=false; btn.textContent='상신';
