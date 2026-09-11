@@ -3206,6 +3206,8 @@ function sumItems(){
   if(t) t.innerHTML='합계 <b class="num">'+won(sum)+'원</b>'+(sum?' <span class="sub">· '+wonKo(sum)+'</span>':'');
 }
 function todayStr(){ var d=new Date(); return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate()); }
+/** 지금 시각을 서버와 같은 모양(YYYY-MM-DD HH:mm)으로 — 낙관 반영한 카드의 `upAt` 에 쓴다 */
+function nowStamp(){ var d=new Date(); return todayStr()+' '+p2(d.getHours())+':'+p2(d.getMinutes()); }
 function p2(n){ return (n<10?'0':'')+n; }
 function addDays(n){ var d=new Date(); d.setDate(d.getDate()+n);
   return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate()); }
@@ -3986,6 +3988,7 @@ function applyTaskLocal(p){
   obj.type=p.type; obj.typeName=typeName; obj.corp=p.corp; obj.corpName=corpName;
   obj.title=p.title; obj.content=p.content||''; obj.owner=p.owner; obj.ownerName=ownerName;
   obj.due=p.due; obj.co=p.co;
+  obj.upAt=nowStamp();                     // 방금 손댔으니 판의 맨 위로 (2026-09-11)
   // 창에서 넘어온 것만 바꾼다 (안 받는 칸은 예전 값을 그대로 둔다)
   if(p.site!==undefined) obj.site=p.site;
   if(p.amount!==undefined) obj.amount=Number(p.amount||0);
@@ -4014,6 +4017,7 @@ function applyLogLocal(p){
     }
     t.lastLog=(p.date||'')+' '+String(p.text||'').split('\n')[0];
     t.next=p.next||'';
+    t.upAt=nowStamp();                     // 방금 기록했으니 판의 맨 위로 (2026-09-11)
     if(p.g||p.j) t.manpower={g:Number(p.g||0), j:Number(p.j||0)};
     if(p.wton) t.waste=Math.round((Number(t.waste||0)+Number(p.wton))*10)/10;
   });
@@ -4272,8 +4276,9 @@ function renderBoard(){
    *     · 진행중 급한 표시(flags) → 마감일 순이었습니다
    *   그래서 방금 기록을 남긴 업무가 화면 아래에 묻혀 있었습니다.
    *
-   *   ★ 급한 표시(빨강·노랑)는 **여전히 맨 위**입니다.
-   *     '지금 손대야 할 것' 보다 '방금 움직인 것' 이 위로 오면 안 됩니다. */
+   *   ★ 급한 표시(빨강·노랑)로 앞세우지 **않습니다** — `taskRecent` 의 설명을 보세요.
+   *   ★ 저장 직후에는 화면이 `upAt` 을 지금으로 올려 둡니다 (`touchTaskLocal`·`nowStamp`, 2026-09-11).
+   *     서버 값은 softRefresh 가 뒤에서 갈아끼웁니다. */
   run.sort(taskRecent);
   wait.sort(taskRecent);
 
@@ -5001,6 +5006,22 @@ function addLogLocal(taskId, log){
   S.data.logsByTask[taskId]=list;
   S.data.logCount[taskId]=(S.data.logCount[taskId]||0)+1;
   if(S.taskCache[taskId]) delete S.taskCache[taskId];
+  touchTaskLocal(taskId);
+}
+
+/** ★★ 방금 손댄 업무를 판·내 업무의 맨 위로 (2026-09-11).
+ *   서버가 주는 `upAt`(마지막으로 움직인 시각)을 화면에서 미리 지금으로 올려 둡니다.
+ *   softRefresh 가 400ms 뒤에 서버 값으로 갈아끼우지만, 그 사이에도 카드가
+ *   맨 위에 있어야 '저장이 됐다' 를 눈으로 알 수 있습니다.
+ *   업무 저장·기록(applyTaskLocal·applyLogLocal)은 값만 올리고 스스로 그립니다.
+ *   사진 있는 기록·댓글은 여기서 그립니다. */
+function touchTaskLocal(taskId){
+  if(!S.data || !Array.isArray(S.data.tasks)) return;
+  var hit=false;
+  S.data.tasks.forEach(function(t){ if(t.id===taskId){ t.upAt=nowStamp(); hit=true; } });
+  if(!hit) return;
+  renderBoard();
+  if(S.view==='me') renderMe();
 }
 
 /** 지운 기록을 상세에서 즉시 뺀다 */
@@ -5027,6 +5048,7 @@ function addCommentLocal(taskId, c){
   S.data.commentCount[taskId]=(S.data.commentCount[taskId]||0)+1;
   S.seen['C'+taskId]=c.at;                 // 내가 쓴 것이니 점을 켜지 않는다
   if(S.taskCache[taskId]) delete S.taskCache[taskId];
+  touchTaskLocal(taskId);
 }
 
 /** 서버가 돌려준 정산 합계·줄을 board 데이터에 바로 반영 */
