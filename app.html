@@ -3997,6 +3997,7 @@ function applyTaskLocal(p){
   obj.title=p.title; obj.content=p.content||''; obj.owner=p.owner; obj.ownerName=ownerName;
   obj.due=p.due; obj.co=p.co;
   obj.upAt=nowStamp();                     // 방금 손댔으니 판의 맨 위로 (2026-09-11)
+  if(found) readersMovedLocal(obj.id, obj.upAt);   // 움직였으니 읽음도 처음부터 (2026-09-14)
   // 창에서 넘어온 것만 바꾼다 (안 받는 칸은 예전 값을 그대로 둔다)
   if(p.site!==undefined) obj.site=p.site;
   if(p.amount!==undefined) obj.amount=Number(p.amount||0);
@@ -4026,6 +4027,7 @@ function applyLogLocal(p){
     t.lastLog=(p.date||'')+' '+String(p.text||'').split('\n')[0];
     t.next=p.next||'';
     t.upAt=nowStamp();                     // 방금 기록했으니 판의 맨 위로 (2026-09-11)
+    readersMovedLocal(t.id, t.upAt);       // 움직였으니 읽음도 처음부터 (2026-09-14)
     if(p.g||p.j) t.manpower={g:Number(p.g||0), j:Number(p.j||0)};
     if(p.wton) t.waste=Math.round((Number(t.waste||0)+Number(p.wton))*10)/10;
   });
@@ -4914,7 +4916,7 @@ function openTask(id, keepFold){
   call('api_taskDetail', S.token, id).then(function(r){
     if(!r.ok){ toast(r.msg); return; }
     S.taskCache[id]=r;
-    if(r.readers) S.readers[id]=r.readers;
+    if(r.readers) S.readers[id]={up:taskUpOf(id), names:r.readers};
     $('modal').innerHTML = taskSheetHtml(r.task, r);
     markCommentsSeen(id);
     paintReaders(id);
@@ -4928,20 +4930,38 @@ function openTask(id, keepFold){
  * 읽음 기록은 뒤에서 조용히 보낸다.
  * 접속 중 같은 업무를 또 열면 다시 보내지 않는다.
  * 단 **새 댓글이 있었으면 다시 보낸다** — 댓글을 어디까지 봤는지 갱신해야 하기 때문 (v44).
+ *
+ * ★★ 업무가 새로 움직이면(upAt 이 바뀌면) 읽음은 처음부터 다시 쌓입니다 (2026-09-14 대표님 지시).
+ *   판정은 서버 readersOf_ 가 합니다. 화면은 '보냈다' 와 '받아 둔 목록' 에 그때의 upAt 을
+ *   붙여 두고, upAt 이 달라졌으면 다시 보내고 옛 목록은 그리지 않습니다.
  */
+function taskUpOf(id){
+  var up='';
+  ((S.data && S.data.tasks) || []).forEach(function(t){ if(t.id===id) up=t.upAt||t.at||''; });
+  return up;
+}
+
 function sendRead(id, force){
-  if(S.readSent[id] && !force) return;
-  S.readSent[id]=1;
+  var up=taskUpOf(id);
+  if(S.readSent[id]===up && !force) return;
+  S.readSent[id]=up;
   call('api_markRead', S.token, '업무', id).then(function(r){
     if(!r || !r.ok) return;
-    S.readers[id]=r.readers||[];
+    S.readers[id]={up:up, names:r.readers||[]};
     paintReaders(id);
   });
 }
 
+/** 방금 내가 움직인 업무 — 읽음을 나 하나로 비운다 (서버도 쓴 사람을 본 사람으로 칩니다) */
+function readersMovedLocal(id, up){
+  S.readers[id]={up:up, names:(S.me && S.me.name) ? [S.me.name] : []};
+  paintReaders(id);
+}
+
 function paintReaders(id){
   var box=$('tdRead'); if(!box) return;
-  var names=S.readers[id]||[];
+  var e=S.readers[id];
+  var names=(e && e.up===taskUpOf(id)) ? e.names : [];
   /* 맨 아래 '누가 올림' 줄에 이어 붙인다. 아무도 안 읽었으면 줄을 만들지 않는다 (v55) */
   box.innerHTML = names.length ? ' · 읽음 '+esc(names.join(', ')) : '';
 }
@@ -4993,7 +5013,7 @@ function loadTaskAll(id, btnId){
   call('api_taskDetail', S.token, id).then(function(r){
     if(!r.ok){ toast(r.msg); if(btn){ btn.disabled=false; } return; }
     S.taskCache[id]=r;
-    if(r.readers) S.readers[id]=r.readers;
+    if(r.readers) S.readers[id]={up:taskUpOf(id), names:r.readers};
     if(!$('tdBody')) return;                 // 그새 창을 닫았으면 그만
     FOLD['flow:'+id]=1;                      // 더 보기를 눌렀으니 그 뒤로는 다 보여준다
     $('tdBody').innerHTML = taskDetailBody(r);
@@ -5026,7 +5046,7 @@ function addLogLocal(taskId, log){
 function touchTaskLocal(taskId){
   if(!S.data || !Array.isArray(S.data.tasks)) return;
   var hit=false;
-  S.data.tasks.forEach(function(t){ if(t.id===taskId){ t.upAt=nowStamp(); hit=true; } });
+  S.data.tasks.forEach(function(t){ if(t.id===taskId){ t.upAt=nowStamp(); readersMovedLocal(t.id, t.upAt); hit=true; } });
   if(!hit) return;
   renderBoard();
   if(S.view==='me') renderMe();
