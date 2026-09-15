@@ -4027,6 +4027,7 @@ function applyLogLocal(p){
     t.lastLog=(p.date||'')+' '+String(p.text||'').split('\n')[0];
     t.next=p.next||'';
     t.upAt=nowStamp();                     // 방금 기록했으니 판의 맨 위로 (2026-09-11)
+    t.editAt=t.upAt; readersMovedLocal(t.id, t.editAt);   // 기록이 붙었으니 읽음도 처음부터 (2026-09-15)
     if(p.g||p.j) t.manpower={g:Number(p.g||0), j:Number(p.j||0)};
     if(p.wton) t.waste=Math.round((Number(t.waste||0)+Number(p.wton))*10)/10;
   });
@@ -4930,8 +4931,8 @@ function openTask(id, keepFold){
  * 접속 중 같은 업무를 또 열면 다시 보내지 않는다.
  * 단 **새 댓글이 있었으면 다시 보낸다** — 댓글을 어디까지 봤는지 갱신해야 하기 때문 (v44).
  *
- * ★★ 업무 글을 고치면(editAt 이 바뀌면) 읽음은 처음부터 다시 쌓입니다 (2026-09-14 대표님 지시).
- *   댓글·작업기록은 비우지 않습니다 (2026-09-15).
+ * ★★ 업무 글을 고치거나 작업기록이 붙으면(editAt 이 바뀌면) 읽음은 처음부터 다시 쌓입니다
+ *   (2026-09-14·15 대표님 지시). 댓글은 비우지 않습니다.
  *   판정은 서버 readersOf_ 가 합니다. 화면은 '보냈다' 와 '받아 둔 목록' 에 그때의 editAt 을
  *   붙여 두고, editAt 이 달라졌으면 다시 보내고 옛 목록은 그리지 않습니다.
  */
