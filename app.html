@@ -1249,20 +1249,6 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 .count button{width:38px;height:38px;border:1px solid var(--line2);background:var(--field);
   border-radius:var(--r);font-size:var(--fs-icon);cursor:pointer}
 .count span{min-width:34px;text-align:center;font-size:var(--fs-h1);font-weight:600}
-/* 근무표 상세 — 가로 일곱 칸 표 (2026-09-17). 좁은 폰에서는 옆으로 민다 */
-.tblwrap{overflow-x:auto;margin-bottom:var(--sp-4)}
-.wktbl{border-collapse:collapse;width:100%;font-size:var(--fs-sm)}
-.wktbl th,.wktbl td{border:1px solid var(--line2);padding:var(--sp-2);text-align:center;white-space:nowrap}
-.wktbl th{color:var(--t3);font-weight:600}
-.wktbl td{color:var(--t1)}
-/* 근무 스케줄표의 일곱 칸 (2026-09-17) — 요일 · 근무/휴무 · 현장 */
-.wkbox{display:grid;gap:var(--sp-2);margin-top:var(--sp-2)}
-.wkrow{display:grid;grid-template-columns:92px auto minmax(0,1fr);gap:var(--sp-2);align-items:center}
-.wkrow>*{min-width:0}
-.wkday{font-size:var(--fs-sm);color:var(--t2)}
-.wkday.hol{color:var(--cal-sun)}
-.wkrow.rest .wksite{visibility:hidden}
-@media (max-width:379px){ .wkrow{grid-template-columns:78px auto minmax(0,1fr);gap:var(--sp-1)} }
 .chks{display:flex;flex-wrap:wrap;gap:6px}
 .chks label{border:1px solid var(--line2);border-radius:99px;padding:6px 12px;cursor:pointer;font-size:var(--fs-sm)}
 .chks input{display:none}
@@ -3587,7 +3573,6 @@ function saveSnap(){
                 ★ 위의 `SNAP` 주석은 v49 에 `events·eventKinds 가 늘었다` 고 적어 두었는데
                   **정작 담는 줄을 안 적었습니다.** 주석만 고치고 코드를 빠뜨린 경우입니다. */
              leaves:d.leaves, events:d.events,
-             shifts:d.shifts,            // 승인된 근무표 (2026-09-17) — 달력에 쓴다
              eventKinds:d.eventKinds, eventKindAll:d.eventKindAll,
              noticeCmt:d.noticeCmt,      // 공지를 열 때 댓글까지 왕복 0회
              filesByTask:d.filesByTask,  // 업무 상세의 `자료 N개`
@@ -7126,17 +7111,7 @@ function calChips(ds){
     out.push({ cls:'chip ev',
                text:[v.time, v.name, v.title].filter(Boolean).join(' ') });
   });
-  /* ★ 승인된 근무표 (2026-09-17) — 달력에 일정 줄을 새로 쓰지 않고 문서에서 읽어 보여만 준다.
-     색은 주지 않습니다 (달력에서 색이 뜻을 갖는 곳은 공휴일·주말뿐입니다). */
-  shiftsOn(ds).forEach(function(v){
-    out.push({ cls:'chip', text: v.off ? (v.name+' 휴무') : (v.name+' · '+v.site) });
-  });
   return out;
-}
-
-/** 그날 승인된 근무표 (board_ 의 shifts) */
-function shiftsOn(ds){
-  return ((S.data && S.data.shifts) || []).filter(function(v){ return v.d===ds; });
 }
 
 /* 뒤에서 응답이 왔을 때 쓴다. 그 사이 사람이 창을 닫았을 수 있으므로,
@@ -8512,31 +8487,11 @@ function docDetailBody(r){
      ★ 빈 값이면 줄 자체를 만들지 않습니다 (CLAUDE.md).
      ★ `fields` 가 없고 비고만 있는 양식도 있으므로 상자를 같이 엽니다. */
   var 칸=[];
-  /* ★ 근무표는 월~일 일곱 줄로 저장됩니다. 한 줄씩 늘어놓으면 읽기 어려워 표로 그립니다 (2026-09-17) */
-  var 요일 = ['월','화','수','목','금','토','일'];
-  var isSch = (d.form==='SCH');
   if(d.fields && d.fields.length){
-    d.fields.forEach(function(f){
-      if(isSch && 요일.indexOf(f.name)>=0) return;     // 아래 표로 대신한다
-      칸.push(row(f.name, f.value));
-    });
+    d.fields.forEach(function(f){ 칸.push(row(f.name, f.value)); });
   }
   if(d.memo) 칸.push(row('비고', d.memo));
   if(칸.length) h+='<div class="kv" style="margin-bottom:14px">'+칸.join('')+'</div>';
-
-  if(isSch){
-    var by={}; (d.fields||[]).forEach(function(f){ by[f.name]=String(f.value||''); });
-    var mon=wkMonday(by['대상 주']||'');
-    var 머리='', 몸='';
-    요일.forEach(function(nm, i){
-      var ds=mon? wkAdd(mon,i) : '';
-      var v=String(by[nm]||''), bar=v.indexOf('|');
-      머리+='<th>'+esc(nm+(ds? ' '+Number(ds.substring(5,7))+'/'+Number(ds.substring(8,10)) : ''))+'</th>';
-      몸+='<td>'+esc(bar>=0? v.substring(bar+1) : (v||''))+'</td>';
-    });
-    h+='<div class="tblwrap"><table class="wktbl"><thead><tr>'+머리+'</tr></thead>'+
-       '<tbody><tr>'+몸+'</tr></tbody></table></div>';
-  }
   if(r.items.length) h+=sechead(d.itemsTitle||'내역', r.items.length);
   r.items.forEach(function(i){
     var sub=[shortDate(i.date), i.kind].filter(function(x){ return x; }).join(' · ');
@@ -8886,17 +8841,9 @@ function openDocForm(code, prefill){
          '</select>';
     } else if(fd.kind==='여러줄'){
       항목들+='<textarea id="'+id+'" data-name="'+esc(fd.name)+'" class="dfField"></textarea>';
-    } else if(fd.kind==='주간표'){
-      /* 근무 스케줄표 전용 칸 (2026-09-17).
-         값은 숨은 칸 하나에 `근무|현장;휴무;…` 로 모읍니다 —
-         저장(saveDoc)과 자동 제목이 읽는 길(.dfField 의 value)을 그대로 쓰려는 것입니다. */
-      항목들+='<input type="hidden" id="'+id+'" data-name="'+esc(fd.name)+'" class="dfField">'+
-        '<div class="wkbox" id="'+id+'_wk"></div>';
     } else if(fd.kind==='날짜'){
       /* 휴가 시작일을 고르면 종료일이 같이 따라온다 (하루짜리가 대부분) */
       var 따라감 = (f.code==='LEAVE' && fd.name==='시작일') ? ' onchange="leaveSyncEnd()"' : '';
-      /* 근무표는 주를 고르면 일곱 칸이 열린다 (2026-09-17) */
-      if(f.code==='SCH' && fd.name==='대상 주') 따라감 = ' onchange="wkDraw(1)"';
       항목들+='<input type="date" id="'+id+'" data-name="'+esc(fd.name)+'" class="dfField"'+따라감+'>';
     } else if(fd.kind==='숫자'){
       항목들+='<input type="number" id="'+id+'" data-name="'+esc(fd.name)+'" class="dfField">';
@@ -8978,160 +8925,7 @@ function openDocForm(code, prefill){
     });
   }
   if(f.useItems) addItem();
-  if(f.code==='SCH') wkDraw(0);          // 근무표 일곱 칸 (2026-09-17)
   syncDocTitle();
-}
-
-/* ===================== 근무 스케줄표 일곱 칸 (2026-09-17) =====================
-   ★ 현장 선택지는 `사무실` + 진행중·대기 업무명입니다. 목록에 없으면 직접 적습니다
-     (datalist 라 고르는 것도 적는 것도 됩니다).
-   ★ 공휴일은 달력이 쓰는 표(holidayOf)로 **표시만** 합니다 — 값은 사람이 정합니다.
-   ★ 값은 숨은 칸 한 줄(`근무|현장;휴무;…`)에 모이고, 서버가 요일 일곱 줄로 풀어 적습니다. */
-var WK_DAYS=['월','화','수','목','금','토','일'];
-var WK_WEEK='';        // 지금 그려 둔 주의 월요일
-var WK_CELLS=[];       // [{work:true, site:'사무실'}, …] 일곱 칸
-
-function wkEls(){
-  var o={ mon:null, hid:null, box:null };
-  [].forEach.call(document.querySelectorAll('.dfField'), function(el){
-    if(el.dataset.name==='대상 주') o.mon=el;
-    if(el.dataset.name==='근무표') o.hid=el;
-  });
-  if(o.hid) o.box=$(o.hid.id+'_wk');
-  return o;
-}
-
-/** 그 주의 월요일 (서버 mondayOf_ 과 같은 규칙) */
-function wkMonday(ds){
-  ds=String(ds||'').substring(0,10);
-  if(ds.length<10) return '';
-  var d=new Date(Number(ds.substring(0,4)), Number(ds.substring(5,7))-1, Number(ds.substring(8,10)));
-  d.setDate(d.getDate() - ((d.getDay()+6)%7));
-  return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
-}
-
-function wkAdd(ds, n){
-  ds=String(ds||'').substring(0,10);
-  if(ds.length<10) return '';
-  var d=new Date(Number(ds.substring(0,4)), Number(ds.substring(5,7))-1, Number(ds.substring(8,10)));
-  d.setDate(d.getDate()+Number(n||0));
-  return d.getFullYear()+'-'+p2(d.getMonth()+1)+'-'+p2(d.getDate());
-}
-
-/** `2026-09-22` → `9/22~9/28` (서버 schSpan_ 과 같은 규칙) */
-function wkSpan(mon){
-  if(!mon) return '';
-  var cut=function(d){ return Number(d.substring(5,7))+'/'+Number(d.substring(8,10)); };
-  return cut(mon)+'~'+cut(wkAdd(mon,6));
-}
-
-/** 현장 선택지 — 사무실 + 진행중·대기 업무명 */
-function wkSites(){
-  var out=['사무실'];
-  ((S.data && S.data.tasks) || []).forEach(function(t){
-    if(t.status==='완료') return;
-    var n=String(t.title||'').trim();
-    if(n && out.indexOf(n)<0) out.push(n);
-  });
-  return out;
-}
-
-/**
- * 일곱 칸을 그린다.
- * reset 이 1 이면 주가 바뀐 것이므로 기본값(월~금 근무 · 토·일 휴무)으로 다시 세운다.
- */
-function wkDraw(reset){
-  var el=wkEls();
-  if(!el.hid || !el.box) return;
-  var mon=wkMonday(el.mon? el.mon.value : '');
-  if(!mon){ el.box.innerHTML=''; el.hid.value=''; WK_WEEK=''; return; }
-
-  if(reset || mon!==WK_WEEK || WK_CELLS.length!==7){
-    WK_CELLS=[0,1,2,3,4,5,6].map(function(i){ return { work:(i<5), site:'' }; });
-  }
-  WK_WEEK=mon;
-
-  var h='<datalist id="wkSiteList">'+
-    wkSites().map(function(x){ return '<option value="'+esc(x)+'">'; }).join('')+'</datalist>';
-
-  h+=WK_CELLS.map(function(c, i){
-    var ds=wkAdd(mon, i);
-    var hol=holidayOf(ds);
-    var 빨강 = (i===6 || hol) ? ' hol' : '';
-    return '<div class="wkrow'+(c.work?'':' rest')+'" id="wkrow'+i+'">'+
-      '<span class="wkday'+빨강+'">'+
-        esc(Number(ds.substring(5,7))+'/'+Number(ds.substring(8,10))+' '+WK_DAYS[i])+
-        (hol? ' '+esc(hol) : '')+'</span>'+
-      '<div class="chks">'+
-        '<label class="'+(c.work?'on':'')+'" onclick="wkMode('+i+',1)">근무</label>'+
-        '<label class="'+(c.work?'':'on')+'" onclick="wkMode('+i+',0)">휴무</label>'+
-      '</div>'+
-      '<input type="text" class="wksite" list="wkSiteList" value="'+esc(c.site||'')+'" '+
-        'oninput="wkSite('+i+',this.value)">'+
-      '</div>';
-  }).join('');
-
-  el.box.innerHTML=h;
-  wkPack();
-}
-
-function wkMode(i, work){
-  if(!WK_CELLS[i]) return;
-  WK_CELLS[i].work=!!work;
-  if(!work) WK_CELLS[i].site='';
-  var row=$('wkrow'+i);
-  if(row){
-    row.classList.toggle('rest', !work);
-    var labels=row.querySelectorAll('.chks label');
-    if(labels[0]) labels[0].classList.toggle('on', !!work);
-    if(labels[1]) labels[1].classList.toggle('on', !work);
-    var inp=row.querySelector('.wksite');
-    if(inp && !work) inp.value='';
-  }
-  wkPack();
-}
-
-function wkSite(i, v){
-  if(!WK_CELLS[i]) return;
-  WK_CELLS[i].site=String(v||'');
-  wkPack();
-}
-
-/** 일곱 칸을 숨은 칸 한 줄로 모은다. `;` 와 `|` 는 칸을 나누는 글자라 현장명에서 뺀다 */
-function wkPack(){
-  var el=wkEls();
-  if(!el.hid) return;
-  el.hid.value=WK_CELLS.map(function(c){
-    if(!c.work) return '휴무';
-    return '근무|'+String(c.site||'').replace(/[;|]/g,' ').trim();
-  }).join(';');
-  syncDocTitle();
-}
-
-/** 현장을 안 적은 근무 날이 있으면 그 요일을 돌려준다 */
-function wkMissing(){
-  for(var i=0;i<WK_CELLS.length;i++){
-    if(WK_CELLS[i].work && !String(WK_CELLS[i].site||'').trim()) return WK_DAYS[i];
-  }
-  return '';
-}
-
-/** 같은 주에 내가 올린 근무표가 이미 있나 (진행중·승인완료). 막지 않고 알려만 준다 */
-function schDupNo(week){
-  var d=S.data||{}, pack=d.docPack||{}, hit='';
-  var mine=[].concat((d.docs&&d.docs.drafts)||[], (d.docs&&d.docs.toAct)||[]);
-  mine.forEach(function(x){
-    if(hit) return;
-    if(x.form!=='SCH') return;
-    if(x.status!=='진행중' && x.status!=='승인완료') return;
-    if(x.who && S.me && x.who!==S.me.name) return;
-    var det=pack[x.no];
-    if(!det || !det.doc) return;
-    (det.doc.fields||[]).forEach(function(f){
-      if(f.name==='대상 주' && String(f.value||'').substring(0,10)===week) hit=x.no;
-    });
-  });
-  return hit;
 }
 
 /* ---- 자동 제목 (v42) ---- */
@@ -9188,19 +8982,6 @@ function autoDocTitle(){
     var span='';
     if(s) span=(e2 && e2!==s)? (s.substring(5)+'~'+e2.substring(5)) : s.substring(5);
     t=join([fields['휴가종류']||'', span],' ');
-  /* ★ 2026-09-17 에 늘어난 세 양식. 서버 docTitle_ 과 **같은 규칙**입니다 — 고칠 때는 둘 다 */
-  } else if(code==='RPT'){
-    var rn='', rs=$('dfTask');
-    if(rs && rs.value){
-      (S.data? S.data.tasks:[]).forEach(function(x){ if(x.id===rs.value) rn=x.title; });
-    }
-    var kind=String(fields['보고 종류']||'').trim();
-    t=join([kind? ('['+kind+']') : '', rn],' ');
-  } else if(code==='AD'){
-    t=join([join(['광고', money],' '), fields['매체']||''],' · ');
-  } else if(code==='SCH'){
-    t=join([join(['근무표', wkSpan(wkMonday(fields['대상 주']||''))],' '),
-            (S.me? S.me.name : '')],' · ');
   } else {
     t=join([f? f.name:'', money, first],' · ');
   }
@@ -9304,16 +9085,6 @@ function saveDoc(){
 
   // 추가공사는 어느 업무인지 반드시 고른다 (서버도 같은 것을 본다)
   if(code==='ADD' && !p.taskId) return void stop('어느 업무의 추가공사인지 골라주세요.', 'dfTask');
-
-  /* ★★ 근무표 — 근무인 날은 현장을 적어야 합니다 (서버 schParse_ 도 같은 것을 봅니다).
-     ★ 같은 주를 이미 올렸으면 **알리기만** 합니다. 수정본을 올릴 수 있어야 하므로 막지 않습니다 (2026-09-17). */
-  if(code==='SCH'){
-    var miss=wkMissing();
-    if(miss) return void stop(miss+'요일은 근무인데 현장이 비어 있습니다.');
-    var wk=wkMonday(fields['대상 주']||'');
-    var dup=wk? schDupNo(wk) : '';
-    if(dup && !confirm('이 주('+wkSpan(wk)+') 근무표를 이미 올리셨습니다. 새로 올릴까요?')) return;
-  }
 
   /* 휴가는 날짜 앞뒤를 본다. 서버(api_saveDoc)도 같은 것을 다시 본다 (v55) */
   if(code==='LEAVE'){
