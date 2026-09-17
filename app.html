@@ -1249,6 +1249,16 @@ html[data-theme="light"] .card{box-shadow:0 1px 2px rgba(20,16,12,.05)}
 .count button{width:38px;height:38px;border:1px solid var(--line2);background:var(--field);
   border-radius:var(--r);font-size:var(--fs-icon);cursor:pointer}
 .count span{min-width:34px;text-align:center;font-size:var(--fs-h1);font-weight:600}
+/* 결재를 종류별로 모아 보는 칸 (2026-09-17) — 대표·전무만 봅니다 */
+.boxgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:var(--sp-2);margin-bottom:var(--sp-4)}
+@media (min-width:900px){ .boxgrid{grid-template-columns:repeat(3,minmax(0,1fr))} }
+.dbox{display:flex;align-items:center;justify-content:space-between;gap:var(--sp-2);min-width:0;
+  padding:var(--sp-3) var(--sp-4);border:1px solid var(--line2);border-radius:var(--r-md);
+  background:var(--card);color:var(--t1);font-size:var(--fs-body);text-align:left;cursor:pointer}
+.dbox .t{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dbox .n{color:var(--t3);font-size:var(--fs-sm)}
+.dboxbar{display:flex;align-items:center;justify-content:center;gap:var(--sp-3);margin-bottom:var(--sp-2)}
+.dboxbar .ym{font-size:var(--fs-body);color:var(--t1)}
 .chks{display:flex;flex-wrap:wrap;gap:6px}
 .chks label{border:1px solid var(--line2);border-radius:99px;padding:6px 12px;cursor:pointer;font-size:var(--fs-sm)}
 .chks input{display:none}
@@ -3579,6 +3589,7 @@ function saveSnap(){
              // 업무 상세·결재 탭·공지·댓글을 왕복 없이 열기 위한 재료도 같이 저장한다
              logsByTask:d.logsByTask, logCount:d.logCount,
              docsByTask:d.docsByTask, settle:d.settle, docs:d.docs, docPack:d.docPack,
+             docBox:d.docBox,            // 종류별 보기를 볼 수 있는 사람인가 (2026-09-17)
              notices:d.notices, commentsByTask:d.commentsByTask, commentCount:d.commentCount,
              cmtDot:d.cmtDot,     // 안 읽은 댓글 배지 (서버 판정, v44)
              vers:d.vers }        // 분야별 번호표도 같이 (다음 접속 때 캐시 판정에 쓴다)
@@ -6002,7 +6013,10 @@ function closeModal(force){
      어떤 창은 돌아오고 어떤 창은 안 돌아오는 상태였습니다.
      저장(closeOk)으로 닫을 때는 각 저장 함수가 알아서 갈 곳을 정합니다. */
   var back=BACK_TASK; BACK_TASK=null;
-  if(!force && back) openTask(back, true);
+  /* 종류별 칸에서 연 문서를 닫으면 그 칸으로 (2026-09-17) */
+  var backBox=BACK_BOX; BACK_BOX='';
+  if(!force && back) { openTask(back, true); return; }
+  if(!force && backBox) drawDocBox();
 }
 /** 업무 상세에서 연 창이 [취소] 됐을 때 돌아갈 업무 */
 var BACK_TASK=null;
@@ -8255,8 +8269,127 @@ function paintDocs(r){
   if(done.length){
     h+=foldBox('docDone', '끝난 문서 <span class="n">'+done.length+'</span>', docSec('', done, false));
   }
-  if(!h) h='<p class="none big">결재할 문서가 없습니다</p>';
-  $('docLists').innerHTML=h;
+  var 칸 = docBoxesHtml();
+  if(!h && !칸) h='<p class="none big">결재할 문서가 없습니다</p>';
+  $('docLists').innerHTML=h+칸;
+}
+
+/* ===================== 결재를 종류별로 모아 보기 (2026-09-17 대표님 지시) =====================
+   결재된 문서가 한 목록에 섞여 있어 휴가와 구매요청서가 나란히 쌓였습니다.
+   ★★ 칸 목록은 **여기 한 곳**입니다. 양식이 늘거나 이름이 바뀌면 이 줄만 고치세요.
+   ★★ 볼 수 있는 사람인지는 **서버가 정해서** `docBox` 로 보냅니다 (화면에서 직급을 보지 않습니다).
+   ★ 자료는 이미 화면이 들고 있는 결재 목록입니다 — 칸을 열든 달을 넘기든 **서버 왕복 0회**. */
+var DOC_BOXES=[
+  { code:'EXP',   name:'지출결의서', money:true  },
+  { code:'PUR',   name:'구매요청서', money:true  },
+  { code:'ADD',   name:'추가공사',   money:true  },
+  { code:'SEAL',  name:'인감',       money:false },
+  { code:'LEAVE', name:'휴가',       money:false }
+];
+
+var DBOX={ code:'EXP', ym:'', st:'전체' };
+var BACK_BOX='';           // 칸에서 문서를 열었으면 닫을 때 그 칸으로 돌아간다
+
+/** 화면이 들고 있는 결재 문서 전부 (내가 결재할 것 · 올린 것 · 열람할 것) */
+function docAll(){
+  var d=(S.data && S.data.docs) || {};
+  return [].concat(d.toAct||[], d.drafts||[], d.others||[]);
+}
+
+/** 이 문서가 어느 칸인가. 다섯 칸에 없는 양식(내린 양식 등)은 `기타` */
+function docBoxOf(d){
+  var c=String(d.form||'');
+  var 있나=false;
+  DOC_BOXES.forEach(function(b){ if(b.code===c) 있나=true; });
+  return 있나? c : '기타';
+}
+
+function docBoxesHtml(){
+  if(!(S.data && S.data.docBox)) return '';       // 대표·전무가 아니면 이 구역 자체가 없다
+  var all=docAll();
+  function 진행중(code){
+    return all.filter(function(d){
+      return docBoxOf(d)===code && String(d.status||'진행중')==='진행중';
+    }).length;
+  }
+  var 칸들=DOC_BOXES.slice();
+  /* ★ 다섯 칸에 없는 양식으로 올라온 문서가 있으면 그때만 `기타` 를 만든다 —
+     문서가 어느 칸에도 안 보여 사라지는 일이 없게 (0건이면 안 그립니다) */
+  var 기타=all.filter(function(d){ return docBoxOf(d)==='기타'; }).length;
+  if(기타) 칸들=칸들.concat([{ code:'기타', name:'기타', money:false }]);
+
+  var h='<div class="sec"><h4>종류별로 보기</h4></div><div class="boxgrid">';
+  칸들.forEach(function(b){
+    var n=진행중(b.code);
+    h+='<button class="dbox" onclick="openDocBox(&quot;'+b.code+'&quot;)">'+
+       '<span class="t">'+esc(b.name)+'</span>'+
+       (n? '<span class="n">'+n+'</span>' : '')+
+       '</button>';
+  });
+  return h+'</div>';
+}
+
+function ymShift(ym, n){
+  var y=Number(String(ym).substring(0,4)), m=Number(String(ym).substring(5,7))+Number(n);
+  y+=Math.floor((m-1)/12);
+  m=((m-1)%12+12)%12+1;
+  return y+'-'+p2(m);
+}
+
+function openDocBox(code){
+  DBOX.code=code||'EXP';
+  DBOX.ym=DBOX.ym||monthNow();
+  DBOX.st='전체';
+  drawDocBox();
+}
+
+function dboxMove(n){ DBOX.ym=ymShift(DBOX.ym, n); drawDocBox(); }
+function dboxState(st){ DBOX.st=st; drawDocBox(); }
+function closeDocBox(){ BACK_BOX=''; closeOk(); }
+
+/** 칸에서 연 문서는 닫을 때 그 칸으로 돌아간다 */
+function openDocFromBox(no){ BACK_BOX=DBOX.code; openDoc(no); }
+
+function drawDocBox(){
+  var b=null;
+  DOC_BOXES.forEach(function(x){ if(x.code===DBOX.code) b=x; });
+  var 이름 = b? b.name : DBOX.code;
+
+  var rows=docAll().filter(function(d){
+    if(docBoxOf(d)!==DBOX.code) return false;
+    if(String(d.at||'').substring(0,7)!==DBOX.ym) return false;
+    if(DBOX.st!=='전체' && String(d.status||'진행중')!==DBOX.st) return false;
+    return true;
+  }).sort(function(a,c){ return String(a.at||'') < String(c.at||'') ? 1 : -1; });
+
+  /* 반려는 합계에서 뺍니다 — 쓰지 않은 돈입니다 */
+  var 합=0;
+  rows.forEach(function(d){ if(String(d.status||'')!=='반려') 합+=Number(d.amount||0); });
+
+  var h='<div class="veil"><div class="sheet">'+
+    '<div class="sheethead">'+
+      '<button class="btn sm" onclick="closeDocBox()">← 결재</button>'+
+      '<h3 class="tt" style="flex:1;text-align:center">'+esc(이름)+'</h3>'+
+    '</div>'+
+    '<div class="dboxbar">'+
+      '<button class="btn sm" onclick="dboxMove(-1)">◀</button>'+
+      '<span class="ym">'+esc(DBOX.ym)+'</span>'+
+      '<button class="btn sm" onclick="dboxMove(1)">▶</button>'+
+    '</div>'+
+    '<div class="chks">'+
+      ['전체','진행중','승인완료','반려'].map(function(x){
+        return '<label class="'+(DBOX.st===x?'on':'')+'" onclick="dboxState(&quot;'+x+'&quot;)">'+x+'</label>';
+      }).join('')+
+    '</div>';
+
+  if(b && b.money && 합) h+='<p class="note right t2">합계 '+won(합)+'원</p>';
+
+  h += rows.length
+    ? docSec('', rows, false).split("openDoc('").join("openDocFromBox('")
+    : empty('이 달에는 없습니다.');
+
+  h+='</div></div>';
+  $('modal').innerHTML=h;
 }
 
 /* ── 여러 건 한 번에 승인 (2026-09-02) ─────────────────────────
