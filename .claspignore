@@ -12,3 +12,6 @@ manifest.webmanifest
 *.txt
 .git/**
 node_modules/**
+
+# Project-local Astra review infrastructure
+.claude/**
